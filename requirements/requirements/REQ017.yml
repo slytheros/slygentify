@@ -16,7 +16,7 @@ references:
 - keyword: REQ017
   path: src/slygentify/_errors.py
   type: file
-reviewed: iuhrizMgMLZ18_y-Tobx7ke1hzcWRWIMbKnR-jEC_lQ=
+reviewed: Jl391oT9UE718zT6kLsUfoOulvcvMYTrFqLkixioLDI=
 text: |
   Slygentify shall expose `scan_repository(path=".", *, git_executable=None)` and stable
   `ScanError` and `ScanValidationError` types directly from `slygentify`. The optional

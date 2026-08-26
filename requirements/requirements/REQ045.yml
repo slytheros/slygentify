@@ -13,7 +13,7 @@ references:
 - keyword: REQ045
   path: tools/review_initialization.py
   type: file
-reviewed: qLISveyqvdUke7_t8a0KJSKyg_22J_2PQVNh-UfF3gE=
+reviewed: biM_nGMRiglgPRbq9puD0cq6kX5gikHH79tPGw5iJGE=
 text: |
   Slygentify shall provide deterministic local tooling to regenerate root AGENTS.md and
   default root-map artifacts for all 20 pinned acceptance repositories in disposable
