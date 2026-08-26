@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, cast
@@ -11,6 +12,7 @@ from typing import Literal, cast
 from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.css.query import NoMatches
 from textual.screen import ModalScreen
 from textual.widgets import (
     Collapsible,
@@ -529,7 +531,8 @@ class ScanExplorer(App[None]):
     def _show_payload(self, payload: _NodePayload | None) -> None:
         if payload is None or self.presentation is None:
             return
-        self.query_one("#detail", _RecordDetail).show(payload, self.presentation)
+        with suppress(NoMatches):
+            self.query_one("#detail", _RecordDetail).show(payload, self.presentation)
 
     def on_tree_node_highlighted(self, event: Tree.NodeHighlighted[_NodePayload]) -> None:
         self._show_payload(event.node.data)
