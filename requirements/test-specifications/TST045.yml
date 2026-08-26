@@ -1,0 +1,19 @@
+active: true
+derived: false
+header: |
+  Bootstrap-to-map corpus acceptance tests
+level: 1.46
+links:
+- REQ045: qLISveyqvdUke7_t8a0KJSKyg_22J_2PQVNh-UfF3gE=
+normative: true
+ref: ''
+references:
+- keyword: TST045
+  path: tests/test_initialization_review.py
+  type: file
+reviewed: 5HBbVV5jvyt9W_3JQDFR9Dkdn2xBT31qLraiIMijkUA=
+text: |
+  Verify deterministic digest-only AGENTS.md and root-projection records, sanitized
+  metrics, renewed corpus size gates, complete human criteria, malformed and incomplete
+  matrix rejection, exact formal comparison, coverage of all pinned repositories, and
+  contained disposable snapshots that do not follow links or execute Git hooks.

@@ -1,0 +1,38 @@
+active: true
+derived: false
+header: |
+  Interactive scan explorer
+level: 1.33
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ033
+  path: src/slygentify/_explorer.py
+  type: file
+- keyword: REQ033
+  path: src/slygentify/cli.py
+  type: file
+- keyword: REQ033
+  path: src/slygentify/_glossary.py
+  type: file
+- keyword: REQ033
+  path: src/slygentify/_presentation.py
+  type: file
+reviewed: s8BvJmGGVchlcMjCCcwE0LW-12qR-MGz53k8DaAwlpQ=
+text: |
+  `slygentify scan --interactive` shall open an opt-in Textual explorer before the one
+  bounded scan completes and show an indeterminate scanning status without changing the
+  canonical Python or JSON contracts. After success, it shall provide component and record
+  hierarchy organized around user tasks, distinct primary and auxiliary component
+  navigation, counted structural groups whose known-empty groups are visible, dimmed, and
+  non-expandable, and disclosure icons only for expandable nodes. Selected records shall
+  use a human-first explanation with resolved evidence, followed by an initially collapsed,
+  keyboard-accessible complete raw JSON record. The explorer shall provide case-insensitive
+  search over human-visible paths and text, record-type and claim-classification filters,
+  keyboard-only expand, collapse, search, clear, navigation, and quit controls, and lazy
+  population of high-cardinality record groups. Sources & provenance shall remain complete
+  but outside the primary component workflow. A question-mark key shall open a dismissible
+  glossary without adding a permanent navigation branch. Claim classifications shall remain
+  explicit without relying on color. Interactive mode shall require both input and output
+  TTYs and shall fail as Typer usage before scanning when that requirement is not met.

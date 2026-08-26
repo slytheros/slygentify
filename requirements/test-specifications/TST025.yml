@@ -1,0 +1,19 @@
+active: true
+derived: false
+header: |
+  JavaScript component and package tests
+level: 1.25
+links:
+- REQ025: My_SX3V8S84WWTfEL5Nn34QhbD-093mUrHCY8LAKKRw=
+normative: true
+ref: ''
+references:
+- keyword: TST025
+  path: tests/test_javascript_inspection.py
+  type: file
+reviewed: sucTFESm1xKcPhRuSHkBFhqRRoNPC3Qd7NON4pL_26U=
+text: |
+  Verify valid, private, unnamed, malformed, duplicate-key, and wrong-shape package.json
+  boundaries; approved metadata, dependency, script, bin, framework, and evidence locator
+  behavior; cautious script redaction and unsafe bin-target withholding; and absence of
+  dependency resolution or execution.

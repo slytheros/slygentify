@@ -1,0 +1,17 @@
+active: true
+derived: false
+header: |
+  Deterministic verified guidance
+level: 1.2
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ002
+  path: src/slygentify/initialization.py
+  type: file
+reviewed: xh3XMtncVIKvg3BbybNAlL9mmWwcbkHeFAg5UYVa-3A=
+text: |
+  Slygentify shall generate deterministic AGENTS.md content from normalized scan results,
+  visibly preserving verified, inferred, recommended, and unknown claims together with
+  conservative safety guidance.

@@ -1,0 +1,17 @@
+active: true
+derived: false
+header: |
+  Containment traversal tests
+level: 1.12
+links:
+- REQ012: Q6cPJin26rysHbfrtpCycf7G9seGiiJ-w1Wpj5ftmxQ=
+normative: true
+ref: ''
+references:
+- keyword: TST012
+  path: tests/test_scan_foundation.py
+  type: file
+reviewed: 1U9Q-DvooeOpFfUPxiffvjHhg_iOnSU5XZEkhsFHdU4=
+text: |
+  Verify links, reparse points, special entries, identity changes, unsafe directories,
+  and out-of-root targets are not read and are represented as skipped scope.

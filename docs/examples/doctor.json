@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "producer_version": "0.1.0",
+  "completion": "complete",
+  "repository": {
+    "id": "repository:.",
+    "root": ".",
+    "kind": "git",
+    "evidence_ids": [
+      "e_repo"
+    ]
+  },
+  "evidence": [
+    {
+      "id": "e_repo",
+      "source_kind": "filesystem",
+      "location": ".",
+      "observation": "Selected the containing Git repository.",
+      "verification_method": "Resolved the repository root without exposing its host path."
+    }
+  ],
+  "diagnostics": [],
+  "skipped_scopes": []
+}

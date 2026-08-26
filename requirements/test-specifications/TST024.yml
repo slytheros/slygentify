@@ -1,0 +1,21 @@
+active: true
+derived: false
+header: |
+  Python inspection safety and parity tests
+level: 1.24
+links:
+- REQ024: 9zvjYGhffmbOTLQGkeY7bLepx3Dmy5BEUnBM82TDVSA=
+normative: true
+ref: ''
+references:
+- keyword: TST024
+  path: tests/test_python_inspection.py
+  type: file
+reviewed: -m6KwpQhgzmbN7KtAjMrkkRFwG_LufIyddgKtV9RmWo=
+text: |
+  Verify deterministic Python, JSON, and CLI results, one-read bounded repository access,
+  malformed and resource-partial behavior, secret-safe output, and absence of imports,
+  process execution, environment reads, network access, writes, and followed links.
+  Verify genuine conflicts and malformed or unsupported sources retain source provenance
+  and an actionable message. Verify cautious literal credential redaction and conditional
+  remediation without hiding variable, expression, or runtime credential references.

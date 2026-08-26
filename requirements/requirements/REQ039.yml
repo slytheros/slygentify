@@ -1,0 +1,17 @@
+active: true
+derived: false
+header: |
+  Digest-guarded initialization lifecycle
+level: 1.39
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ039
+  path: src/slygentify/initialization.py
+  type: file
+reviewed: l9yL22BZRhzWnmf_V1CJgFSPPjrmygFxItNxWU1fjuw=
+text: |
+  Slygentify shall plan and apply root AGENTS.md and provenance-state changes through
+  digest-guarded ownership classification, explicit replacement, and atomic per-file writes
+  that preserve unmanaged and human-edited content by default.

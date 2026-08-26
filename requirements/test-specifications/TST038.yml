@@ -1,0 +1,18 @@
+active: true
+derived: false
+header: |
+  Agent guidance generation tests
+level: 1.38
+links:
+- REQ038: o9q7_MP79sHAeEZOIFFQWoJ0aD3LIIX7RizRXJJ4w_s=
+normative: true
+ref: ''
+references:
+- keyword: TST038
+  path: tests/test_initialization.py
+  type: file
+reviewed: XO7AxBwbto7z9Hpse6dzHy6rHV1yCfytXI3TfW6uikU=
+text: |
+  Verify deterministic thin-router rendering, root-first breadth-first primary-component
+  indexing, canonical evidence selection, partial and omission summaries, safety wording,
+  Unicode paths, no-primary behavior, and exclusion of dynamic scan details.

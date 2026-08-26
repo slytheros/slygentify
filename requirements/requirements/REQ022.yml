@@ -1,0 +1,19 @@
+active: true
+derived: false
+header: |
+  Python tool and framework inspection
+level: 1.22
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ022
+  path: src/slygentify/_scan/detectors/python.py
+  type: file
+reviewed: Zh8jjiW1YAg0RqmCAT5B1oSP7Wv4BwhYkmcrpdQi4RE=
+text: |
+  Slygentify shall report the approved Python test, quality, typing, migration, and
+  framework evidence only from supported static configuration or direct dependency
+  declarations and shall not claim installation, activation, or runtime use. Supported
+  tox INI configuration shall be retained, and multiple tool locations shall be reported
+  as a conflict only when they occur at the same supported component root.

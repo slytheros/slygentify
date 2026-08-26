@@ -1,0 +1,20 @@
+active: true
+derived: false
+header: |
+  Reviewable contribution control plane
+level: 1.9
+links: []
+normative: true
+ref: ''
+references:
+- keyword: Agent Definition of Ready
+  path: CONTRIBUTING.md
+  type: file
+- keyword: Architecture decision records
+  path: docs/adr/README.md
+  type: file
+reviewed: ML-UGP8Zp5ZiUJ1YcK6-A-FZiEr6Bto5U_iIVg2BPjs=
+text: |
+  Slygentify shall provide portable contribution and decision templates that make the
+  intended outcome, dependencies, requirements, tests, effects, security, compatibility,
+  documentation, ADR impact, and human governance gates reviewable before completion.

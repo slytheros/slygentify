@@ -1,0 +1,23 @@
+active: true
+derived: false
+header: |
+  Static doctor core
+level: 1.48
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ047
+  path: src/slygentify/_doctor.py
+  type: file
+- keyword: REQ047
+  path: src/slygentify/models.py
+  type: file
+reviewed: gdVCOB28vF9YiOLjwxJxyhZq7Zj0otb_J6fd3UNFjQE=
+text: |
+  Slygentify shall provide a deterministic, read-only doctor core that validates
+  configuration and provenance, performs one fresh bounded scan when safe, compares
+  managed guidance against current evidence, reports the approved static diagnostic
+  contract with evidence and remediation, preserves partial-result accounting, and does
+  not execute discovered repository commands, contact the network, or write repository
+  files.

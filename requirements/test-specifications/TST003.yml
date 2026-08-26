@@ -1,0 +1,21 @@
+active: true
+derived: false
+header: |
+  Exclusive creation tests
+level: 1.3
+links:
+- REQ002: xh3XMtncVIKvg3BbybNAlL9mmWwcbkHeFAg5UYVa-3A=
+- REQ003: Rztc5vyoQKlUTObLfeMRJgx_EyDKdGD1EIcwRGWJIFM=
+normative: true
+ref: ''
+references:
+- keyword: TST003
+  path: tests/test_initialization.py
+  type: file
+- keyword: TST003
+  path: tests/test_cli.py
+  type: file
+reviewed: RJSf2xdjj4O5XzexJWi2EBAgFLPCw1xyZkq2LHM8zvc=
+text: |
+  Verify UTF-8 exclusive creation and refusal to replace regular files, directories,
+  symlinks, or entries created concurrently, including controlled I/O failures.

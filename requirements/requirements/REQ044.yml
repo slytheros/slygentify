@@ -1,0 +1,29 @@
+active: true
+derived: false
+header: |
+  Configurable initialization context bounds
+level: 1.45
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ044
+  path: src/slygentify/_configuration.py
+  type: file
+- keyword: REQ044
+  path: src/slygentify/_generation.py
+  type: file
+- keyword: REQ044
+  path: src/slygentify/cli.py
+  type: file
+- keyword: REQ044
+  path: src/slygentify/initialization.py
+  type: file
+reviewed: yewXyP_OnkOvROsHA1znpkNae9tF0wwwmFXXMyX86uM=
+text: |
+  The optional [init] configuration shall independently bound generated AGENTS.md bytes
+  and component entries with deterministic defaults of 4096 and 8. Each setting shall
+  accept a positive integer or "unlimited"; max_agents_bytes below the documented fixed-
+  router minimum shall be rejected. Initialization shall warn when either committed
+  setting raises or disables its default, include configuration changes in provenance,
+  preserve dry-run and lifecycle behavior, and enforce whichever bound remains active.

@@ -1,0 +1,22 @@
+active: true
+derived: false
+header: |
+  JavaScript manager workspace and runtime inspection
+level: 1.26
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ026
+  path: src/slygentify/_scan/detectors/javascript.py
+  type: file
+reviewed: 5UuUx8cJFXRQsd4tCpi543CE20gTgPvQVkHBzXbJP-M=
+text: |
+  Slygentify shall report approved npm, pnpm, Yarn, Corepack, workspace, lock, Node,
+  npm-engine, version-file, and static CI runtime declarations independently with
+  provenance. It shall resolve only safe bounded in-root workspace patterns to valid
+  package.json members, apply exclusions, and preserve missing, invalid, overlapping,
+  and out-of-root evidence through actionable diagnostics. Competing manager families
+  shall be retained without selecting a preference. A Node runtime conflict shall be
+  reported only when an exact selection is demonstrably outside a supported range;
+  unsupported comparisons shall remain unknown.

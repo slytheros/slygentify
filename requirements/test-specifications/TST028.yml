@@ -1,0 +1,18 @@
+active: true
+derived: false
+header: |
+  Static JavaScript CI tests
+level: 1.28
+links:
+- REQ028: FNr0Gu8nzT1VvhPuotApu4XrgMaYZ4h2I9XlWVg9_PI=
+normative: true
+ref: ''
+references:
+- keyword: TST028
+  path: tests/test_javascript_inspection.py
+  type: file
+reviewed: 5AcmLw1Iq4ow_y14QiseBbimywISCIs89QBU1cZlgcg=
+text: |
+  Verify Gitea, GitHub, and GitLab literal commands, static setup-node matrices, exact
+  locators, checkout and working-directory ownership, local includes, include cycles,
+  external and dynamic includes, expression-only commands, and credential-safe output.

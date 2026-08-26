@@ -1,0 +1,19 @@
+active: true
+derived: false
+header: |
+  Doorstop integrity test
+level: 1.7
+links:
+- REQ006: --GPrpt8Q4vZXaL1dC7n-yDaLgTd5bDJxD5RpllKszg=
+- REQ007: pnoD3kcLp1i9MYfYFvoBrWIcYzkzH4I3O16_OHZAlZY=
+normative: true
+ref: ''
+references:
+- keyword: TST007
+  path: tests/test_repository_quality.py
+  type: file
+reviewed: JF6nc59jpH_8JQyaZ1xLgYitvH_4HHfR2Q9Oyyqj9xg=
+text: |
+  Verify that Doorstop accepts the complete requirements hierarchy, item reviews,
+  parent links, implementation references, and test references, and rejects broken
+  parent links and external references in isolated repositories.

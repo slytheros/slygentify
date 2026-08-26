@@ -1,0 +1,19 @@
+active: true
+derived: false
+header: |
+  JavaScript TypeScript tool and framework tests
+level: 1.27
+links:
+- REQ027: AqCWAIQ4_o43FTuP3Vy_cp8W7EeIfFr8isXpdg2drAY=
+normative: true
+ref: ''
+references:
+- keyword: TST027
+  path: tests/test_javascript_inspection.py
+  type: file
+reviewed: guuMiTO_juQCHCGCHYJnv6aJQdPD-dJM3KtagTFyJRk=
+text: |
+  Verify TypeScript, ESLint, Prettier, Jest, Vitest, Playwright, Express, Fastify, and
+  Vue evidence from only approved static sources; safe explicit-file and directory-form
+  TypeScript references; aggregated unresolved-reference provenance and causes;
+  unresolved and non-strict content behavior; and non-evaluation of configuration modules.

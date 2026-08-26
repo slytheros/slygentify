@@ -1,0 +1,19 @@
+active: true
+derived: false
+header: |
+  Doctor Python, JSON, and schema contract tests
+level: 1.49
+links:
+- REQ048: rgK0ldgn_ETs1sjHFMjymVSqGAROgkxVkaCIVMIErGo=
+normative: true
+ref: ''
+references:
+- keyword: TST048
+  path: tests/test_doctor_json.py
+  type: file
+reviewed: ccfNpCfO9IwLd633cokxoJchAwwn7wviHzV6splekks=
+text: |
+  Verify public exports, immutable round trips, strict recursive validation, translated
+  failures, forward-compatible unknown properties, parser resource limits, deterministic
+  bytes and ordering, omitted optional fields, fresh checked-in schema integrity,
+  independent schema validation, and schema/model/adapter drift detection.

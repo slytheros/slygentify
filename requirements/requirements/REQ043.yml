@@ -1,0 +1,23 @@
+active: true
+derived: false
+header: |
+  Fresh task-scoped map interfaces
+level: 1.44
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ043
+  path: src/slygentify/api.py
+  type: file
+- keyword: REQ043
+  path: src/slygentify/cli.py
+  type: file
+reviewed: Lw8KYIrC_ADqVAhNOSbc_QllXNjQw8IAJseb01kzC4w=
+text: |
+  Slygentify shall provide map_repository and `slygentify map` interfaces that perform
+  one fresh local scan per call, accept safe repository-relative POSIX scopes including
+  planned paths, support exact deduplicated section selection and an explicit per-call
+  byte limit or unlimited override, honor scan's trusted Git executable and partial-
+  result behavior, emit canonical projection JSON to stdout, and do not cache, contact
+  the network, consume saved scan JSON, or write repository files.

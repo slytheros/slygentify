@@ -1,0 +1,275 @@
+{
+  "schema_version": 1,
+  "source_scan_schema_version": 1,
+  "producer_version": "0.1.0",
+  "source_scan_sha256": "69bc919162f1daf6b4f624cdbf7064859265d3869f33e431d26b845a0d5cb8e2",
+  "source_completion": "partial",
+  "scope": {
+    "requested_path": "packages/web/src/app.ts",
+    "matched_component_id": "component_6cc21f6f719d57adbe7b9bbee4929e37c2615e6c3cbe4dd7f58430ed349319a1",
+    "matched_component_path": "packages/web"
+  },
+  "navigation": {
+    "ancestors": [
+      "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de"
+    ],
+    "owner": "component_6cc21f6f719d57adbe7b9bbee4929e37c2615e6c3cbe4dd7f58430ed349319a1",
+    "children": []
+  },
+  "sections": [
+    "orientation",
+    "workflows",
+    "architecture",
+    "boundaries"
+  ],
+  "repository": {
+    "id": "repository_c140010bf267fcd92f5cf59a9250459d63078cb45b41e6451fef20e19c9fd170",
+    "root": ".",
+    "kind": "git",
+    "evidence_ids": [
+      "evidence_991841db58f5fed6ab9e290f5d9c0fb15a68876d8448625c8b7b494d84ba27fd"
+    ]
+  },
+  "components": [
+    {
+      "id": "component_6cc21f6f719d57adbe7b9bbee4929e37c2615e6c3cbe4dd7f58430ed349319a1",
+      "path": "packages/web",
+      "ecosystem": "javascript",
+      "kind": "package",
+      "role": "unknown",
+      "evidence_ids": [
+        "javascript-inspect-v1_e1acf2a36795e8fbf6a4886462119ab8539ca35e4ab6d9031a3d400e0f361eb2"
+      ],
+      "ecosystems": [
+        "javascript"
+      ]
+    },
+    {
+      "id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "path": ".",
+      "ecosystem": "python",
+      "kind": "package",
+      "role": "unknown",
+      "evidence_ids": [
+        "python-inspect-v1_746aa4662542bcce8419485fb8712fc2e702c8cc6b2db2a2038406bdeb3afe99"
+      ],
+      "ecosystems": [
+        "python"
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "id": "relationship_2509b52a083e67cc4070a4de740986c2f767fce5d2ac1d2efb0a826bc10f4ef5",
+      "kind": "contains",
+      "source_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "target_id": "component_6cc21f6f719d57adbe7b9bbee4929e37c2615e6c3cbe4dd7f58430ed349319a1",
+      "classification": "inferred",
+      "evidence_ids": [
+        "javascript-inspect-v1_e1acf2a36795e8fbf6a4886462119ab8539ca35e4ab6d9031a3d400e0f361eb2",
+        "python-inspect-v1_746aa4662542bcce8419485fb8712fc2e702c8cc6b2db2a2038406bdeb3afe99"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "finding_a90d4f4272647d0533d4507d972ead68279a2d3d448079316aa59dfc553f2e35",
+      "code": "javascript.component.unknown",
+      "classification": "unknown",
+      "subject_id": "repository_c140010bf267fcd92f5cf59a9250459d63078cb45b41e6451fef20e19c9fd170",
+      "summary": "A JavaScript package candidate at packages/broken could not be verified.",
+      "evidence_ids": [
+        "javascript-inspect-v1_31e49b927e3d7d4f3ff116325f47b4da0aeb998292ebc404b8d16291b2247124"
+      ]
+    },
+    {
+      "id": "finding_731c71594a78c384f44a9470261da57a6410a598cffdaa0cb1ba9c1566fcf350",
+      "code": "javascript.component.verified",
+      "classification": "verified",
+      "subject_id": "component_6cc21f6f719d57adbe7b9bbee4929e37c2615e6c3cbe4dd7f58430ed349319a1",
+      "summary": "A JavaScript or TypeScript package is declared at \"packages/web\".",
+      "evidence_ids": [
+        "javascript-inspect-v1_e1acf2a36795e8fbf6a4886462119ab8539ca35e4ab6d9031a3d400e0f361eb2"
+      ]
+    },
+    {
+      "id": "finding_b8b557a6562cd54f9abaa8fc7af257c04813f10b57e8ee209db692c9ef60b6a8",
+      "code": "javascript.package.metadata",
+      "classification": "verified",
+      "subject_id": "component_6cc21f6f719d57adbe7b9bbee4929e37c2615e6c3cbe4dd7f58430ed349319a1",
+      "summary": "Package field private is declared as true.",
+      "evidence_ids": [
+        "javascript-inspect-v1_d404558ba10e04da97dcbf0d341fad2f0df424112cd3649c3494338ce0716552"
+      ]
+    },
+    {
+      "id": "finding_d80cc318af35668da08027ea6d7f21ac1a34e609bac1728401aed06e2cf9e344",
+      "code": "javascript.package.metadata",
+      "classification": "verified",
+      "subject_id": "component_6cc21f6f719d57adbe7b9bbee4929e37c2615e6c3cbe4dd7f58430ed349319a1",
+      "summary": "Package field name is declared as \"@acme/web\".",
+      "evidence_ids": [
+        "javascript-inspect-v1_67e7ba6031ed359f7b199eb76d86c71b845cfa2124e30aab2fe5bc271fcd97fe"
+      ]
+    },
+    {
+      "id": "finding_b0400d02dc7cf74989d9f208c63f26c02eff33108846f3a9fc6e7f02b7127bbc",
+      "code": "javascript.runtime.declaration",
+      "classification": "verified",
+      "subject_id": "component_6cc21f6f719d57adbe7b9bbee4929e37c2615e6c3cbe4dd7f58430ed349319a1",
+      "summary": "Node constraint \">=20\" is declared.",
+      "evidence_ids": [
+        "javascript-inspect-v1_b38f8268b069cc5c6734b12376baeb4767e8386e34a89aa2f04fd70be5cee782"
+      ]
+    },
+    {
+      "id": "finding_1a10950a7aeb748ee30682d82def72fec97ad35800544148c6f5c57a8a80f691",
+      "code": "javascript.tool.evidence",
+      "classification": "verified",
+      "subject_id": "component_6cc21f6f719d57adbe7b9bbee4929e37c2615e6c3cbe4dd7f58430ed349319a1",
+      "summary": "typescript has configuration-location evidence at packages/web/tsconfig.json.",
+      "evidence_ids": [
+        "javascript-inspect-v1_4d935232f882e7bd4faa8da820a1ad771089a405dde078f396bb394bbb2eff64"
+      ]
+    },
+    {
+      "id": "finding_38d2875b74ce8d443839f4a5cab4493130b90abb362274bd7f90efaf5f1d44a1",
+      "code": "python.component.verified",
+      "classification": "verified",
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "summary": "A Python component is declared at the repository root.",
+      "evidence_ids": [
+        "python-inspect-v1_746aa4662542bcce8419485fb8712fc2e702c8cc6b2db2a2038406bdeb3afe99"
+      ]
+    },
+    {
+      "id": "finding_1529c60b91f02bc405da49c540e6ec37472e17b15cf529519747cacca42a2828",
+      "code": "python.manifest.declaration",
+      "classification": "verified",
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "summary": "Python manifest table project is declared.",
+      "evidence_ids": [
+        "python-inspect-v1_746aa4662542bcce8419485fb8712fc2e702c8cc6b2db2a2038406bdeb3afe99"
+      ]
+    },
+    {
+      "id": "finding_f2f53b2dbfc009d35ec22b92b0b4ab01945b7c8b21b30399e1ba3943a714845e",
+      "code": "python.metadata.declaration",
+      "classification": "verified",
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "summary": "Project name is \"acme-platform\".",
+      "evidence_ids": [
+        "python-inspect-v1_d51a27db0231a482c87f6c1ba5de135bf181ccc9c21b71dd511f327577487635"
+      ]
+    },
+    {
+      "id": "finding_f5eff431c7ad724206d58fd576427e050030d32f47f13a1f4003c841c1a21ffe",
+      "code": "python.runtime.declaration",
+      "classification": "verified",
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "summary": "Python supported range \">=3.11\" is declared.",
+      "evidence_ids": [
+        "python-inspect-v1_c59fa8d211e876059a5692df1c9f60111562597e54df9962c5d43fab9607f60c"
+      ]
+    },
+    {
+      "id": "finding_b37534d4b3341a6ff1cde794663055b61ecea43d2d6a83102aec3add512e4982",
+      "code": "python.tool.evidence",
+      "classification": "verified",
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "summary": "pytest has configuration evidence at pyproject.toml.",
+      "evidence_ids": [
+        "python-inspect-v1_ac73a397a4d31388609b129ac9d2a8e101c11b4c0692e74680b9ce389fce5188"
+      ]
+    }
+  ],
+  "diagnostics": [],
+  "skipped_scopes": [],
+  "evidence": [
+    {
+      "id": "evidence_991841db58f5fed6ab9e290f5d9c0fb15a68876d8448625c8b7b494d84ba27fd",
+      "source_kind": "vcs-marker",
+      "location": ".git",
+      "observation": "Git repository marker is present.",
+      "verification_method": "non-following metadata inspection"
+    },
+    {
+      "id": "javascript-inspect-v1_31e49b927e3d7d4f3ff116325f47b4da0aeb998292ebc404b8d16291b2247124",
+      "source_kind": "manifest",
+      "location": "packages/broken/package.json",
+      "observation": "A package.json file is present but its content could not be verified.",
+      "verification_method": "strict bounded static inspection"
+    },
+    {
+      "id": "javascript-inspect-v1_4d935232f882e7bd4faa8da820a1ad771089a405dde078f396bb394bbb2eff64",
+      "source_kind": "tool-configuration",
+      "location": "packages/web/tsconfig.json",
+      "observation": "typescript configuration-location evidence is present.",
+      "verification_method": "strict bounded static inspection"
+    },
+    {
+      "id": "javascript-inspect-v1_67e7ba6031ed359f7b199eb76d86c71b845cfa2124e30aab2fe5bc271fcd97fe",
+      "source_kind": "package-metadata",
+      "location": "packages/web/package.json",
+      "locator": "/name",
+      "observation": "JavaScript package field name is declared.",
+      "verification_method": "strict bounded static inspection"
+    },
+    {
+      "id": "javascript-inspect-v1_b38f8268b069cc5c6734b12376baeb4767e8386e34a89aa2f04fd70be5cee782",
+      "source_kind": "runtime",
+      "location": "packages/web/package.json",
+      "locator": "/engines/node",
+      "observation": "A Node.js or npm runtime declaration is present.",
+      "verification_method": "strict bounded static inspection"
+    },
+    {
+      "id": "javascript-inspect-v1_d404558ba10e04da97dcbf0d341fad2f0df424112cd3649c3494338ce0716552",
+      "source_kind": "package-metadata",
+      "location": "packages/web/package.json",
+      "locator": "/private",
+      "observation": "JavaScript package field private is declared.",
+      "verification_method": "strict bounded static inspection"
+    },
+    {
+      "id": "javascript-inspect-v1_e1acf2a36795e8fbf6a4886462119ab8539ca35e4ab6d9031a3d400e0f361eb2",
+      "source_kind": "manifest",
+      "location": "packages/web/package.json",
+      "observation": "A valid package.json declares a JavaScript or TypeScript package boundary.",
+      "verification_method": "strict bounded static inspection"
+    },
+    {
+      "id": "python-inspect-v1_746aa4662542bcce8419485fb8712fc2e702c8cc6b2db2a2038406bdeb3afe99",
+      "source_kind": "manifest",
+      "location": "pyproject.toml",
+      "locator": "project",
+      "observation": "Python manifest table project is declared.",
+      "verification_method": "strict bounded static inspection"
+    },
+    {
+      "id": "python-inspect-v1_ac73a397a4d31388609b129ac9d2a8e101c11b4c0692e74680b9ce389fce5188",
+      "source_kind": "tool-configuration",
+      "location": "pyproject.toml",
+      "locator": "tool.pytest",
+      "observation": "pytest configuration evidence is present.",
+      "verification_method": "strict bounded static inspection"
+    },
+    {
+      "id": "python-inspect-v1_c59fa8d211e876059a5692df1c9f60111562597e54df9962c5d43fab9607f60c",
+      "source_kind": "runtime",
+      "location": "pyproject.toml",
+      "locator": "project.requires-python",
+      "observation": "A Python runtime declaration is present.",
+      "verification_method": "strict bounded static inspection"
+    },
+    {
+      "id": "python-inspect-v1_d51a27db0231a482c87f6c1ba5de135bf181ccc9c21b71dd511f327577487635",
+      "source_kind": "metadata",
+      "location": "pyproject.toml",
+      "locator": "project.name",
+      "observation": "Python project metadata field name is declared.",
+      "verification_method": "strict bounded static inspection"
+    }
+  ],
+  "omissions": []
+}

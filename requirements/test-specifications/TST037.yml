@@ -1,0 +1,16 @@
+active: true
+derived: false
+header: |
+  Provenance sidecar write tests
+level: 1.37
+links:
+- REQ037: 43Itl2LHxWOliFtNdT9pf5kyGqV7pKttBcDVWCzfTxs=
+normative: true
+ref: ''
+references:
+- keyword: TST037
+  path: tests/test_provenance.py
+  type: file
+reviewed: 91Mch1LL9LPGBuAnBZwkm6MqgbBGbqPtUjGcWNGa0kc=
+text: |
+  Verify create, replacement, no-change, malformed-state, and race-safe persistence behavior.

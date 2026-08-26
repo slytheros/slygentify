@@ -1,0 +1,29 @@
+active: true
+derived: false
+header: |
+  Scan command contract tests
+level: 1.19
+links:
+- REQ019: Raiur0Ula8vOf5PE4yhjd5yHkp88VOTKAMyRjrVtOHk=
+normative: true
+ref: ''
+references:
+- keyword: TST019
+  path: tests/test_scan_cli.py
+  type: file
+reviewed: PQJELtGlbkeuvia5ge0PWw4W2jUyoLJ23O6xzv8T60g=
+text: |
+  Verify the complete component-first default text consumes the same scan result,
+  distinguishes primary from auxiliary component navigation without suppressing records,
+  clearly binds completion to current Python, JavaScript/TypeScript, and generic support,
+  represents every component, relationship, finding, evidence record, diagnostic, and
+  skipped scope exactly once in its canonical section, organizes component results by
+  identity, working tasks, architecture, automation, and attention, separates routine
+  inspection boundaries from actionable concerns, retains literal claim
+  classifications and source citations, keeps sources in a final provenance appendix,
+  explains claim terms compactly, and groups high-cardinality records without
+  merging them, and remains understandable without color or control sequences. Verify
+  `--git-executable` forwarding in text, JSON, and interactive modes, canonical JSON
+  stdout and clean stderr, reject interactive JSON and removed `--verbose` as usage,
+  return success and a canonical document for complete and partial scans, map operational
+  failures to stderr and exit 1, and retain Typer usage exit 2.

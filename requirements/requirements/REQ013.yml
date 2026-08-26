@@ -1,0 +1,24 @@
+active: true
+derived: false
+header: |
+  Bounded and honest completion
+level: 1.13
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ013
+  path: src/slygentify/_git_tracking.py
+  type: file
+- keyword: REQ013
+  path: src/slygentify/_scan/kernel.py
+  type: file
+reviewed: LjeYcRh8w4bj9buRHDVwSgf0Ba0EJZDmbSsvuBhdwZI=
+text: |
+  Repository inspection shall enforce deterministic depth, entry, file-byte,
+  aggregate-byte, open-file, and scanner-accounted-memory limits plus an elapsed-time
+  limit across discovery, traversal, detection, normalization, and canonical result
+  preparation, and shall identify result-affecting exhausted work as partial. Git tracked-path
+  lookup shall use at most ten seconds or the remaining scan deadline, bound stdout by
+  the remaining aggregate-byte and scanner-memory budgets, cap stderr at 64 KiB, and
+  terminate and fall back to partial inspection when a bound is exhausted.

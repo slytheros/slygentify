@@ -1,0 +1,25 @@
+active: true
+derived: false
+header: |
+  Inspection scope tests
+level: 1.14
+links:
+- REQ014: yg9IL8Wj0hONrbEafjobqy_069cc7NJ5nwnpMwCpXbY=
+normative: true
+ref: ''
+references:
+- keyword: TST014
+  path: tests/test_git_tracking.py
+  type: file
+- keyword: TST014
+  path: tests/test_scan_foundation.py
+  type: file
+reviewed: Kor57_giTIACPOXhGqXGtCrXv5EnoDLTIltDFbs-54M=
+text: |
+  Verify Gitignore precedence and negation; malformed Gitignore rules return an
+  explicit partial result while inspection continues; sensitive and built-in exclusions;
+  opaque nested repositories; and fail-closed invalid root configuration. Verify tracked
+  ignored manifests and their directory prefixes are
+  retained without admitting untracked ignored siblings, hard boundaries remain
+  authoritative, Git output is byte-preserving and strictly validated, and unavailable
+  lookup returns the stable repository-wide partial diagnostic and skipped reason.

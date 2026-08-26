@@ -1,0 +1,26 @@
+active: true
+derived: false
+header: |
+  Resource budget tests
+level: 1.13
+links:
+- REQ013: sFSVNkd0eQ_Es7Xz7SBby8_Ix1zJBGuh--7kuIbkZhc=
+normative: true
+ref: ''
+references:
+- keyword: TST013
+  path: tests/test_git_tracking.py
+  type: file
+- keyword: TST013
+  path: tests/test_scan_foundation.py
+  type: file
+- keyword: TST013
+  path: tests/test_scan_scaling.py
+  type: file
+reviewed: a-ODFctKHSfbTsqjKk8frbcVoOa_lAkqBTVAgcbkpOE=
+text: |
+  Verify inspection budgets stop traversal, detection, normalization, and canonical result
+  preparation safely, produce an explicit partial result when applicable, and remain
+  deterministic for deterministic work limits. Verify Git
+  tracked-path lookup enforces its deadline, stdout, stderr, aggregate-byte, and
+  scanner-memory bounds and discards the complete lookup on exhaustion.

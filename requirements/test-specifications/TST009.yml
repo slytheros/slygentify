@@ -1,0 +1,18 @@
+active: true
+derived: false
+header: |
+  Contribution control-plane tests
+level: 1.9
+links:
+- REQ009: ML-UGP8Zp5ZiUJ1YcK6-A-FZiEr6Bto5U_iIVg2BPjs=
+normative: true
+ref: ''
+references:
+- keyword: TST009
+  path: tests/test_repository_quality.py
+  type: file
+reviewed: ow-xIrQXGDu4W6wc6gea6hrDt0e4kUwJo5-RQCIeVQk=
+text: |
+  Verify that contribution, issue, pull-request, and ADR artifacts exist with portable
+  metadata and cover readiness, completion, traceability, effects, security, compatibility,
+  documentation, decisions, and human governance gates.

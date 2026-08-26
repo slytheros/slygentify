@@ -1,0 +1,19 @@
+active: true
+derived: false
+header: |
+  Static Python CI tests
+level: 1.23
+links:
+- REQ023: Jvq-L6xBEiegKIvCxLuYviJ0In6RIqPLdpcRI1EVTK0=
+normative: true
+ref: ''
+references:
+- keyword: TST023
+  path: tests/test_python_inspection.py
+  type: file
+reviewed: pq8BL-8j5WlZ9iG0ClquB50GkXL70T2RftW_Ew_EYoM=
+text: |
+  Verify literal and expression-only Gitea and GitHub run steps, scalar, object-axis, and
+  include setup-python matrices with exact locators, literal checkout ownership, GitLab
+  command fields and local includes, external and cyclic include boundaries, invalid YAML,
+  attribution, safe escaping, and credential-like value redaction.

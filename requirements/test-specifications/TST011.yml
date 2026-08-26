@@ -1,0 +1,23 @@
+active: true
+derived: false
+header: |
+  Local discovery effect tests
+level: 1.11
+links:
+- REQ011: MrrtM4dE4qXl1dqBlWw4C7_wekHiMbvUmVUM7aX5d9M=
+normative: true
+ref: ''
+references:
+- keyword: TST011
+  path: tests/test_git_tracking.py
+  type: file
+- keyword: TST011
+  path: tests/test_scan_foundation.py
+  type: file
+reviewed: SDkTrg4Ob8kEb9U2W8nuFEE--J-KdGZIpLasPz4Quzc=
+text: |
+  Verify containing-root discovery, safe root-marker failures, deterministic local
+  results, and absence of repository writes, discovered-command execution, and network
+  access. Verify automatic and explicit Git selection, explicit repository-contained
+  authorization, automatic repository-contained rejection, exact bounded invocation,
+  sanitized environment, executable identity revalidation, and recoverable failures.

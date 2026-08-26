@@ -1,0 +1,21 @@
+active: true
+derived: false
+header: |
+  Static Python CI evidence
+level: 1.23
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ023
+  path: src/slygentify/_scan/detectors/python.py
+  type: file
+reviewed: O7WaPZTxU2Z4qVj28vn-Lg5G-VRyzBcQ1URCyFoC1i4=
+text: |
+  Slygentify shall report attributable literal commands and Python runtime selections
+  from approved Gitea, GitHub, and GitLab static workflow evidence. It shall retain exact
+  locators for supported static scalar, object-axis, and include-matrix selections and
+  use literal checkout paths and repository declarations to avoid attributing external
+  workspaces to a Python component. Expression-only commands and ambiguous ownership
+  shall remain unknown or unattributed. It shall resolve only bounded in-root GitLab local
+  includes and never fetch or execute workflow content.

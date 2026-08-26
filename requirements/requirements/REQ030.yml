@@ -1,0 +1,28 @@
+active: true
+derived: false
+header: |
+  Mixed component facets and relationships
+level: '1.30'
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ030
+  path: src/slygentify/models.py
+  type: file
+- keyword: REQ030
+  path: src/slygentify/_scan/normalization.py
+  type: file
+- keyword: REQ030
+  path: src/slygentify/_presentation.py
+  type: file
+reviewed: CEaQe-XwpdDXJyd0LBzrlgG-NFwbm-C6-ic8bZAtbos=
+text: |
+  Slygentify shall retain one stable path-derived component identity per repository
+  root while preserving every detected ecosystem facet. A component with multiple
+  facets shall use the summary ecosystem `mixed`. Scan results shall expose
+  a closed component role of `unknown` or inferred `auxiliary`, where auxiliary is based
+  only on the approved exact path-segment conventions and retains the component's
+  manifest evidence in an inferred finding. Scan results shall expose
+  deterministic, evidence-backed containment and workspace-membership relationships
+  without silently selecting among overlapping workspace parents.

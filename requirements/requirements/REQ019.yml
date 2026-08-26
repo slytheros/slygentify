@@ -1,0 +1,46 @@
+active: true
+derived: false
+header: |
+  Scan command presentation and exit behavior
+level: 1.19
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ019
+  path: src/slygentify/cli.py
+  type: file
+- keyword: REQ019
+  path: src/slygentify/_presentation.py
+  type: file
+- keyword: REQ019
+  path: src/slygentify/_glossary.py
+  type: file
+reviewed: Raiur0Ula8vOf5PE4yhjd5yHkp88VOTKAMyRjrVtOHk=
+text: |
+  `slygentify scan [PATH] --format text|json [--git-executable PATH]` shall use
+  `scan_repository` as its scan operation, forward the optional executable path without
+  adding a configuration or environment alias, and present the same result as plain text
+  or the canonical JSON document.
+  Default text shall identify the resolved root, completion within the currently
+  supported inspection scope, supported ecosystems, and every component, relationship,
+  finding, evidence record, diagnostic, and skipped scope in a component-first,
+  deterministic hierarchy. Component content shall be organized as What it is, How to
+  work on it, Architecture, Automation, and Needs attention; repository-wide workflows,
+  primary component navigation and secondary auxiliary-component navigation shall remain
+  distinct without omitting canonical component records,
+  actionable attention, and routine inspection boundaries shall remain separately
+  visible; and every evidence record shall appear
+  in a final Sources & provenance appendix. Findings shall retain literal claim
+  classifications and inspectable source citations. Repeated diagnostics and skipped
+  scopes may be grouped for navigation but no canonical record may be omitted or merged.
+  A compact claim-term guide shall explain classifications without adding another report
+  branch. This comprehensive
+  default is a scan-specific exception to the normally concise CLI default so that the
+  non-interactive human report remains lossless after removal of `--verbose`.
+  JSON shall remain the full
+  canonical document; `--interactive` shall be a usage failure with JSON or without an
+  interactive input and output terminal.
+  Complete and honest partial results shall exit 0; operational failures shall write
+  only an error to standard error and exit 1; Typer usage failures shall remain exit 2;
+  JSON success shall write only the canonical document to standard output.

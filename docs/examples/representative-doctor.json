@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "producer_version": "0.1.0",
+  "completion": "partial",
+  "repository": {
+    "id": "repository_c140010bf267fcd92f5cf59a9250459d63078cb45b41e6451fef20e19c9fd170",
+    "root": ".",
+    "kind": "git",
+    "evidence_ids": [
+      "evidence_991841db58f5fed6ab9e290f5d9c0fb15a68876d8448625c8b7b494d84ba27fd"
+    ]
+  },
+  "evidence": [
+    {
+      "id": "doctor-evidence_3d174a30bb0de8ba2e92e619181ef64724502b096643c98513ff0e48652c9d62",
+      "source_kind": "doctor-provenance",
+      "location": "AGENTS.md",
+      "observation": "No valid managed provenance record owns root agent guidance.",
+      "verification_method": "deterministic provenance comparison"
+    },
+    {
+      "id": "doctor-evidence_c7e7b624636d78676f9818ae20a283f6259bd0fcd68c4e472c14b25f83896f7a",
+      "source_kind": "doctor-provenance",
+      "location": ".",
+      "observation": "Fresh inspection reached a documented safety, policy, or resource boundary.",
+      "verification_method": "deterministic provenance comparison"
+    },
+    {
+      "id": "evidence_991841db58f5fed6ab9e290f5d9c0fb15a68876d8448625c8b7b494d84ba27fd",
+      "source_kind": "vcs-marker",
+      "location": ".git",
+      "observation": "Git repository marker is present.",
+      "verification_method": "non-following metadata inspection"
+    },
+    {
+      "id": "javascript-inspect-v1_31e49b927e3d7d4f3ff116325f47b4da0aeb998292ebc404b8d16291b2247124",
+      "source_kind": "manifest",
+      "location": "packages/broken/package.json",
+      "observation": "A package.json file is present but its content could not be verified.",
+      "verification_method": "strict bounded static inspection"
+    },
+    {
+      "id": "javascript-inspect-v1_4b49f71ea64fa5b58f042efdb80b023dcc06ecabc5e1e57131806ba88866ea37",
+      "source_kind": "package-metadata",
+      "location": "examples/demo/package.json",
+      "locator": "/private",
+      "observation": "JavaScript package field private is declared.",
+      "verification_method": "strict bounded static inspection"
+    },
+    {
+      "id": "javascript-inspect-v1_4d935232f882e7bd4faa8da820a1ad771089a405dde078f396bb394bbb2eff64",
+      "source_kind": "tool-configuration",
+      "location": "packages/web/tsconfig.json",
+      "observation": "typescript configuration-location evidence is present.",
+      "verification_method": "strict bounded static inspection"
+    },
+    {
+      "id": "javascript-inspect-v1_60dac4cf8df36b0febd446f750313cc2628d015da3caebd8bcb8b6ee21d35150",
+      "source_kind": "manifest",
+      "location": "examples/demo/package.json",
+      "observation": "A valid package.json declares a JavaScript or TypeScript package boundary.",
+      "verification_method": "strict bounded static inspection"
+    },
+    {
+      "id": "javascript-inspect-v1_67e7ba6031ed359f7b199eb76d86c71b845cfa2124e30aab2fe5bc271fcd97fe",
+      "source_kind": "package-metadata",
+      "location": "packages/web/package.json",
+      "locator": "/name",
+      "observation": "JavaScript package field name is declared.",
+      "verification_method": "strict bounded static inspection"
+    },
+    {
+      "id": "javascript-inspect-v1_746f8048038ac3ec4302cba65622a927425d7dd07a5fdfcfb8bd49554250e33e",
+      "source_kind": "package-metadata",
+      "location": "examples/demo/package.json",
+      "locator": "/name",
+      "observation": "JavaScript package field name is declared.",
+      "verification_method": "strict bounded static inspection"
+    },
+    {
+      "id": "javascript-inspect-v1_b38f8268b069cc5c6734b12376baeb4767e8386e34a89aa2f04fd70be5cee782",
+      "source_kind": "runtime",
+      "location": "packages/web/package.json",
+      "locator": "/engines/node",
+      "observation": "A Node.js or npm runtime declaration is present.",
+      "verification_method": "strict bounded static inspection"
+    },
+    {
+      "id": "javascript-inspect-v1_d404558ba10e04da97dcbf0d341fad2f0df424112cd3649c3494338ce0716552",
+      "source_kind": "package-metadata",
+      "location": "packages/web/package.json",
+      "locator": "/private",
+      "observation": "JavaScript package field private is declared.",
+      "verification_method": "strict bounded static inspection"
+    },
+    {
+      "id": "javascript-inspect-v1_e1acf2a36795e8fbf6a4886462119ab8539ca35e4ab6d9031a3d400e0f361eb2",
+      "source_kind": "manifest",
+      "location": "packages/web/package.json",
+      "observation": "A valid package.json declares a JavaScript or TypeScript package boundary.",
+      "verification_method": "strict bounded static inspection"
+    },
+    {
+      "id": "python-inspect-v1_746aa4662542bcce8419485fb8712fc2e702c8cc6b2db2a2038406bdeb3afe99",
+      "source_kind": "manifest",
+      "location": "pyproject.toml",
+      "locator": "project",
+      "observation": "Python manifest table project is declared.",
+      "verification_method": "strict bounded static inspection"
+    },
+    {
+      "id": "python-inspect-v1_ac73a397a4d31388609b129ac9d2a8e101c11b4c0692e74680b9ce389fce5188",
+      "source_kind": "tool-configuration",
+      "location": "pyproject.toml",
+      "locator": "tool.pytest",
+      "observation": "pytest configuration evidence is present.",
+      "verification_method": "strict bounded static inspection"
+    },
+    {
+      "id": "python-inspect-v1_c59fa8d211e876059a5692df1c9f60111562597e54df9962c5d43fab9607f60c",
+      "source_kind": "runtime",
+      "location": "pyproject.toml",
+      "locator": "project.requires-python",
+      "observation": "A Python runtime declaration is present.",
+      "verification_method": "strict bounded static inspection"
+    },
+    {
+      "id": "python-inspect-v1_d51a27db0231a482c87f6c1ba5de135bf181ccc9c21b71dd511f327577487635",
+      "source_kind": "metadata",
+      "location": "pyproject.toml",
+      "locator": "project.name",
+      "observation": "Python project metadata field name is declared.",
+      "verification_method": "strict bounded static inspection"
+    }
+  ],
+  "diagnostics": [
+    {
+      "id": "doctor-diagnostic_31edd7d7e254dd3017de40547331252ea855b6fce9fa148e10dd51a9a930a515",
+      "code": "doctor.guidance.unmanaged",
+      "severity": "info",
+      "classification": "unknown",
+      "subject_id": "repository_c140010bf267fcd92f5cf59a9250459d63078cb45b41e6451fef20e19c9fd170",
+      "location": "AGENTS.md",
+      "problem": "Root agent guidance is unmanaged or has not been initialized by Slygentify.",
+      "effect": "Doctor cannot establish whether the guidance reflects current repository knowledge.",
+      "remediation": "Leave human-owned guidance unchanged or adopt it through a reviewed initialization flow.",
+      "evidence_ids": [
+        "doctor-evidence_3d174a30bb0de8ba2e92e619181ef64724502b096643c98513ff0e48652c9d62"
+      ]
+    },
+    {
+      "id": "doctor-diagnostic_94b268ed49827fbeff2931a6d4a9e89b5582acdf7129fbc1ca0193dff83dee14",
+      "code": "doctor.inspection.partial",
+      "severity": "warning",
+      "classification": "unknown",
+      "subject_id": "repository_c140010bf267fcd92f5cf59a9250459d63078cb45b41e6451fef20e19c9fd170",
+      "location": ".",
+      "problem": "Fresh repository inspection is partial.",
+      "effect": "Doctor cannot claim exhaustive drift absence outside the reported inspection boundary.",
+      "remediation": "Inspect omitted boundaries or explicitly raise the applicable limit and rerun doctor.",
+      "evidence_ids": [
+        "doctor-evidence_c7e7b624636d78676f9818ae20a283f6259bd0fcd68c4e472c14b25f83896f7a"
+      ]
+    }
+  ],
+  "skipped_scopes": []
+}

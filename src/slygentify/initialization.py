@@ -1,0 +1,350 @@
+"""Planning and safe application of root AGENTS.md initialization."""
+
+from __future__ import annotations
+
+import hashlib
+import os
+import stat
+import tempfile
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Literal
+
+from slygentify._generation import generate_agents_document
+from slygentify._provenance import (
+    Artifact,
+    StateError,
+    apply_state_write,
+    dump_state_json,
+    load_state_json,
+    plan_state_write,
+    state_from_scan,
+)
+from slygentify._repository import (
+    AGENTS_FILENAME,
+    RepositoryPathError,
+)
+from slygentify._repository import (
+    find_git_root as _find_git_root,
+)
+from slygentify.traceability import implements
+
+OwnershipState = Literal[
+    "new",
+    "clean-managed",
+    "recoverable-state",
+    "unmanaged",
+    "human-edited",
+    "missing-managed-artifact",
+    "invalid-state",
+    "unsafe-entry",
+]
+ArtifactAction = Literal["create", "replace", "no_change"]
+
+
+class InitializationError(Exception):
+    """A safe, actionable initialization failure."""
+
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        *,
+        changed_locations: tuple[str, ...] = (),
+        recovery: str = "Run slygentify init --dry-run to review the current state.",
+    ) -> None:
+        super().__init__(message)
+        self.code = code
+        self.changed_locations = changed_locations
+        self.recovery = recovery
+
+
+@dataclass(frozen=True, slots=True)
+class InitializationDiagnostic:
+    """A stable, actionable initialization diagnostic."""
+
+    code: str
+    message: str
+    recovery: str
+
+
+@dataclass(frozen=True, slots=True)
+class InitializationPlan:
+    """Exact, reviewable bytes and ownership state for one initialization."""
+
+    repository_root: Path
+    ownership: OwnershipState
+    can_apply: bool
+    replace_requested: bool
+    agents_action: ArtifactAction
+    state_action: ArtifactAction
+    agents_markdown: str
+    state_json: bytes
+    diagnostics: tuple[InitializationDiagnostic, ...]
+    warnings: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class InitializationResult:
+    """The observable result of applying one initialization plan."""
+
+    repository_root: Path
+    ownership: OwnershipState
+    agents_action: ArtifactAction
+    state_action: ArtifactAction
+    changed_locations: tuple[str, ...]
+
+
+@implements("REQ001")
+def find_git_root(path: Path) -> Path:
+    """Return the nearest Git root containing *path* without invoking Git."""
+    try:
+        return _find_git_root(path)
+    except RepositoryPathError as error:
+        code = (
+            "initialization.no-repository"
+            if str(error).startswith("no Git")
+            else "initialization.path"
+        )
+        raise InitializationError(code, str(error)) from None
+
+
+def _regular(path: Path) -> bool:
+    metadata = path.lstat()
+    return stat.S_ISREG(metadata.st_mode) and not stat.S_ISLNK(metadata.st_mode)
+
+
+def _action(path: Path, data: bytes) -> ArtifactAction:
+    if not os.path.lexists(path):
+        return "create"
+    if not _regular(path):
+        raise OSError("unsafe entry")
+    return "no_change" if path.read_bytes() == data else "replace"
+
+
+def _diagnostic(code: str, message: str, recovery: str) -> InitializationDiagnostic:
+    return InitializationDiagnostic(code, message, recovery)
+
+
+def _can_replace(ownership: OwnershipState, requested: bool) -> bool:
+    return requested and ownership in {"unmanaged", "human-edited", "missing-managed-artifact"}
+
+
+@implements("REQ002", "REQ003", "REQ004", "REQ005", "REQ038", "REQ039", "REQ044")
+def plan_initialization(
+    path: str | os.PathLike[str] = ".", *, replace: bool = False
+) -> InitializationPlan:
+    """Scan, render, and classify a reviewable initialization operation without writing."""
+    from slygentify._scan import _scan_foundation, _ScanFoundationError
+
+    try:
+        execution = _scan_foundation(Path(path))
+    except (_ScanFoundationError, OSError, TypeError, ValueError) as error:
+        raise InitializationError("initialization.scan", str(error)) from None
+    root = execution.root
+    agents = root / AGENTS_FILENAME
+    state_target = root / ".slygentify" / "state.json"
+    guidance = generate_agents_document(
+        execution.result,
+        max_bytes=execution.configuration.max_agents_bytes,
+        max_component_entries=execution.configuration.max_component_entries,
+    )
+    agents_data = guidance.markdown.encode("utf-8")
+    preliminary_state = state_from_scan(
+        execution.result,
+        execution.configuration,
+        execution.content_fingerprints,
+    )
+    input_ids = {item.id for item in preliminary_state.inputs}
+    artifact = Artifact(
+        AGENTS_FILENAME,
+        hashlib.sha256(agents_data).hexdigest(),
+        tuple(item for item in guidance.evidence_ids if item in input_ids),
+    )
+    state = state_from_scan(
+        execution.result,
+        execution.configuration,
+        execution.content_fingerprints,
+        artifacts=(artifact,),
+    )
+    state_data = dump_state_json(state)
+    diagnostics: list[InitializationDiagnostic] = []
+    ownership: OwnershipState
+    try:
+        if os.path.lexists(agents) and not _regular(agents):
+            raise OSError("AGENTS.md is unsafe")
+        parent = state_target.parent
+        if os.path.lexists(parent) and (not parent.is_dir() or parent.is_symlink()):
+            raise OSError("provenance directory is unsafe")
+        existing_state = None
+        if os.path.lexists(state_target):
+            if not _regular(state_target):
+                raise OSError("provenance state is unsafe")
+            existing_state = load_state_json(state_target.read_bytes())
+        if existing_state is None and not os.path.lexists(agents):
+            ownership = "new"
+        elif existing_state is None:
+            ownership = "recoverable-state" if agents.read_bytes() == agents_data else "unmanaged"
+        else:
+            recorded = next(
+                (item for item in existing_state.artifacts if item.location == AGENTS_FILENAME),
+                None,
+            )
+            if recorded is None:
+                ownership = "unmanaged"
+            elif not os.path.lexists(agents):
+                ownership = "missing-managed-artifact"
+            else:
+                current = agents.read_bytes()
+                digest = hashlib.sha256(current).hexdigest()
+                if digest == recorded.sha256:
+                    ownership = "clean-managed"
+                elif current == agents_data:
+                    ownership = "recoverable-state"
+                else:
+                    ownership = "human-edited"
+        agents_action = _action(agents, agents_data)
+        state_action = plan_state_write(root, state).action
+    except StateError:
+        ownership = "invalid-state"
+        agents_action = "replace" if os.path.lexists(agents) else "create"
+        state_action = "replace" if os.path.lexists(state_target) else "create"
+        diagnostics.append(
+            _diagnostic(
+                "initialization.invalid-state",
+                "Initialization refused because provenance state is malformed or unsupported.",
+                "Inspect and repair the state manually; automatic replacement is unavailable.",
+            )
+        )
+    except OSError:
+        ownership = "unsafe-entry"
+        agents_action = "replace" if os.path.lexists(agents) else "create"
+        state_action = "replace" if os.path.lexists(state_target) else "create"
+        diagnostics.append(
+            _diagnostic(
+                "initialization.unsafe-entry",
+                "Initialization refused because an artifact or provenance target is unsafe.",
+                "Inspect the entry manually; symbolic links and non-regular targets are never replaced.",
+            )
+        )
+    can_apply = ownership in {"new", "clean-managed", "recoverable-state"} or _can_replace(
+        ownership, replace
+    )
+    if not can_apply and not diagnostics:
+        diagnostics.append(
+            _diagnostic(
+                f"initialization.{ownership}",
+                f"Ordinary initialization refuses {ownership.replace('-', ' ')} AGENTS.md content.",
+                "Review the dry-run and use --replace only after preserving any content you need.",
+            )
+        )
+    return InitializationPlan(
+        root,
+        ownership,
+        can_apply,
+        replace,
+        agents_action,
+        state_action,
+        guidance.markdown,
+        state_data,
+        tuple(diagnostics),
+        (("slygentify.toml raises or disables an AGENTS.md byte or component-entry limit."),)
+        if execution.configuration.init_relaxed
+        else (),
+    )
+
+
+def _write_agents(
+    root: Path, data: bytes, action: ArtifactAction, expected_sha256: str | None
+) -> bool:
+    target = root / AGENTS_FILENAME
+    if action == "no_change":
+        return False
+    if os.path.lexists(target):
+        if not _regular(target):
+            raise InitializationError("initialization.concurrent-change", "AGENTS.md became unsafe")
+        if expected_sha256 != hashlib.sha256(target.read_bytes()).hexdigest():
+            raise InitializationError(
+                "initialization.concurrent-change", "AGENTS.md changed concurrently"
+            )
+    elif action == "replace":
+        raise InitializationError("initialization.concurrent-change", "AGENTS.md was removed")
+    descriptor, temporary_name = tempfile.mkstemp(prefix=".agents-", dir=root)
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, target)
+    except OSError as error:
+        temporary.unlink(missing_ok=True)
+        raise InitializationError(
+            "initialization.write-failed", "Unable to write AGENTS.md"
+        ) from error
+    return True
+
+
+@implements("REQ003", "REQ005", "REQ039")
+def apply_initialization(plan: InitializationPlan) -> InitializationResult:
+    """Revalidate and atomically apply one applicable initialization plan."""
+    if not isinstance(plan, InitializationPlan):
+        raise InitializationError("initialization.plan", "initialization plan is invalid")
+    current = plan_initialization(plan.repository_root, replace=plan.replace_requested)
+    if (
+        not current.can_apply
+        or current.agents_markdown != plan.agents_markdown
+        or current.state_json != plan.state_json
+        or current.agents_action != plan.agents_action
+        or current.state_action != plan.state_action
+    ):
+        raise InitializationError(
+            "initialization.concurrent-change",
+            "Repository state changed after planning; no files were changed.",
+        )
+    changed: list[str] = []
+    try:
+        agents_target = current.repository_root / AGENTS_FILENAME
+        expected_agents = (
+            None
+            if not os.path.lexists(agents_target)
+            else hashlib.sha256(agents_target.read_bytes()).hexdigest()
+        )
+        state = load_state_json(current.state_json)
+        state_plan = plan_state_write(current.repository_root, state)
+    except (OSError, StateError) as error:
+        raise InitializationError(
+            "initialization.concurrent-change", "Repository state changed after planning."
+        ) from error
+    if state_plan.action != current.state_action:
+        raise InitializationError(
+            "initialization.concurrent-change", "Provenance state changed after planning."
+        )
+    if _write_agents(
+        current.repository_root,
+        current.agents_markdown.encode("utf-8"),
+        current.agents_action,
+        expected_agents,
+    ):
+        changed.append(AGENTS_FILENAME)
+    try:
+        if apply_state_write(state_plan):
+            changed.append(".slygentify/state.json")
+    except (StateError, OSError) as error:
+        if changed:
+            raise InitializationError(
+                "initialization.partial-write",
+                "AGENTS.md changed but provenance state did not.",
+                changed_locations=tuple(changed),
+                recovery="Run slygentify init --dry-run again before attempting recovery.",
+            ) from error
+        raise InitializationError(
+            "initialization.write-failed", "Unable to write provenance state"
+        ) from error
+    return InitializationResult(
+        current.repository_root,
+        current.ownership,
+        current.agents_action,
+        current.state_action,
+        tuple(changed),
+    )

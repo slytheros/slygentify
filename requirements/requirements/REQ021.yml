@@ -1,0 +1,26 @@
+active: true
+derived: false
+header: |
+  Python manager workspace and runtime inspection
+level: 1.21
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ021
+  path: src/slygentify/_scan/detectors/python.py
+  type: file
+reviewed: n_9cZHzKU1UZKZvmJPa8k7xHljrNCY7tIuAQWHFxEZg=
+text: |
+  Slygentify shall report approved uv, Poetry, pip-style, workspace, lock, runtime,
+  and install-time entry-point declarations independently with provenance and without
+  selecting a preferred manager, resolving locks, or calculating an effective runtime.
+  A valid uv workspace declaration shall qualify its root and bind same-root manager
+  evidence even when the root does not declare a package. Constraints and recognizable
+  generated requirements output shall remain manager evidence without being reported as
+  direct component dependencies.
+  Coexisting manager configuration or requirements evidence shall not be reported as a
+  conflict; a manager conflict requires competing lock families at the same root and
+  shall identify their source paths and a next action.
+  It shall distinguish supported-range constraints from interpreter selections and
+  shall not report compatible or incomparable values as runtime conflicts.

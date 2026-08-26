@@ -1,0 +1,29 @@
+active: true
+derived: false
+header: |
+  Interactive scan explorer tests
+level: 1.33
+links:
+- REQ033: s8BvJmGGVchlcMjCCcwE0LW-12qR-MGz53k8DaAwlpQ=
+normative: true
+ref: ''
+references:
+- keyword: TST033
+  path: tests/test_scan_explorer.py
+  type: file
+- keyword: TST033
+  path: tests/test_scan_cli.py
+  type: file
+reviewed: 7zo7mwe8iiMQA8Nk2z6lzU76Zz5nwTmbaKAIBAIRqqw=
+text: |
+  Exercise the explorer headlessly at narrow and wide terminal sizes. Verify that the
+  scanning state renders before a controlled scan completes and that scan failures restore
+  controlled CLI error behavior. Verify primary and auxiliary component navigation,
+  keyboard expand, collapse, navigation, search, clearing, type and classification filters,
+  human-first record details, evidence resolution, collapsed keyboard-accessible raw JSON,
+  glossary opening and dismissal, and quit behavior. Verify user-task grouping, counted
+  empty structural groups without expand controls, record leaves without disclosure icons,
+  a collapsed provenance area, matching descendants retain their ancestors, collapsed
+  high-cardinality groups are populated lazily, and non-TTY invocation fails before scan
+  work. Confirm the explorer preserves the unchanged normalized result and does not add
+  repository writes, discovered-command execution, or network effects.

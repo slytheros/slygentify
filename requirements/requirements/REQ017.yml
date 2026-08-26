@@ -1,0 +1,28 @@
+active: true
+derived: false
+header: |
+  Supported repository scan interface
+level: 1.17
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ017
+  path: src/slygentify/_git_tracking.py
+  type: file
+- keyword: REQ017
+  path: src/slygentify/api.py
+  type: file
+- keyword: REQ017
+  path: src/slygentify/_errors.py
+  type: file
+reviewed: iuhrizMgMLZ18_y-Tobx7ke1hzcWRWIMbKnR-jEC_lQ=
+text: |
+  Slygentify shall expose `scan_repository(path=".", *, git_executable=None)` and stable
+  `ScanError` and `ScanValidationError` types directly from `slygentify`. The optional
+  string or path-like Git executable shall be forwarded unchanged, expanded and resolved
+  relative to the caller's current directory, and override PATH discovery. Invalid
+  explicit input shall raise `ScanError` before traversal without fallback. A successful
+  call shall return the normalized local, read-only `ScanResult`; lookup failures after
+  valid selection shall remain successful partial results. No configuration or
+  environment alias shall select the override.

@@ -1,0 +1,30 @@
+active: true
+derived: false
+header: |
+  Versioned evidence-closed scan projections
+level: 1.43
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ042
+  path: src/slygentify/_projection.py
+  type: file
+- keyword: REQ042
+  path: src/slygentify/_projection_serialization.py
+  type: file
+- keyword: REQ042
+  path: src/slygentify/models.py
+  type: file
+reviewed: z-1Q_LcZXPp1MzUrO7YBPtwd-eK98vB-DRDWnIOu9Kg=
+text: |
+  Slygentify shall expose immutable scan-projection-v1 values and named validation,
+  projection, canonical JSON, and packaged JSON Schema interfaces. A projection shall
+  identify its source scan and requested scope, select the deepest containing component,
+  expose explicit root-to-parent ancestor, owner, and included direct-child component
+  references for iterative one-hop navigation, provide top-level navigation when
+  unmatched, preserve requested section order canonically, include complete record-plus-
+  evidence units, report deterministic output-limit omissions, and never deserialize as
+  a complete ScanResult. The default canonical
+  JSON including its final newline shall not exceed 8 KiB; if required metadata and
+  owning context cannot fit, projection shall fail with actionable guidance.

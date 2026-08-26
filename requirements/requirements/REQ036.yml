@@ -1,0 +1,23 @@
+active: true
+derived: false
+header: |
+  Deterministic provenance state
+level: 1.36
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ036
+  path: src/slygentify/_provenance.py
+  type: file
+- keyword: REQ036
+  path: src/slygentify/_scan/orchestration.py
+  type: file
+reviewed: KU2mrUPYA8harg_CY_tYKMM071KhxNUVZ6wFbPGGwgY=
+text: |
+  Slygentify shall validate and serialize schema-major-1 provenance state as
+  deterministic UTF-8 JSON containing only safe repository-relative metadata, hashes,
+  derivations, artifacts, completion, and skipped scope records. Inputs shall retain
+  digests for safely read evidence files, and every derivation and generated-artifact
+  evidence relationship shall resolve to those captured inputs without retaining source
+  content.

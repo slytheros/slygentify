@@ -1,0 +1,20 @@
+active: true
+derived: false
+header: |
+  Root scan configuration
+level: 1.35
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ035
+  path: src/slygentify/_configuration.py
+  type: file
+- keyword: REQ035
+  path: src/slygentify/_scan/orchestration.py
+  type: file
+reviewed: ZvFcqxcWexVUleGzs8Gc7HpqoyI4t0KigcD2S3MVlYg=
+text: |
+  Slygentify shall load at most one strict root slygentify.toml before traversal,
+  apply its valid ignore, component, and resource-limit declarations without weakening
+  hard safety boundaries, and fail before traversal without writes when it is invalid.

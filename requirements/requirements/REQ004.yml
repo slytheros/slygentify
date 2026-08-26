@@ -1,0 +1,19 @@
+active: true
+derived: false
+header: |
+  Reviewable initialization
+level: 1.4
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ004
+  path: src/slygentify/initialization.py
+  type: file
+- keyword: REQ004
+  path: src/slygentify/cli.py
+  type: file
+reviewed: rjDQbuZhpnVthvw0W9RnrJRHvZYPO-fcROjgUcuj2P4=
+text: |
+  Slygentify init shall support a dry-run that validates preconditions and displays the
+  exact proposed AGENTS.md and provenance state without modifying the repository.

@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "repositories": [
+    {"id": "flask", "category": "python", "source_url": "https://github.com/pallets/flask.git", "commit": "2a8a38b051fc248865730bf3511bf2e2ea325e81", "license": "BSD-3-Clause", "frameworks": ["flask"]},
+    {"id": "fastapi", "category": "python", "source_url": "https://github.com/fastapi/fastapi.git", "commit": "a1fa70d4237d50aae6586a0d9b229df583463d21", "license": "MIT", "frameworks": ["fastapi"]},
+    {"id": "httpx", "category": "python", "source_url": "https://github.com/encode/httpx.git", "commit": "b5addb64f0161ff6bfe94c124ef76f6a1fba5254", "license": "BSD-3-Clause", "frameworks": []},
+    {"id": "pydantic", "category": "python", "source_url": "https://github.com/pydantic/pydantic.git", "commit": "02c5c975fa9f1bf4f094834487786d3148987fee", "license": "MIT", "frameworks": []},
+    {"id": "pytest", "category": "python", "source_url": "https://github.com/pytest-dev/pytest.git", "commit": "68308aa288e00ff84880572ed9b3590f6cd7d470", "license": "MIT", "frameworks": []},
+    {"id": "express", "category": "javascript-typescript", "source_url": "https://github.com/expressjs/express.git", "commit": "a3714473feb3d2908add734d340e7755fd85e0a3", "license": "MIT", "frameworks": ["express"]},
+    {"id": "fastify", "category": "javascript-typescript", "source_url": "https://github.com/fastify/fastify.git", "commit": "d693f43d890f07a8852b4737b048ed76458139a2", "license": "MIT", "frameworks": ["fastify"]},
+    {"id": "vue-core", "category": "javascript-typescript", "source_url": "https://github.com/vuejs/core.git", "commit": "a2b40db9a83b36ed9da3a16403cf8f040262d73f", "license": "MIT", "frameworks": ["vue"]},
+    {"id": "axios", "category": "javascript-typescript", "source_url": "https://github.com/axios/axios.git", "commit": "e6824eec5fcf9da467a9792724396badc490c469", "license": "MIT", "frameworks": []},
+    {"id": "prettier", "category": "javascript-typescript", "source_url": "https://github.com/prettier/prettier.git", "commit": "ca49e13b3e30303de6a22aeacdbe7e31139f3b75", "license": "MIT", "frameworks": []},
+    {"id": "full-stack-fastapi-template", "category": "mixed", "source_url": "https://github.com/fastapi/full-stack-fastapi-template.git", "commit": "75b402644329e53b2c9c862181b47003ad5fc914", "license": "MIT", "frameworks": ["fastapi"]},
+    {"id": "cookiecutter-django", "category": "mixed", "source_url": "https://github.com/cookiecutter/cookiecutter-django.git", "commit": "5494104be34b25f2b687ff0a0e813368a51490f5", "license": "BSD-3-Clause", "frameworks": ["django"]},
+    {"id": "jupyterlab", "category": "mixed", "source_url": "https://github.com/jupyterlab/jupyterlab.git", "commit": "4182bc53c35b1c883d66be322e875c7405a22567", "license": "BSD-3-Clause", "frameworks": []},
+    {"id": "gradio", "category": "mixed", "source_url": "https://github.com/gradio-app/gradio.git", "commit": "3f52f1737f1d68f6e1cda7bb8b498da9e4111799", "license": "Apache-2.0", "frameworks": []},
+    {"id": "dash", "category": "mixed", "source_url": "https://github.com/plotly/dash.git", "commit": "c06fbe7cbed7b9707c751b2da1ddf64f05f8c856", "license": "MIT", "frameworks": []},
+    {"id": "gitea", "category": "generic-unsupported", "source_url": "https://github.com/go-gitea/gitea.git", "commit": "133a3b85671cb3e46e185eeb35bdf79bd8167e92", "license": "MIT", "frameworks": []},
+    {"id": "github-cli", "category": "generic-unsupported", "source_url": "https://github.com/cli/cli.git", "commit": "0eeec0b92edbe70199f9768522f831d3534f41ad", "license": "MIT", "frameworks": []},
+    {"id": "nlohmann-json", "category": "generic-unsupported", "source_url": "https://github.com/nlohmann/json.git", "commit": "cdf52ae9bef77a0844e02e42df6d2df83a55c4b9", "license": "MIT", "frameworks": []},
+    {"id": "esp-idf", "category": "generic-unsupported", "source_url": "https://github.com/espressif/esp-idf.git", "commit": "08e0d30a74ad0bfd5a34933142b80f45619ee410", "license": "Apache-2.0", "frameworks": []},
+    {"id": "tokio", "category": "generic-unsupported", "source_url": "https://github.com/tokio-rs/tokio.git", "commit": "625954f365727668cb02d04172b34f1149637728", "license": "MIT", "frameworks": []}
+  ]
+}

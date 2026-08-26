@@ -1,0 +1,18 @@
+active: true
+derived: false
+header: |
+  Composed-repository scaling tests
+level: 1.42
+links:
+- REQ041: oE7RbVSK6fyO7wvr_TFDWKpvCs_rerkAusQVAetWW-I=
+normative: true
+ref: ''
+references:
+- keyword: TST041
+  path: tests/test_scan_scaling.py
+  type: file
+reviewed: Pbtvz_eo07JHnUf0rvqtE3VfAc227LRhIb-cOy05vIs=
+text: |
+  Verify a bounded synthetic composed repository retains canonical results while
+  indexed detector and composition operations grow approximately linearly as
+  independent top-level component trees are doubled.

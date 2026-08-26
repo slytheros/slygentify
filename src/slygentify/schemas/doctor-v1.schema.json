@@ -1,0 +1,230 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schemas/doctor-v1.schema.json",
+  "title": "Slygentify doctor result schema major 1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "producer_version",
+    "completion",
+    "repository",
+    "evidence",
+    "diagnostics",
+    "skipped_scopes"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "producer_version": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "completion": {
+      "enum": [
+        "complete",
+        "partial"
+      ]
+    },
+    "repository": {
+      "$ref": "#/$defs/repository"
+    },
+    "evidence": {
+      "type": "array",
+      "maxItems": 100000,
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "maxItems": 100000,
+      "items": {
+        "$ref": "#/$defs/doctorDiagnostic"
+      }
+    },
+    "skipped_scopes": {
+      "type": "array",
+      "maxItems": 100000,
+      "items": {
+        "$ref": "#/$defs/skippedScope"
+      }
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4194304
+    },
+    "stringList": {
+      "type": "array",
+      "maxItems": 100000,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "safePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4194304,
+      "pattern": "^(?:\\.|(?!/)(?![^/]*:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*(?:^|/)\\.(?:/|$))[^/]+(?:/[^/]+)*)$"
+    },
+    "repository": {
+      "type": "object",
+      "required": [
+        "id",
+        "root",
+        "kind",
+        "evidence_ids"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "root": {
+          "$ref": "#/$defs/safePath"
+        },
+        "kind": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "evidence_ids": {
+          "$ref": "#/$defs/stringList"
+        }
+      },
+      "additionalProperties": true
+    },
+    "evidence": {
+      "type": "object",
+      "required": [
+        "id",
+        "source_kind",
+        "location",
+        "observation"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "source_kind": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "location": {
+          "$ref": "#/$defs/safePath"
+        },
+        "locator": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "observation": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "verification_method": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      },
+      "additionalProperties": true
+    },
+    "doctorDiagnostic": {
+      "type": "object",
+      "required": [
+        "id",
+        "code",
+        "severity",
+        "classification",
+        "problem",
+        "effect",
+        "evidence_ids"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "code": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "severity": {
+          "enum": [
+            "info",
+            "warning",
+            "error"
+          ]
+        },
+        "classification": {
+          "enum": [
+            "verified",
+            "inferred",
+            "recommended",
+            "unknown"
+          ]
+        },
+        "subject_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "location": {
+          "$ref": "#/$defs/safePath"
+        },
+        "problem": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "effect": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "remediation": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "evidence_ids": {
+          "$ref": "#/$defs/stringList"
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "subject_id"
+          ]
+        },
+        {
+          "required": [
+            "location"
+          ]
+        }
+      ],
+      "additionalProperties": true
+    },
+    "skippedScope": {
+      "type": "object",
+      "required": [
+        "scope",
+        "reason",
+        "omitted_scope"
+      ],
+      "properties": {
+        "scope": {
+          "$ref": "#/$defs/safePath"
+        },
+        "reason": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "effective_limit": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "const": "unlimited"
+            }
+          ]
+        },
+        "consumed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "omitted_scope": {
+          "$ref": "#/$defs/safePath"
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

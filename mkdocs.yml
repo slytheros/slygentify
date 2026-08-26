@@ -1,0 +1,87 @@
+site_name: Slygentify
+site_description: Evidence-backed repository operating maps and safe agent guidance.
+repo_url: https://github.com/slytheros/slygentify
+repo_name: slytheros/slygentify
+edit_uri: edit/develop/docs/
+strict: true
+use_directory_urls: false
+
+theme:
+  name: mkdocs
+  custom_dir: overrides
+  favicon: assets/logo.png
+  color_mode: auto
+  user_color_mode_toggle: true
+  nav_style: dark
+
+extra_css:
+  - stylesheets/slygentify.css
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Installation: installation.md
+      - Explore your first repository: tutorials/first-repository.md
+      - Concepts: concepts.md
+      - Safety: safety.md
+  - Task guides:
+      - Scan a repository: guides/scan.md
+      - Initialize guidance: guides/init.md
+      - Map task context: guides/map.md
+      - Assess managed knowledge: guides/doctor.md
+      - Troubleshoot safe recovery: guides/troubleshooting.md
+  - Reference:
+      - CLI: cli.md
+      - Python API: api.md
+      - Scan Python API: api/scan.md
+      - Doctor Python API: api/doctor.md
+      - Map Python API: api/map.md
+      - Initialization Python API: api/initialization.md
+      - JSON Schemas: schemas.md
+      - Configuration and state: configuration-and-provenance.md
+      - Mixed repositories: mixed-repositories.md
+      - Python inspection: python-inspection.md
+      - JavaScript and TypeScript inspection: javascript-inspection.md
+      - Inspection accounting: inspection-accounting.md
+  - Project:
+      - Migration guidance: migration.md
+      - Interaction design: interaction-design.md
+      - Changelog: https://github.com/slytheros/slygentify/blob/develop/CHANGELOG.md
+      - Support: https://github.com/slytheros/slygentify/blob/develop/SUPPORT.md
+      - Security: https://github.com/slytheros/slygentify/blob/develop/SECURITY.md
+      - Contributing: https://github.com/slytheros/slygentify/blob/develop/CONTRIBUTING.md
+
+exclude_docs: |
+  /README.md
+  /acceptance.md
+  /adr/
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths:
+            - src
+          options:
+            allow_inspection: false
+            force_inspection: false
+            show_source: false
+            show_root_heading: true
+            show_root_full_path: false
+            show_object_full_path: false
+            members_order: source
+            docstring_style: google
+
+markdown_extensions:
+  - admonition
+  - fenced_code
+  - tables
+  - toc:
+      permalink: true

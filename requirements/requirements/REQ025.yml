@@ -1,0 +1,22 @@
+active: true
+derived: false
+header: |
+  JavaScript component and package inspection
+level: 1.25
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ025
+  path: src/slygentify/_scan/detectors/javascript.py
+  type: file
+reviewed: aE3_KZHmVhbm3LA5-zVs_CdpPxpYQ-9yhc1naA56V6I=
+text: |
+  Slygentify shall identify JavaScript and TypeScript package components only from valid,
+  safely read package.json objects and shall retain exact JSON Pointer evidence locations
+  for approved metadata, direct dependencies, scripts, and executable entries. Private,
+  unnamed, and unversioned packages shall remain valid boundaries. Script text that
+  resembles literal credential material shall be withheld without asserting that it is a
+  confirmed secret, and unsafe or unsupported bin targets shall be withheld. Slygentify
+  shall not install dependencies, resolve dependency graphs, execute scripts, or infer
+  runtime use from package declarations.

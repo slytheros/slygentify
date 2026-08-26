@@ -1,0 +1,19 @@
+active: true
+derived: false
+header: |
+  Non-overwrite safety
+level: 1.3
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ003
+  path: src/slygentify/initialization.py
+  type: file
+- keyword: REQ003
+  path: src/slygentify/cli.py
+  type: file
+reviewed: Rztc5vyoQKlUTObLfeMRJgx_EyDKdGD1EIcwRGWJIFM=
+text: |
+  Slygentify init shall refuse to overwrite or merge unmanaged or human-edited AGENTS.md
+  entries by default and shall require an explicit replacement operation for a regular file.

@@ -1,0 +1,16 @@
+active: true
+derived: false
+header: |
+  Implementation traceability
+level: 1.6
+links: []
+normative: true
+ref: ''
+references:
+- keyword: def implements
+  path: src/slygentify/traceability.py
+  type: file
+reviewed: --GPrpt8Q4vZXaL1dC7n-yDaLgTd5bDJxD5RpllKszg=
+text: |
+  Slygentify shall provide a non-wrapping decorator that associates implementation
+  functions and classes with one or more stable Doorstop requirement identifiers.

@@ -1,0 +1,20 @@
+active: true
+derived: false
+header: |
+  Static JavaScript CI evidence
+level: 1.28
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ028
+  path: src/slygentify/_scan/detectors/javascript.py
+  type: file
+reviewed: h11mpW0Qv6pSXPWOYvKCg0R-q861RVdayWHfiVwtPUY=
+text: |
+  Slygentify shall report attributable literal commands and Node selections from
+  approved Gitea, GitHub, and GitLab static workflow evidence. It shall retain exact
+  locators for literal and supported static matrix selections, respect literal checkout
+  and working-directory ownership, resolve only bounded in-root GitLab local includes,
+  and preserve expression-only commands and external or dynamic includes as unknown.
+  Workflow content shall never be fetched or executed.

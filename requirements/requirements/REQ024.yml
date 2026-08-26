@@ -1,0 +1,26 @@
+active: true
+derived: false
+header: |
+  Honest Python inspection boundaries
+level: 1.24
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ024
+  path: src/slygentify/_scan/detectors/python.py
+  type: file
+reviewed: lU3OlEbHr7sGoubrAvif1IahW73b6KFcPEXUSzYRTY0=
+text: |
+  Python inspection shall preserve competing declarations, produce explicit conflict,
+  unknown, redaction, malformed-source, and resource-boundary results, and retain the
+  local, read-only, contained, bounded, network-free, and non-executing scan contract.
+  A runtime conflict shall be reported only when an exact interpreter selection is
+  demonstrably outside a parseable supported range; its diagnostic shall identify the
+  component, values, source paths, locators, compatibility problem, and next action.
+  Source-backed Python diagnostics shall retain their source location when they also
+  identify a component and shall explain the corrective or review action. CI command
+  values shall be redacted only for recognizable literal credential material; variable,
+  expression, and runtime credential references shall remain visible as static source text.
+  Redaction diagnostics shall not assert that credential-shaped text is a confirmed secret
+  and shall recommend a secret reference only conditionally when the value is sensitive.

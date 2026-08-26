@@ -1,0 +1,26 @@
+active: true
+derived: false
+header: |
+  JavaScript TypeScript tool and framework inspection
+level: 1.27
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ027
+  path: src/slygentify/_scan/detectors/javascript.py
+  type: file
+reviewed: RBMOkczojw_KJWv0d7i0HOhGCKesRJYdZrzv4xVDFoA=
+text: |
+  Slygentify shall report approved TypeScript, ESLint, Prettier, Jest, Vitest,
+  Playwright, Express, Fastify, and Vue evidence only from supported static
+  configuration locations, package fields, or direct dependency declarations.
+  TypeScript references shall be expanded only to exact safe in-root regular strict
+  unique-key JSON configuration files. Project references may resolve through an
+  in-root directory's tsconfig.json after preserving explicit-file resolution.
+  Unresolved references shall remain explicit and aggregate deterministically by
+  component and safe-resolution cause; non-strict configuration content shall remain
+  explicit.
+  JavaScript and TypeScript configuration modules shall never be imported or evaluated,
+  and installation, activation, runtime use, and transitive framework use shall not be
+  claimed.

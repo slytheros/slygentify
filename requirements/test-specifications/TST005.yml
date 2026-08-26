@@ -1,0 +1,17 @@
+active: true
+derived: false
+header: |
+  Implementation decorator tests
+level: 1.5
+links:
+- REQ006: --GPrpt8Q4vZXaL1dC7n-yDaLgTd5bDJxD5RpllKszg=
+normative: true
+ref: ''
+references:
+- keyword: TST005
+  path: tests/test_traceability.py
+  type: file
+reviewed: qS0R6ogxvNqKGeYaU_mYNtjX2gbLIMEFbG8D1iw34DA=
+text: |
+  Verify function and class identity, ordered metadata, stacked decorators, and
+  rejection of missing, blank, non-string, and duplicate requirement identifiers.

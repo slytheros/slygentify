@@ -1,0 +1,18 @@
+active: true
+derived: false
+header: |
+  Map API and CLI tests
+level: 1.44
+links:
+- REQ043: Lw8KYIrC_ADqVAhNOSbc_QllXNjQw8IAJseb01kzC4w=
+normative: true
+ref: ''
+references:
+- keyword: TST043
+  path: tests/test_map_cli.py
+  type: file
+reviewed: 6yVQ2dZuk5-HgEUDaf0JA5UMVb13LgfmWUioGwXH09I=
+text: |
+  Verify fresh-scan Python and CLI parity, default and explicit options, trusted Git
+  forwarding, canonical stdout, actionable stderr and exits, and absence of repository
+  writes or network behavior.

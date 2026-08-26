@@ -1,0 +1,27 @@
+active: true
+derived: false
+header: |
+  Bootstrap-to-map corpus acceptance evidence
+level: 1.46
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ045
+  path: tools/support/initialization_acceptance.py
+  type: file
+- keyword: REQ045
+  path: tools/review_initialization.py
+  type: file
+reviewed: qLISveyqvdUke7_t8a0KJSKyg_22J_2PQVNh-UfF3gE=
+text: |
+  Slygentify shall provide deterministic local tooling to regenerate root AGENTS.md and
+  default root-map artifacts for all 20 pinned acceptance repositories in disposable
+  copies. Candidate evidence shall retain only artifact digests and sanitized metrics in
+  the committed matrix, enforce 4 KiB per AGENTS.md, 2 KiB median AGENTS.md, and 8 KiB
+  per root projection, and require human pass decisions for bootstrap clarity, component-
+  index accuracy, map navigation, boundary honesty, safety, and concision. Formal mode
+  shall reproduce both artifact digests and every metric exactly without mutating the
+  corpus or repository. Corpus snapshots shall require contained standalone Git
+  checkouts, preserve descendant links without reading their targets, disable Git hooks
+  and filesystem monitors, and clean only disposable copies.

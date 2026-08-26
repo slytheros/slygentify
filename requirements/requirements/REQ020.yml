@@ -1,0 +1,23 @@
+active: true
+derived: false
+header: |
+  Python component and metadata inspection
+level: '1.20'
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ020
+  path: src/slygentify/_scan/detectors/python.py
+  type: file
+reviewed: H8fXu0Ipo82-3UtJaAnyLzpNFAsIJOJ-zmbaTK3yGMU=
+text: |
+  Slygentify shall identify Python components only from approved static manifest
+  declarations, retain exact evidence locations for supported metadata and direct
+  dependencies, accept whitespace-delimited inline comments in requirements files,
+  distinguish direct requirements from constraints and recognizable generated lock
+  output, and shall never evaluate setup.py, unrendered template manifests, or dynamic
+  metadata. When an approved generic
+  ecosystem manifest declares the same component path, Slygentify shall retain the
+  Python evidence without promoting the polyglot component to Python or attributing
+  root CI commands to Python.

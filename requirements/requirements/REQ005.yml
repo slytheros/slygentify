@@ -1,0 +1,16 @@
+active: true
+derived: false
+header: |
+  Local-only initialization
+level: 1.5
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ005
+  path: src/slygentify/initialization.py
+  type: file
+reviewed: j8JTJHIcHXdsJ9Tsuasa6XeH8kjOJz6a96RllAgF0kk=
+text: |
+  Slygentify initialization shall operate entirely on the local filesystem and shall
+  not execute commands discovered in the target repository or use network services.

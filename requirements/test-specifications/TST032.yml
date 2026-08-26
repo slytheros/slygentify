@@ -1,0 +1,18 @@
+active: true
+derived: false
+header: |
+  Mixed composition safety and diagnostic tests
+level: 1.32
+links:
+- REQ032: rN1PlVvPPuYW19heCkLi0DNMWWpMlqFOMYbX71BBIFo=
+normative: true
+ref: ''
+references:
+- keyword: TST032
+  path: tests/test_mixed_composition.py
+  type: file
+reviewed: fNbuyzpThcoP710jlE6oxnIFpCraU_RI1C3E-nhYVaU=
+text: |
+  Verify overlap, unresolved and ambiguous-boundary diagnostics, exact evidence and
+  applicable configuration paths, resource-partial behavior, deterministic parity, and
+  absence of execution, network, environment, writes, or followed links.

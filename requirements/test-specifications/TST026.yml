@@ -1,0 +1,18 @@
+active: true
+derived: false
+header: |
+  JavaScript manager workspace and runtime tests
+level: 1.26
+links:
+- REQ026: aHlwSO9wk_U9v_0O9HPSWkkGVd4PmONiUIbN_ebK2_A=
+normative: true
+ref: ''
+references:
+- keyword: TST026
+  path: tests/test_javascript_inspection.py
+  type: file
+reviewed: WBtAjnZmy2s6HKG4it2avDpl_8hGYyiSZDskcjGtWdQ=
+text: |
+  Verify npm, pnpm, Yarn, Corepack, lock precedence and conflict evidence; safe workspace
+  membership and exclusions; invalid, missing, out-of-root, and overlapping patterns;
+  Node and npm runtime declarations; genuine runtime conflicts; and incomparable values.

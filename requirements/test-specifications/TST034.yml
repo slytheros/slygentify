@@ -1,0 +1,19 @@
+active: true
+derived: false
+header: |
+  Public acceptance-claim measurement tests
+level: 1.34
+links:
+- REQ034: ROAh1TMNyeyjkXwyZ8zIdLvyw0vR4NaUgAEtnd2HR4M=
+normative: true
+ref: ''
+references:
+- keyword: TST034
+  path: tests/test_acceptance.py
+  type: file
+reviewed: NDY-3DlXWETK7rNy1ooWIpvVxo1Zt8lmAihCBowgcEI=
+text: |
+  Verify deterministic candidate generation and reviewed-matrix loading. Verify that
+  unexpected factual claims, omitted expected facts, absent expected evidence, duplicate
+  claims, malformed matrices, and incomplete human review fail closed, while an exact
+  evidence-backed comparison reports the expected ADR 0002 precision and recall values.

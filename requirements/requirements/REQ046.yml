@@ -1,0 +1,19 @@
+active: true
+derived: false
+header: |
+  Clear, evidence-safe, actionable diagnostics
+level: 1.47
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ046
+  path: src/slygentify/_scan/contracts.py
+  type: file
+reviewed: 1w3QuJWM3IFmN0kY_1xSO-P81GWLud62IFo4QqvQzqE=
+text: |
+  User-visible diagnostics shall distinguish the observed problem from its effect on
+  retained, omitted, withheld, or partial evidence. A diagnostic shall include recovery
+  text only when a safe, concrete review or correction is available, shall not recommend
+  weaker safety boundaries or unapproved effects, and shall compose the public message
+  deterministically without changing the public diagnostic data model.

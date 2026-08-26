@@ -1,0 +1,22 @@
+active: true
+derived: false
+header: |
+  Honest JavaScript inspection boundaries
+level: 1.29
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ029
+  path: src/slygentify/_scan/detectors/javascript.py
+  type: file
+reviewed: hgUDw4QSjCXZavJOjDZnJfYv9aS3WrUM0xGUdkdmZeE=
+text: |
+  JavaScript and TypeScript inspection shall preserve competing declarations, exact
+  evidence provenance, unsupported evidence, and explicit conflict, unknown,
+  malformed-source, redaction, and resource-boundary results. It shall retain the
+  local, read-only, contained, bounded, network-free, and non-executing scan contract.
+  Source-backed diagnostics shall retain their source location, identify the affected
+  component when known, and give a corrective or review action. Unsupported runtimes,
+  managers, orchestrators, dynamic configuration, source inference, and external CI
+  content shall not be presented as supported facts.

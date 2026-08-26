@@ -1,0 +1,21 @@
+active: true
+derived: false
+header: |
+  Init command and dry-run tests
+level: 1.4
+links:
+- REQ003: Rztc5vyoQKlUTObLfeMRJgx_EyDKdGD1EIcwRGWJIFM=
+- REQ004: rjDQbuZhpnVthvw0W9RnrJRHvZYPO-fcROjgUcuj2P4=
+normative: true
+ref: ''
+references:
+- keyword: TST004
+  path: tests/test_initialization.py
+  type: file
+- keyword: TST004
+  path: tests/test_cli.py
+  type: file
+reviewed: MICUQwsTtM0XORVQ5LqLWX3O95TWiO6UvZ5_uEu7Ri8=
+text: |
+  Verify init creation, dry-run output without writes, operational failure reporting,
+  and the documented success, failure, and command-usage exit codes.

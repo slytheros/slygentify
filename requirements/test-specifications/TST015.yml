@@ -1,0 +1,17 @@
+active: true
+derived: false
+header: |
+  Normalization tests
+level: 1.15
+links:
+- REQ015: IkC4zvkay8CAc174yuJMfiaV4loCTwu7qeB3Z-3QtZ4=
+normative: true
+ref: ''
+references:
+- keyword: TST015
+  path: tests/test_scan_foundation.py
+  type: file
+reviewed: FGp305rlza10DPJ--xDEO0DN21XEw8yD1Y0G-rJdNSU=
+text: |
+  Verify deterministic identifiers, canonical order, evidence integrity, co-located
+  candidate composition, and one component per path.

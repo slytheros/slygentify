@@ -1,0 +1,21 @@
+active: true
+derived: false
+header: |
+  Deterministic contained distribution artifacts
+level: 1.51
+links: []
+normative: true
+ref: ''
+references:
+- keyword: include = [
+  path: pyproject.toml
+  type: file
+- keyword: path = "src/slygentify/_version.py"
+  path: pyproject.toml
+  type: file
+reviewed: wNYjNkiYN2ThUuXe401_KMKb_ezIaSpc7yhDavuWm8U=
+text: |
+  Slygentify shall build source and wheel distributions containing only the package runtime,
+  package metadata, license, changelog, and README, independently of ambient untracked
+  checkout content. Package version metadata shall derive from one private source while the
+  public slygentify.__version__ value remains unchanged.

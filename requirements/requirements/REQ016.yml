@@ -1,0 +1,17 @@
+active: true
+derived: false
+header: |
+  Generic manifest discovery
+level: 1.16
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ016
+  path: src/slygentify/_scan/detectors/generic.py
+  type: file
+reviewed: UcJcsZcx1PPlUICSKmWK5qcMt_6datDbBpeNsPdpiX4=
+text: |
+  Slygentify shall recognize safe Cargo, Go, and Maven project or workspace evidence
+  as generic components, report invalid declarations without executing them, and
+  report an unknown finding when no supported boundary exists.

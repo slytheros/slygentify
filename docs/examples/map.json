@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "source_scan_schema_version": 1,
+  "producer_version": "0.1.0",
+  "source_scan_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "source_completion": "complete",
+  "scope": {
+    "requested_path": "."
+  },
+  "navigation": {
+    "ancestors": [],
+    "children": []
+  },
+  "sections": [
+    "orientation",
+    "boundaries"
+  ],
+  "repository": {
+    "id": "repository:.",
+    "root": ".",
+    "kind": "git",
+    "evidence_ids": [
+      "e_repo"
+    ]
+  },
+  "components": [],
+  "relationships": [],
+  "findings": [],
+  "diagnostics": [],
+  "skipped_scopes": [],
+  "evidence": [
+    {
+      "id": "e_repo",
+      "source_kind": "filesystem",
+      "location": ".",
+      "observation": "Selected the containing Git repository.",
+      "verification_method": "Resolved the repository root without exposing its host path."
+    }
+  ],
+  "omissions": []
+}

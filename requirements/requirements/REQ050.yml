@@ -1,0 +1,83 @@
+active: true
+derived: false
+header: |
+  Accurate public documentation and package metadata
+level: 1.493
+links: []
+normative: true
+ref: ''
+references:
+- keyword: 'site_name: Slygentify'
+  path: mkdocs.yml
+  type: file
+- keyword: 'use_directory_urls: false'
+  path: mkdocs.yml
+  type: file
+- keyword: assets/logo.png
+  path: overrides/main.html
+  type: file
+- keyword: --sg-navy
+  path: docs/stylesheets/slygentify.css
+  type: file
+- keyword: Current availability
+  path: docs/installation.md
+  type: file
+- keyword: Git executable
+  path: docs/installation.md
+  type: file
+- keyword: Explore your first repository
+  path: docs/tutorials/first-repository.md
+  type: file
+- keyword: 'Path A: inspect your own Git repository'
+  path: docs/tutorials/first-repository.md
+  type: file
+- keyword: Troubleshoot safe recovery
+  path: docs/guides/troubleshooting.md
+  type: file
+- keyword: CI recipes
+  path: docs/guides/doctor.md
+  type: file
+- keyword: Scan Python API
+  path: docs/api/scan.md
+  type: file
+- keyword: Inspection accounting
+  path: docs/inspection-accounting.md
+  type: file
+- keyword: JSON Schema reference
+  path: docs/schemas.md
+  type: file
+- keyword: Security policy
+  path: SECURITY.md
+  type: file
+- keyword: Support
+  path: SUPPORT.md
+  type: file
+- keyword: Unreleased
+  path: CHANGELOG.md
+  type: file
+- keyword: license = "Apache-2.0"
+  path: pyproject.toml
+  type: file
+reviewed: -2HIOUz3fZKBGEKc6bLJpFpBFV0ExmbDrp1DxO2M_cM=
+text: |
+  Slygentify shall provide locally buildable public documentation that accurately
+  distinguishes implemented, unavailable, and future capabilities; documents source
+  installation, concepts, safety, every supported command, configuration and state,
+  public Python interfaces, canonical JSON Schemas, compatibility, support, and security;
+  distinguishes the required local Git repository boundary from optional Git executable
+  discovery; provides goal-oriented onboarding, a read-only own-repository first-use path,
+  and an equivalent deterministic CLI and Python fixture workflow; documents safe recovery
+  from partial results, configuration and managed-artifact findings, and platform-specific
+  doctor automation; and organizes detailed Python API contracts by operation while
+  preserving generated public-reference coverage; and publishes truthful package license,
+  maturity, audience, platform, support, and
+  project-link metadata. Representative machine-readable examples shall be generated from
+  a public-safe deterministic fixture and continuously checked against public API output,
+  packaged schemas, and their documented complete or partial scenarios. Documented
+  resource defaults shall remain synchronized with effective configuration. The public
+  documentation build shall use only selected public-safe content, extract Python reference
+  information statically without importing Slygentify, and fail on reference, navigation,
+  link, generated-link target or fragment, example, or schema drift. Generated pages shall
+  use file-portable URLs so they open correctly when browsed directly from a local checkout.
+  The public site shall present the approved logo and an accessible navy, teal, and
+  cool-neutral visual system.

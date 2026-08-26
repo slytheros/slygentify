@@ -1,0 +1,16 @@
+active: true
+derived: false
+header: |
+  Safe provenance sidecar persistence
+level: 1.37
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ037
+  path: src/slygentify/_provenance.py
+  type: file
+reviewed: 43Itl2LHxWOliFtNdT9pf5kyGqV7pKttBcDVWCzfTxs=
+text: |
+  Slygentify shall plan and atomically create or replace a valid provenance sidecar
+  only after revalidating its safe target and shall leave exact no-change state untouched.

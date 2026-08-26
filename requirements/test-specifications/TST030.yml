@@ -1,0 +1,28 @@
+active: true
+derived: false
+header: |
+  Mixed component model and relationship tests
+level: '1.30'
+links:
+- REQ030: njsLaLzXunQJX7BsdrB396KK1uq3Pz7sbg5NdY0Zd_k=
+normative: true
+ref: ''
+references:
+- keyword: TST030
+  path: tests/test_mixed_composition.py
+  type: file
+- keyword: TST030
+  path: tests/test_scan_models.py
+  type: file
+- keyword: TST030
+  path: tests/test_scan_explorer.py
+  type: file
+- keyword: TST030
+  path: tests/test_scan_cli.py
+  type: file
+reviewed: JuwtS1stLTPX76mpRgcsPCTEmFqcGr-gck0W-AlKyvg=
+text: |
+  Verify stable component identities, sorted ecosystem facets, mixed summaries, closed
+  auxiliary roles inferred only from approved exact path segments with evidence-backed
+  findings, deterministic containment and workspace relationships, overlaps, ordering,
+  model integrity, JSON compatibility, and CLI and explorer presentation.

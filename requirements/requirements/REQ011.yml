@@ -1,0 +1,24 @@
+active: true
+derived: false
+header: |
+  Local read-only scan discovery
+level: 1.11
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ011
+  path: src/slygentify/_git_tracking.py
+  type: file
+- keyword: REQ011
+  path: src/slygentify/_scan/orchestration.py
+  type: file
+reviewed: WKqN9uxmGbMFqgU9ETvZLiQ83Q5hqN1CsM0uhNfNVYI=
+text: |
+  Slygentify scan discovery shall locate the nearest containing Git repository using
+  local metadata and shall not write files, execute discovered repository commands, or
+  access network services. Before traversal, scan may invoke one selected Git executable
+  with the fixed `ls-files --cached --full-name -z` capability accepted by ADR 0007.
+  Automatic selection shall reject an executable inside the repository; an explicit
+  executable path authorizes that exact executable, including a repository-contained
+  executable whose arbitrary residual effects cannot be prevented by Slygentify.

@@ -1,0 +1,18 @@
+active: true
+derived: false
+header: |
+  Python tool and framework tests
+level: 1.22
+links:
+- REQ022: hLIuUYBC3QFWVOPB7XiTA1i3RpBj3LnxnNkeJRginZM=
+normative: true
+ref: ''
+references:
+- keyword: TST022
+  path: tests/test_python_inspection.py
+  type: file
+reviewed: FavuEsjMCY6-qguYPl0SyWO_yvQ2ZLno-3QLVvSl_UY=
+text: |
+  Verify every approved tool configuration family including tox INI, low-strength pytest convention,
+  normalized direct tool and framework declarations, Alembic configuration, invalid
+  configuration handling, and same-component-root duplicate configuration diagnostics.

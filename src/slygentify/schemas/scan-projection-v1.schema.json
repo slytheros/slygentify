@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schemas/scan-projection-v1.schema.json",
+  "title": "Slygentify scan projection schema major 1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "source_scan_schema_version",
+    "producer_version",
+    "source_scan_sha256",
+    "source_completion",
+    "scope",
+    "navigation",
+    "sections",
+    "repository",
+    "components",
+    "relationships",
+    "findings",
+    "diagnostics",
+    "skipped_scopes",
+    "evidence",
+    "omissions"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "source_scan_schema_version": {"const": 1},
+    "producer_version": {"$ref": "#/$defs/nonEmptyString"},
+    "source_scan_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "source_completion": {"enum": ["complete", "partial"]},
+    "scope": {"$ref": "#/$defs/projectionScope"},
+    "navigation": {"$ref": "#/$defs/projectionNavigation"},
+    "sections": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": {
+        "enum": ["orientation", "workflows", "architecture", "automation", "boundaries"]
+      }
+    },
+    "repository": {"$ref": "#/$defs/repository"},
+    "components": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/component"}},
+    "relationships": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/componentRelationship"}},
+    "findings": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/finding"}},
+    "diagnostics": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/diagnostic"}},
+    "skipped_scopes": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/skippedScope"}},
+    "evidence": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/evidence"}},
+    "omissions": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/omission"}}
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "nonEmptyString": {"type": "string", "minLength": 1, "maxLength": 4194304},
+    "stringList": {
+      "type": "array",
+      "maxItems": 100000,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/nonEmptyString"}
+    },
+    "safePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4194304,
+      "pattern": "^(?:\\.|(?!/)(?![^/]*:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*(?:^|/)\\.(?:/|$))[^/]+(?:/[^/]+)*)$"
+    },
+    "projectionScope": {
+      "type": "object",
+      "required": ["requested_path"],
+      "properties": {
+        "requested_path": {"$ref": "#/$defs/safePath"},
+        "matched_component_id": {"$ref": "#/$defs/nonEmptyString"},
+        "matched_component_path": {"$ref": "#/$defs/safePath"}
+      },
+      "dependentRequired": {
+        "matched_component_id": ["matched_component_path"],
+        "matched_component_path": ["matched_component_id"]
+      },
+      "additionalProperties": true
+    },
+    "projectionNavigation": {
+      "type": "object",
+      "required": ["ancestors", "children"],
+      "properties": {
+        "ancestors": {"$ref": "#/$defs/stringList"},
+        "owner": {"$ref": "#/$defs/nonEmptyString"},
+        "children": {"$ref": "#/$defs/stringList"}
+      },
+      "additionalProperties": true
+    },
+    "repository": {
+      "type": "object",
+      "required": ["id", "root", "kind", "evidence_ids"],
+      "properties": {
+        "id": {"$ref": "#/$defs/nonEmptyString"},
+        "root": {"$ref": "#/$defs/safePath"},
+        "kind": {"$ref": "#/$defs/nonEmptyString"},
+        "evidence_ids": {"$ref": "#/$defs/stringList"}
+      },
+      "additionalProperties": true
+    },
+    "component": {
+      "type": "object",
+      "required": ["id", "path", "ecosystem", "kind", "evidence_ids"],
+      "properties": {
+        "id": {"$ref": "#/$defs/nonEmptyString"},
+        "path": {"$ref": "#/$defs/safePath"},
+        "ecosystem": {"$ref": "#/$defs/nonEmptyString"},
+        "kind": {"$ref": "#/$defs/nonEmptyString"},
+        "role": {"enum": ["unknown", "auxiliary"], "default": "unknown"},
+        "evidence_ids": {"$ref": "#/$defs/stringList"},
+        "ecosystems": {"$ref": "#/$defs/stringList"}
+      },
+      "additionalProperties": true
+    },
+    "componentRelationship": {
+      "type": "object",
+      "required": ["id", "kind", "source_id", "target_id", "classification", "evidence_ids"],
+      "properties": {
+        "id": {"$ref": "#/$defs/nonEmptyString"},
+        "kind": {"$ref": "#/$defs/nonEmptyString"},
+        "source_id": {"$ref": "#/$defs/nonEmptyString"},
+        "target_id": {"$ref": "#/$defs/nonEmptyString"},
+        "classification": {"enum": ["verified", "inferred", "recommended", "unknown"]},
+        "evidence_ids": {"$ref": "#/$defs/stringList"}
+      },
+      "additionalProperties": true
+    },
+    "finding": {
+      "type": "object",
+      "required": ["id", "code", "classification", "subject_id", "summary", "evidence_ids"],
+      "properties": {
+        "id": {"$ref": "#/$defs/nonEmptyString"},
+        "code": {"$ref": "#/$defs/nonEmptyString"},
+        "classification": {"enum": ["verified", "inferred", "recommended", "unknown"]},
+        "subject_id": {"$ref": "#/$defs/nonEmptyString"},
+        "summary": {"$ref": "#/$defs/nonEmptyString"},
+        "evidence_ids": {"$ref": "#/$defs/stringList"}
+      },
+      "additionalProperties": true
+    },
+    "diagnostic": {
+      "type": "object",
+      "required": ["id", "code", "message", "evidence_ids"],
+      "properties": {
+        "id": {"$ref": "#/$defs/nonEmptyString"},
+        "code": {"$ref": "#/$defs/nonEmptyString"},
+        "subject_id": {"$ref": "#/$defs/nonEmptyString"},
+        "location": {"$ref": "#/$defs/safePath"},
+        "message": {"$ref": "#/$defs/nonEmptyString"},
+        "evidence_ids": {"$ref": "#/$defs/stringList"}
+      },
+      "anyOf": [{"required": ["subject_id"]}, {"required": ["location"]}],
+      "additionalProperties": true
+    },
+    "skippedScope": {
+      "type": "object",
+      "required": ["scope", "reason", "omitted_scope"],
+      "properties": {
+        "scope": {"$ref": "#/$defs/safePath"},
+        "reason": {"$ref": "#/$defs/nonEmptyString"},
+        "effective_limit": {
+          "oneOf": [{"type": "integer", "minimum": 1}, {"const": "unlimited"}]
+        },
+        "consumed": {"type": "integer", "minimum": 0},
+        "omitted_scope": {"$ref": "#/$defs/safePath"}
+      },
+      "additionalProperties": true
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["id", "source_kind", "location", "observation"],
+      "properties": {
+        "id": {"$ref": "#/$defs/nonEmptyString"},
+        "source_kind": {"$ref": "#/$defs/nonEmptyString"},
+        "location": {"$ref": "#/$defs/safePath"},
+        "locator": {"$ref": "#/$defs/nonEmptyString"},
+        "observation": {"$ref": "#/$defs/nonEmptyString"},
+        "verification_method": {"$ref": "#/$defs/nonEmptyString"}
+      },
+      "additionalProperties": true
+    },
+    "omission": {
+      "type": "object",
+      "required": ["section", "record_kind", "count"],
+      "properties": {
+        "section": {"enum": ["orientation", "workflows", "architecture", "automation", "boundaries"]},
+        "record_kind": {"$ref": "#/$defs/nonEmptyString"},
+        "count": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,22 @@
+active: true
+derived: false
+header: |
+  Generic engineering project evidence
+level: 1.31
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ031
+  path: src/slygentify/_scan/detectors/generic.py
+  type: file
+- keyword: REQ031
+  path: src/slygentify/_presentation.py
+  type: file
+reviewed: fe9H7Hr-tpcAbQnX9s0FE2csT7aD8xJJD68RXNXegws=
+text: |
+  Slygentify shall recognize bounded static CMake and ESP-IDF project markers and
+  valid KiCad project documents only as generic component evidence. KiCad schematic
+  and board artifacts shall corroborate a sibling project boundary but shall not
+  establish one alone. Unsupported evidence shall never claim installation, runtime
+  use, command success, or first-class ecosystem support.

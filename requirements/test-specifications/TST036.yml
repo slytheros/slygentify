@@ -1,0 +1,17 @@
+active: true
+derived: false
+header: |
+  Provenance state tests
+level: 1.36
+links:
+- REQ036: PseEJpFOf0fehFz80BSdESnRbCEv0VA8Tadq5uzqiPk=
+normative: true
+ref: ''
+references:
+- keyword: TST036
+  path: tests/test_provenance.py
+  type: file
+reviewed: r54ZJpE9XWkY4cV4B3ABjx03o9yB1BWUGfHrvxzi0Uc=
+text: |
+  Verify canonical state serialization, validation, forward-compatible reads, real-scan
+  input capture, closed artifact and derivation evidence, and privacy boundaries.

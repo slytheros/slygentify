@@ -1,0 +1,26 @@
+active: true
+derived: false
+header: |
+  Inspection scope boundaries
+level: 1.14
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ014
+  path: src/slygentify/_git_tracking.py
+  type: file
+- keyword: REQ014
+  path: src/slygentify/_scan/kernel.py
+  type: file
+reviewed: r5GyqnFe61lr4Q5NkeRhyuFBCC-qJw-FleXJhPh4ieM=
+text: |
+  Inspection shall apply hierarchical Gitignore rules, hard sensitive and VCS
+  boundaries, narrow cache exclusions, and opaque nested repositories. Malformed
+  Gitignore rules shall produce an explicit partial result with a diagnostic and
+  skipped scope while inspection continues. Validated Git tracked paths shall
+  override only the Gitignore layer: an exact tracked file may be retained and an ignored
+  tracked-path prefix may be entered, while ignored untracked siblings and every harder
+  boundary remain excluded. Unavailable tracked paths shall produce diagnostic
+  `inspection.git-tracked-paths-unavailable`, repository-wide skipped reason
+  `git_tracking_unavailable`, and an honest partial result.

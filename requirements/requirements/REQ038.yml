@@ -1,0 +1,24 @@
+active: true
+derived: false
+header: |
+  Thin deterministic bootstrap guidance
+level: 1.38
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ038
+  path: src/slygentify/_generation.py
+  type: file
+- keyword: REQ038
+  path: src/slygentify/initialization.py
+  type: file
+reviewed: o9q7_MP79sHAeEZOIFFQWoJ0aD3LIIX7RizRXJJ4w_s=
+text: |
+  Slygentify shall generate a concise deterministic root AGENTS.md as stable bootstrap
+  guidance rather than a serialization of scan findings. It shall explain fresh map use,
+  classification and evidence interpretation, and separate-effect safety; include a
+  root-first breadth-first micro-index of primary components with one canonical evidence
+  path each; summarize partial scans and omitted component counts without enumerating
+  skipped paths; and exclude commands, CI bodies, runtime matrices, diagnostics,
+  relationships, and general findings.

@@ -1,0 +1,22 @@
+active: true
+derived: false
+header: |
+  Python manager workspace and runtime tests
+level: 1.21
+links:
+- REQ021: bikwfKDNAvplGoghIP-D8lcuwOeQ8C8YOxvJVff9KlE=
+normative: true
+ref: ''
+references:
+- keyword: TST021
+  path: tests/test_python_inspection.py
+  type: file
+reviewed: 7Ta3d4Ska8ouJiYUAXJ-Ijwjqn9aLRrG8gyhj4wCtCI=
+text: |
+  Verify uv, Poetry, pip-style, lock, workspace membership, runtime, and entry-point
+  declarations plus workspace-only roots and missing, escaping, unbound, generated,
+  constrained, and conflicting evidence behavior.
+  Verify that coexisting configuration and requirements evidence is not a manager
+  conflict and that competing lock families produce a source-rich actionable diagnostic.
+  Verify compatible, incompatible, and incomparable runtime declarations without
+  calculating a combined effective range.

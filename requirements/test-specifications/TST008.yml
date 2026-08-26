@@ -1,0 +1,17 @@
+active: true
+derived: false
+header: |
+  Coverage gate configuration test
+level: 1.8
+links:
+- REQ008: GbAIjcZ9u2xHmpBbDCbe50xKbWOhDuOHa7HdBRCrNvE=
+normative: true
+ref: ''
+references:
+- keyword: TST008
+  path: tests/test_repository_quality.py
+  type: file
+reviewed: _w04xJOIqj3Yui1FMEStUCiXFrxkkzhWEE0WvCCljyU=
+text: |
+  Verify that the default pytest configuration enables first-party package coverage,
+  branch measurement, missing-line reporting, and a 100 percent failure threshold.

@@ -1,0 +1,28 @@
+active: true
+derived: false
+header: |
+  Versioned doctor Python and JSON interfaces
+level: 1.49
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ048
+  path: src/slygentify/_doctor.py
+  type: file
+- keyword: REQ048
+  path: src/slygentify/_doctor_serialization.py
+  type: file
+- keyword: REQ048
+  path: src/slygentify/models.py
+  type: file
+reviewed: rgK0ldgn_ETs1sjHFMjymVSqGAROgkxVkaCIVMIErGo=
+text: |
+  Slygentify shall export immutable DoctorResult and DoctorDiagnostic values, stable
+  DoctorInputError and DoctorOperationalError failures, doctor_repository, and named
+  validation, canonical JSON, and packaged Draft 2020-12 schema interfaces. Readers
+  shall apply bounded strict validation, reject duplicate keys, invalid UTF-8, BOMs,
+  non-finite values, and oversized or cyclic inputs, while ignoring additive unknown
+  same-major object properties. Producers shall revalidate closed values and emit only
+  declared fields in fixed order as deterministic UTF-8, LF, two-space-indented JSON
+  with one final newline and absent optional values omitted.

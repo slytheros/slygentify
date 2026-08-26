@@ -1,0 +1,19 @@
+active: true
+derived: false
+header: |
+  Honest mixed-boundary diagnostics and safety
+level: 1.32
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ032
+  path: src/slygentify/_scan/normalization.py
+  type: file
+reviewed: WOvmswDD_vOQPD-PijfIBzsjQQXR0UOzcFbV5WOuCpA=
+text: |
+  Mixed-repository composition shall preserve conflicts and overlapping relationships,
+  report ambiguous or unresolved boundaries with exact repository-relative evidence and
+  safe configuration guidance when applicable, and recommend narrowing overlapping
+  workspace declarations rather than ineffective component overrides. It shall retain
+  the local, read-only, contained, bounded, network-free, and non-executing scan contract.

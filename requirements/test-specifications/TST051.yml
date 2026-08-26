@@ -1,0 +1,29 @@
+active: true
+derived: false
+header: |
+  Public documentation and package metadata tests
+level: 1.493
+links:
+- REQ050: -2HIOUz3fZKBGEKc6bLJpFpBFV0ExmbDrp1DxO2M_cM=
+normative: true
+ref: ''
+references:
+- keyword: TST051
+  path: tests/test_public_documentation.py
+  type: file
+reviewed: 9bO8kwa_tI4kXB4wmf4JEWWl40fqU3RcO7-RJE3fYTo=
+text: |
+  Verify exact public package metadata and documentation dependency bounds; strict local
+  site generation without private-history content; file-portable generated page URLs and
+  valid generated internal link targets and fragments; complete generated coverage of public
+  exports; valid and documented packaged Draft 2020-12 schemas; loadable canonical JSON
+  examples; byte-for-byte representative scan, map, and doctor output generated from a
+  deterministic public-safe fixture; intended multi-component, inferred, partial, and
+  warning scenarios; compilable tutorial and task-guide Python examples; goal-oriented
+  onboarding that distinguishes the Git repository boundary from optional executable
+  discovery; own-repository and deterministic fixture tutorial paths; safe recovery and
+  PowerShell doctor automation guidance; operation-focused API reference navigation with
+  complete generated-export coverage; synchronized effective resource defaults; correct
+  command output-mode and safety claims; explicit pre-publication installation and support
+  boundaries; tutorial and next-step navigation; and the configured logo, favicon, and
+  accessible public-site color system.

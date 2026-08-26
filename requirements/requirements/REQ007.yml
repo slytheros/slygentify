@@ -1,0 +1,16 @@
+active: true
+derived: false
+header: |
+  Test specification traceability
+level: 1.7
+links: []
+normative: true
+ref: ''
+references:
+- keyword: pytest_collection_modifyitems
+  path: tests/conftest.py
+  type: file
+reviewed: pnoD3kcLp1i9MYfYFvoBrWIcYzkzH4I3O16_OHZAlZY=
+text: |
+  The test suite shall require every collected pytest test to identify one or more
+  existing Doorstop test specifications through the registered verifies mark.

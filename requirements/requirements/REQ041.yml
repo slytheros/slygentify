@@ -1,0 +1,22 @@
+active: true
+derived: false
+header: |
+  Linear composed-repository scan scaling
+level: 1.42
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ041
+  path: src/slygentify/_scan/detectors/javascript.py
+  type: file
+- keyword: REQ041
+  path: src/slygentify/_scan/detectors/python.py
+  type: file
+reviewed: YWfpIDteJMIYG8mmfaUAZcAFY17Pg0dNgdeGZdFgIIw=
+text: |
+  Scan shall index safely catalogued paths and component ancestry so independent
+  top-level component trees do not cause repeated global path-catalog scans during
+  Python requirements discovery, JavaScript package tooling discovery, workspace
+  membership matching, Gitignore evaluation, or containment composition. Completed
+  scans shall preserve their existing canonical facts and ordering.

@@ -1,0 +1,29 @@
+active: true
+derived: false
+header: |
+  Doctor command presentation and automation behavior
+level: 1.491
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ049
+  path: src/slygentify/_doctor_presentation.py
+  type: file
+- keyword: REQ049
+  path: src/slygentify/cli.py
+  type: file
+reviewed: eYHBVa9LGtMI0ECO3ZltttOjqVdWlWtxU7LW6ZwY890=
+text: |
+  `slygentify doctor [PATH] --format text|json [--verbose]
+  [--git-executable PATH]` shall call the static doctor core without prompting,
+  forward only the explicitly selected Git executable, and never execute a discovered
+  project command. Text shall identify the resolved root, completion, severity counts,
+  and every diagnostic grouped by severity with claim classification, code, target,
+  problem, effect, and remediation; verbose text shall additionally expose evidence
+  references, every evidence record once, and every skipped scope. JSON shall emit one
+  canonical DoctorResult and reject verbose mode. Result output shall use stdout with
+  empty stderr and exit 0 for only informational or no diagnostics and exit 1 for any
+  warning or error; usage and caller-input failures shall emit no result and exit 2,
+  while operational or internal failures shall emit no result and exit 3. Human output
+  shall remain understandable without color or terminal control sequences.

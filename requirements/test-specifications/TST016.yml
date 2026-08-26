@@ -1,0 +1,17 @@
+active: true
+derived: false
+header: |
+  Generic detector tests
+level: 1.16
+links:
+- REQ016: iAdYwj0thVAzxbw-A7MvqS5AZm-wYl00Boeuhxf7470=
+normative: true
+ref: ''
+references:
+- keyword: TST016
+  path: tests/test_scan_foundation.py
+  type: file
+reviewed: Yx1jLB_lYnhZGN919Z1ZcbCi00x1anQXm9GrrxhQI7w=
+text: |
+  Verify valid, invalid, co-located, workspace, escaping, and missing-member Cargo,
+  Go, and Maven evidence plus honest no-component uncertainty.

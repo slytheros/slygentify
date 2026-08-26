@@ -1,0 +1,24 @@
+active: true
+derived: false
+header: |
+  Repository scan interface tests
+level: 1.17
+links:
+- REQ017: iuhrizMgMLZ18_y-Tobx7ke1hzcWRWIMbKnR-jEC_lQ=
+normative: true
+ref: ''
+references:
+- keyword: TST017
+  path: tests/test_git_tracking.py
+  type: file
+- keyword: TST017
+  path: tests/test_scan_api.py
+  type: file
+reviewed: QJOCGYPPZeiHchv8k8x1p9gkwLwRw7CQ0HdSiYREa2g=
+text: |
+  Verify top-level public imports, default and explicit paths, normalized results,
+  translated operational failures, unchanged forwarding of `git_executable`, explicit
+  absolute and relative executable selection, override precedence, and pre-traversal
+  rejection of invalid explicit input without fallback. Verify default scans permit only
+  the fixed Git lookup process and retain the absence of repository writes, discovered
+  command execution, and network access by Slygentify.

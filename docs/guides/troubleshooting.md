@@ -1,0 +1,64 @@
+# Troubleshoot safe recovery
+
+Use this guide when a trustworthy result is partial, a configuration prevents inspection,
+or Slygentify refuses to change managed guidance. Do not weaken containment, sensitive
+content, link, nested-repository, command, or network protections to work around a
+finding.
+
+## A scan, map, or doctor result is partial
+
+Read `diagnostics` and `skipped_scopes` before treating missing evidence as absent. A
+partial result can reflect an unreadable file, configured resource limit, environmental
+exhaustion, or unavailable tracked-path discovery. Keep the result for the inspected
+boundary, then correct the reported repository condition or use a tighter task scope.
+
+See the [scan guide](scan.md#investigate-a-partial-result) and
+[inspection accounting](../inspection-accounting.md) for the exact boundary semantics.
+
+## Git tracked-path discovery is unavailable
+
+Slygentify still requires a local Git repository, but it can inspect when the standard
+Git executable is unavailable. The result becomes partial because tracked manifests
+hidden by checked-out ignore rules may be omitted.
+
+Restore a trusted Git executable on `PATH` and rerun the command. Use
+`--git-executable` only after inspecting the exact selected file: it is trusted,
+unsandboxed code and can have arbitrary effects. It authorizes only the fixed lookup,
+not repository commands. See [safety boundaries](../safety.md#fixed-git-lookup).
+
+## Configuration prevents a result
+
+`slygentify.toml` is read only at the selected Git root. Malformed TOML, unknown keys,
+unsafe paths, duplicate component paths, or invalid patterns fail before traversal.
+Correct the reported root configuration error, then rerun the command. Do not move the
+file to a parent, component, profile, or environment location: those locations are not
+configuration sources.
+
+See the [configuration reference](../configuration-and-provenance.md) for the accepted
+shape and path rules.
+
+## Init refuses to create or regenerate guidance
+
+Run `slygentify init PATH --dry-run` and review the ownership state, diagnostic, and
+recovery text. Ordinary init intentionally refuses unmanaged, human-edited, missing
+managed, malformed, and unsafe targets to preserve existing work. Do not use `--replace`
+as routine recovery: it can discard a regular `AGENTS.md`, creates no backup, and never
+permits unsafe entries.
+
+If you intentionally want to replace a regular file, first retain the content you need,
+review the dry-run with `--replace`, then choose the explicit apply command. See the
+[init guide](init.md#apply-a-reviewed-plan) for ownership behavior.
+
+## Doctor exits 1 in automation
+
+Exit 1 means doctor produced a trustworthy complete or partial report with at least one
+warning or error diagnostic. Read the report; use exits 2 and 3 to distinguish invalid
+input from an operational failure. The [doctor CI recipes](doctor.md#ci-recipes) show
+safe POSIX-shell and PowerShell handling while retaining canonical JSON.
+
+## Next steps
+
+- Return to the [first-repository tutorial](../tutorials/first-repository.md) for a safe
+  first-use workflow.
+- Use [scan](scan.md), [map](map.md), [init](init.md), or [doctor](doctor.md) once the
+  reported condition is understood.

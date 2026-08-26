@@ -1,0 +1,18 @@
+active: true
+derived: false
+header: |
+  Public scan model tests
+level: '1.10'
+links:
+- REQ010: XI6klKicaVobz_uWP3AQ_IyZlomjjIOjjAZr0ALSFHk=
+- REQ015: IkC4zvkay8CAc174yuJMfiaV4loCTwu7qeB3Z-3QtZ4=
+normative: true
+ref: ''
+references:
+- keyword: TST010
+  path: tests/test_scan_models.py
+  type: file
+reviewed: 7lu1mPnn68mBO-EVKxt5ImBd-euauk2ptYxH11fPbZo=
+text: |
+  Verify immutable keyword-only public values, path and scalar invariants, canonical
+  ordering, unique identities, component paths, and subject and evidence references.

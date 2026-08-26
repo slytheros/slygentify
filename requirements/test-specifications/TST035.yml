@@ -1,0 +1,16 @@
+active: true
+derived: false
+header: |
+  Root scan configuration tests
+level: 1.35
+links:
+- REQ035: urolAmfE_Gfr1bfiL8Ic53nEgecduAgTaGoLINppkF4=
+normative: true
+ref: ''
+references:
+- keyword: TST035
+  path: tests/test_configuration.py
+  type: file
+reviewed: xuTDnMFapFOnXuHb4Wz2JLrSGBZxj-TFf91wUvtNB1E=
+text: |
+  Verify valid configuration application and fail-closed invalid configuration behavior.

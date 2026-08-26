@@ -1,0 +1,17 @@
+active: true
+derived: false
+header: |
+  Containment-aware traversal
+level: 1.12
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ012
+  path: src/slygentify/_scan/kernel.py
+  type: file
+reviewed: FWwP64132CGzkuOUP0aEm1B9RcLKQY5ImZpIjD6ZKA4=
+text: |
+  Repository traversal shall remain within the selected root, avoid following links
+  or reparse points, read only stable regular files, avoid descendant mount or volume
+  boundaries, and report scopes that cannot be proven safe.

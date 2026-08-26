@@ -1,0 +1,16 @@
+active: true
+derived: false
+header: |
+  Git repository discovery
+level: 1.1
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ001
+  path: src/slygentify/initialization.py
+  type: file
+reviewed: 7V8NbVveAUFceMRIoyfq17-osmEJ8tuGw2vytFiyVBo=
+text: |
+  Slygentify shall resolve a supplied existing directory to the nearest containing
+  Git repository root by inspecting local filesystem metadata without invoking Git.

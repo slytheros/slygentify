@@ -1,0 +1,16 @@
+active: true
+derived: false
+header: |
+  Complete decision coverage
+level: 1.8
+links: []
+normative: true
+ref: ''
+references:
+- keyword: --cov-branch
+  path: pyproject.toml
+  type: file
+reviewed: GbAIjcZ9u2xHmpBbDCbe50xKbWOhDuOHa7HdBRCrNvE=
+text: |
+  The default pytest run shall measure statement and branch coverage over all
+  first-party package code and fail when total coverage is below 100 percent.

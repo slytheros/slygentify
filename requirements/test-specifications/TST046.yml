@@ -1,0 +1,21 @@
+active: true
+derived: false
+header: |
+  Diagnostic quality and presentation tests
+level: 1.47
+links:
+- REQ046: evKhEThhDr2LehJSK2kvfdgUfOKo3Halww0uul8nYKY=
+normative: true
+ref: ''
+references:
+- keyword: TST046
+  path: tests/test_diagnostic_quality.py
+  type: file
+- keyword: TST046
+  path: tests/test_mixed_composition.py
+  type: file
+reviewed: 5V0K_fVNPnrAkouk0SOHNbvDp6OzyUNNT1nMkbEtB7c=
+text: |
+  Verify deterministic problem/effect/recovery composition, recovery and no-recovery
+  cases across diagnostic subsystems, actionable mixed-boundary guidance, consistent map
+  and initialization failures, and absence of duplicated recovery or secret disclosure.
