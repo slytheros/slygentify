@@ -1,0 +1,22 @@
+active: true
+derived: false
+header: |
+  Reproducible release workflow and recovery tests
+level: 1.53
+links:
+- REQ052: E7lgRnz451A1ATzgn4cHM8L52PFQl6Q-DnHMi3Gq5Lk=
+normative: true
+ref: ''
+references:
+- keyword: TST053
+  path: tests/test_release.py
+  type: file
+reviewed: 0umYl2tbhSBriJWplHk5U7xb-NSNX7MyREo25WwTb2s=
+text: |
+  Verify accepted and rejected release tags, package-version mapping, exact artifact
+  inventory and metadata, deterministic checksums, immutable bundle verification, normal,
+  partial-recovery, and verification-only registry classifications, unsafe remote-state
+  refusal, provenance acquisition boundaries, and isolated distribution installation.
+  Statically verify distinct production and TestPyPI triggers, environments, least-privilege
+  permissions, full-SHA action pins, supported matrices, required pre-publication jobs, and
+  the absence of secrets, pull_request_target, automatic tags, or automatic GitHub releases.

@@ -101,6 +101,7 @@ Start with the [first-repository tutorial](docs/tutorials/first-repository.md), 
 - [Python inspection](docs/python-inspection.md)
 - [JavaScript and TypeScript inspection](docs/javascript-inspection.md)
 - [acceptance measurement](docs/acceptance.md)
+- [maintainer release process](docs/releasing.md)
 - [architecture decisions](docs/adr/README.md)
 - [support](SUPPORT.md), [security](SECURITY.md), and [migration guidance](docs/migration.md)
 

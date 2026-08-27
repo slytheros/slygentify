@@ -44,6 +44,7 @@ nav:
       - JavaScript and TypeScript inspection: javascript-inspection.md
       - Inspection accounting: inspection-accounting.md
   - Project:
+      - Maintainer release process: releasing.md
       - Migration guidance: migration.md
       - Interaction design: interaction-design.md
       - Changelog: https://github.com/slytheros/slygentify/blob/develop/CHANGELOG.md

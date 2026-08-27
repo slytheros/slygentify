@@ -68,6 +68,10 @@ documentation build, remain local. MkDocs extracts the public Python reference f
 source without importing Slygentify. Do not weaken or suppress an unrelated check to
 make a contribution pass.
 
+Release preparation, TestPyPI rehearsal, recovery, and production approval follow the
+[maintainer release runbook](docs/releasing.md). Contributors and agents never move a
+release tag, reuse a published version, or publish outside that documented process.
+
 ## Requirements and traceability
 
 Externally observable behavior belongs in the Doorstop `REQ` document under

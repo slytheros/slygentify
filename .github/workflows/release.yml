@@ -1,0 +1,348 @@
+name: Release to PyPI
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Recovery action for the selected existing release tag
+        required: true
+        default: verify-only
+        type: choice
+        options:
+          - recover-partial
+          - verify-only
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-pypi-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build immutable distributions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      mode: ${{ steps.identity.outputs.mode }}
+      tag: ${{ steps.identity.outputs.tag }}
+      version: ${{ steps.identity.outputs.version }}
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify clean tagged main commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_TYPE" = tag
+          test -z "$(git status --porcelain --untracked-files=all)"
+          git fetch --no-tags origin main
+          tagged_commit="$(git rev-list -n 1 "$GITHUB_REF")"
+          test "$tagged_commit" = "$(git rev-parse HEAD)"
+          git merge-base --is-ancestor "$tagged_commit" origin/main
+
+      - name: Install pinned uv and Python
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: 0.11.32
+          python-version: '3.14'
+          enable-cache: true
+
+      - name: Install locked release tooling
+        run: uv sync --locked --all-groups --no-install-project
+
+      - name: Require successful protected source checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          commit="$(git rev-parse HEAD)"
+          gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "/repos/$GITHUB_REPOSITORY/commits/$commit/check-runs?filter=latest&per_page=100" \
+            > check-runs.json
+          uv run --locked --no-sync python -m tools.release verify-source-checks check-runs.json
+
+      - name: Resolve release identity
+        id: identity
+        shell: bash
+        env:
+          DISPATCH_MODE: ${{ inputs.mode }}
+        run: |
+          set -euo pipefail
+          version="$(uv run --locked --no-sync python -m tools.release version "$GITHUB_REF_NAME")"
+          mode=publish
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+            mode="$DISPATCH_MODE"
+          fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "tag=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Build once with the locked backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SOURCE_DATE_EPOCH="$(git show -s --format=%ct HEAD)"
+          uv build --offline --no-build-isolation --no-sources --no-create-gitignore \
+            --clear --out-dir dist
+
+      - name: Check package metadata
+        run: uv run --locked --no-sync twine check --strict dist/*
+
+      - name: Prepare release bundle
+        run: >-
+          uv run --locked --no-sync python -m tools.release prepare
+          --tag "${{ steps.identity.outputs.tag }}"
+          --dist dist
+          --bundle release-bundle
+
+      - name: Store immutable release bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-bundle-${{ steps.identity.outputs.tag }}
+          path: release-bundle/
+          if-no-files-found: error
+          retention-days: 30
+
+  attest:
+    name: Attest immutable distributions
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - name: Download release bundle
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-bundle-${{ needs.build.outputs.tag }}
+          path: release-bundle
+
+      - name: Generate GitHub build provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: release-bundle/dist/*
+
+      - name: Verify GitHub build provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          for artifact in release-bundle/dist/*; do
+            gh attestation verify "$artifact" --repo "$GITHUB_REPOSITORY"
+          done
+
+  install-artifacts:
+    name: Install artifacts (${{ matrix.os }}, Python ${{ matrix.python-version }})
+    needs: build
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025, macos-15]
+        python-version: ['3.11', '3.12', '3.13', '3.14']
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install pinned uv and Python
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: 0.11.32
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+
+      - name: Install locked release tooling
+        run: uv sync --locked --all-groups --no-install-project
+
+      - name: Download release bundle
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-bundle-${{ needs.build.outputs.tag }}
+          path: release-bundle
+
+      - name: Install wheel and source distribution separately
+        run: >-
+          uv run --locked --no-sync python -m tools.release smoke
+          --tag "${{ needs.build.outputs.tag }}"
+          --bundle release-bundle
+
+  preflight:
+    name: Refuse unsafe PyPI state
+    needs: [build, attest, install-artifacts]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      has-upload: ${{ steps.plan.outputs.has-upload }}
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install pinned uv and Python
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: 0.11.32
+          python-version: '3.14'
+          enable-cache: true
+
+      - name: Install locked release tooling
+        run: uv sync --locked --all-groups --no-install-project
+
+      - name: Download release bundle
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-bundle-${{ needs.build.outputs.tag }}
+          path: release-bundle
+
+      - name: Plan exact upload
+        id: plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run --locked --no-sync python -m tools.release stage \
+            --tag "${{ needs.build.outputs.tag }}" \
+            --bundle release-bundle \
+            --destination publish \
+            --index-root https://pypi.org \
+            --mode "${{ needs.build.outputs.mode }}"
+          if compgen -G 'publish/*' > /dev/null; then
+            echo 'has-upload=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'has-upload=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Store exact publication payload
+        if: steps.plan.outputs.has-upload == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pypi-payload-${{ needs.build.outputs.tag }}
+          path: publish/
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: Publish approved files to PyPI
+    if: needs.preflight.outputs.has-upload == 'true'
+    needs: [build, preflight]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: pypi
+      url: https://pypi.org/p/slygentify
+    permissions:
+      id-token: write
+    steps:
+      - name: Download exact publication payload
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: pypi-payload-${{ needs.build.outputs.tag }}
+          path: dist
+
+      - name: Publish with PyPI Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          packages-dir: dist/
+          attestations: true
+          print-hash: true
+
+  verify-pypi:
+    name: Verify PyPI hashes and provenance
+    if: >-
+      always() &&
+      needs.build.result == 'success' &&
+      needs.preflight.result == 'success' &&
+      (needs.publish.result == 'success' || needs.publish.result == 'skipped')
+    needs: [build, preflight, publish]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install pinned uv and Python
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: 0.11.32
+          python-version: '3.14'
+          enable-cache: true
+
+      - name: Install locked verification tooling
+        run: uv sync --locked --all-groups --no-install-project
+
+      - name: Download release bundle
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-bundle-${{ needs.build.outputs.tag }}
+          path: release-bundle
+
+      - name: Wait for and retrieve PyPI provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in {1..12}; do
+            if uv run --locked --no-sync python -m tools.release fetch-provenance \
+              --tag "${{ needs.build.outputs.tag }}" \
+              --bundle release-bundle \
+              --destination provenance \
+              --index-root https://pypi.org; then
+              exit 0
+            fi
+            rm -rf provenance
+            sleep 10
+          done
+          exit 1
+
+      - name: Verify trusted publisher identity and PEP 740 attestations
+        shell: bash
+        run: |
+          set -euo pipefail
+          for artifact in release-bundle/dist/*; do
+            filename="$(basename "$artifact")"
+            uv run --locked --no-sync pypi-attestations verify pypi \
+              --repository https://github.com/slytheros/slygentify \
+              --provenance-file "provenance/$filename.provenance" \
+              "$artifact"
+          done
+
+  install-pypi:
+    name: Install from PyPI (${{ matrix.os }}, Python ${{ matrix.python-version }})
+    needs: [build, verify-pypi]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025, macos-15]
+        python-version: ['3.11', '3.12', '3.13', '3.14']
+    steps:
+      - name: Install pinned uv and Python
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: 0.11.32
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install and execute the published version
+        run: >-
+          uv run --isolated --no-project --refresh-package slygentify
+          --with "slygentify==${{ needs.build.outputs.version }}"
+          slygentify --help
