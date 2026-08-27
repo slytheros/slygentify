@@ -16,7 +16,9 @@ text: |
   Verify accepted and rejected release tags, package-version mapping, exact artifact
   inventory and metadata, deterministic checksums, immutable bundle verification, normal,
   partial-recovery, and verification-only registry classifications, unsafe remote-state
-  refusal, provenance acquisition boundaries, and isolated distribution installation.
-  Statically verify distinct production and TestPyPI triggers, environments, least-privilege
-  permissions, full-SHA action pins, supported matrices, required pre-publication jobs, and
-  the absence of secrets, pull_request_target, automatic tags, or automatic GitHub releases.
+  refusal, provenance acquisition boundaries, isolated distribution installation, and
+  exact-version uv tool and pipx installation with isolated manager state. Statically verify
+  distinct production and TestPyPI triggers, environments, least-privilege permissions,
+  full-SHA action pins, supported artifact and published-installer matrices, required
+  pre-publication jobs, and the absence of secrets, pull_request_target, automatic tags, or
+  automatic GitHub releases.

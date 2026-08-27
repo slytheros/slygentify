@@ -6,6 +6,10 @@ major versions are independent compatibility surfaces.
 
 ## Unreleased
 
+No changes yet.
+
+## [1.0.0rc1] - 2026-08-27
+
 - Add reproducible, human-gated PyPI and TestPyPI release workflows with provenance,
   twelve-context installation verification, fail-closed partial recovery, and a public
   maintainer runbook.

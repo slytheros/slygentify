@@ -20,8 +20,11 @@ text: |
   byte-identifiable py3-none-any wheel and one source distribution with locked tooling,
   validate and install those exact files across the supported platform matrix, record
   SHA-256 checksums, create GitHub build provenance, and use environment-approved PyPI
-  Trusted Publishing without long-lived credentials. Production and TestPyPI shall use
-  distinct workflows, environments, and publisher identities. Publication shall fail
-  closed on mismatched tags, files, hashes, registry state, or provenance. A separately
-  approved partial recovery may upload only one missing file after verifying the matching
-  existing file. GitHub release publication shall remain an authorized human action.
+  Trusted Publishing without long-lived credentials. Each published version shall also
+  install and execute through uv tool and pipx in fresh environments across the supported
+  platform matrix. Production and TestPyPI shall use distinct workflows, environments,
+  and publisher identities. Publication shall fail closed on mismatched tags, files,
+  hashes, registry state, provenance, installed versions, or missing executables. A
+  separately approved partial recovery may upload only one missing file after verifying
+  the matching existing file. GitHub release publication shall remain an authorized human
+  action.

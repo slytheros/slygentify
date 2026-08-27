@@ -21,6 +21,15 @@ wheels = [
 ]
 
 [[package]]
+name = "argcomplete"
+version = "3.7.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/87/6f/5a73f04007ca950701765949209f068da628bd11f9c2da287278ce91e0ee/argcomplete-3.7.2.tar.gz", hash = "sha256:aad8b69a0b9969edb62db0d1752354c0d50717b10e0cbb00e2a958381b9fc6b9", size = 74473, upload-time = "2026-08-06T04:53:21.662Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/46/bd/551ee6af426af84ca33e02622be722925c196608e9127d731ef17c47f06e/argcomplete-3.7.2-py3-none-any.whl", hash = "sha256:6029205678bdd9c1c728a155f5f9ecf5812393f969eef58807641a2bc2aa5b19", size = 43294, upload-time = "2026-08-06T04:53:20.246Z" },
+]
+
+[[package]]
 name = "attrs"
 version = "26.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1141,6 +1150,23 @@ wheels = [
 ]
 
 [[package]]
+name = "pipx"
+version = "1.16.7"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "argcomplete" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "filelock" },
+    { name = "packaging" },
+    { name = "platformdirs" },
+    { name = "userpath" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8d/b6/6c8062aaaca7164955a84dd0aaff31ae73e121d5da177f9d542e5c552f4f/pipx-1.16.7.tar.gz", hash = "sha256:a575ced25c507c1b1c978269f5684b5b291e81e3cd14eb3cee196a3c5b304732", size = 353428, upload-time = "2026-08-13T22:27:45.833Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/84/4f/935051d431d8831dc08d2a6ea100d37f4ae11df9484c6d0b683002c757df/pipx-1.16.7-py3-none-any.whl", hash = "sha256:ff9719b1ef80edb8d08ad76862103c6100ff4e3f5e9012b441f51e7b5a04fa5b", size = 152983, upload-time = "2026-08-13T22:27:44.477Z" },
+]
+
+[[package]]
 name = "plantuml-markdown"
 version = "3.11.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1874,6 +1900,7 @@ dev = [
     { name = "hatchling" },
     { name = "jsonschema" },
     { name = "mypy" },
+    { name = "pipx" },
     { name = "pre-commit" },
     { name = "pypi-attestations" },
     { name = "pytest" },
@@ -1903,6 +1930,7 @@ dev = [
     { name = "hatchling", specifier = ">=1.27,<2" },
     { name = "jsonschema", specifier = ">=4.25,<5" },
     { name = "mypy", specifier = ">=1.17,<2" },
+    { name = "pipx", specifier = ">=1.8,<2" },
     { name = "pre-commit", specifier = ">=4.3,<5" },
     { name = "pypi-attestations", specifier = ">=0.0.30,<1" },
     { name = "pytest", specifier = ">=8.4,<10" },
@@ -2089,6 +2117,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/53/0c/06f8b233b8fd13b9e5ee11424ef85419ba0d8ba0b3138bf360be2ff56953/urllib3-2.7.0.tar.gz", hash = "sha256:231e0ec3b63ceb14667c67be60f2f2c40a518cb38b03af60abc813da26505f4c", size = 433602, upload-time = "2026-05-07T16:13:18.596Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7f/3e/5db95bcf282c52709639744ca2a8b149baccf648e39c8cc87553df9eae0c/urllib3-2.7.0-py3-none-any.whl", hash = "sha256:9fb4c81ebbb1ce9531cce37674bbc6f1360472bc18ca9a553ede278ef7276897", size = 131087, upload-time = "2026-05-07T16:13:17.151Z" },
+]
+
+[[package]]
+name = "userpath"
+version = "1.9.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "click" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d5/b7/30753098208505d7ff9be5b3a32112fb8a4cb3ddfccbbb7ba9973f2e29ff/userpath-1.9.2.tar.gz", hash = "sha256:6c52288dab069257cc831846d15d48133522455d4677ee69a9781f11dbefd815", size = 11140, upload-time = "2024-02-29T21:39:08.742Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/43/99/3ec6335ded5b88c2f7ed25c56ffd952546f7ed007ffb1e1539dc3b57015a/userpath-1.9.2-py3-none-any.whl", hash = "sha256:2cbf01a23d655a1ff8fc166dfb78da1b641d1ceabf0fe5f970767d380b14e89d", size = 9065, upload-time = "2024-02-29T21:39:07.551Z" },
 ]
 
 [[package]]

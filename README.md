@@ -5,7 +5,7 @@ understand and operate unfamiliar software repositories safely. It builds a boun
 evidence-backed operating map instead of guessing from conventions or executing
 discovered project commands.
 
-Slygentify is pre-alpha (`0.1.0`). The implemented commands are:
+Slygentify is a public 1.0 release candidate (`1.0.0rc1`). The implemented commands are:
 
 - `slygentify init` — plan or create concise, component-aware root guidance.
 - `slygentify scan` — inspect a repository and return a human or versioned JSON report.

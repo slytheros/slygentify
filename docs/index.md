@@ -1,8 +1,8 @@
 # Slygentify documentation
 
-Slygentify `0.1.0` is pre-alpha software for building bounded, evidence-backed
-repository operating maps and safe agent guidance. It implements `init`, `scan`, `map`,
-and static `doctor`. It is not yet published on PyPI.
+Slygentify `1.0.0rc1` is a public 1.0 release candidate for building bounded,
+evidence-backed repository operating maps and safe agent guidance. It implements `init`,
+`scan`, `map`, and static `doctor`. It is not yet published on production PyPI.
 
 ## Start here
 

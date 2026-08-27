@@ -61,7 +61,7 @@ def test_public_package_metadata_and_documentation_dependencies_are_exact() -> N
 
     assert metadata["dynamic"] == ["version"]
     assert project["tool"]["hatch"]["version"] == {"path": "src/slygentify/_version.py"}
-    assert slygentify.__version__ == "0.1.0"
+    assert slygentify.__version__ == "1.0.0rc1"
     assert metadata["license"] == "Apache-2.0"
     assert metadata["license-files"] == ["LICENSE"]
     assert metadata["urls"] == {
@@ -72,7 +72,7 @@ def test_public_package_metadata_and_documentation_dependencies_are_exact() -> N
         "Changelog": "https://github.com/slytheros/slygentify/blob/develop/CHANGELOG.md",
     }
     assert {
-        "Development Status :: 2 - Pre-Alpha",
+        "Development Status :: 4 - Beta",
         "Environment :: Console",
         "Intended Audience :: Developers",
         "Operating System :: OS Independent",
@@ -259,7 +259,7 @@ def test_public_documentation_is_present_state_accurate() -> None:
     support = (ROOT / "SUPPORT.md").read_text(encoding="utf-8")
     security = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
 
-    assert "not yet published on PyPI" in installation
+    assert "not yet published on production PyPI" in installation
     assert "not currently available downloads" in installation
     current, future = installation.split("## After a genuine PyPI publication", maxsplit=1)
     assert "existing reviewed source checkout" in current
@@ -268,10 +268,10 @@ def test_public_documentation_is_present_state_accurate() -> None:
     assert "git clone" not in current
     assert "git clone" in future
     assert '!!! warning "Future installation only — do not run these commands yet"' in future
-    assert "no pre-release OS support matrix is promised" in current
+    assert "Ubuntu 24.04 x64, Windows 2025 x64, and macOS 15 arm64" in current
     assert "docs/installation.md#current-availability" in support
     assert changelog.count("## Unreleased") == 1
-    assert not re.search(r"^## \[?\d+\.\d+\.\d+", changelog, re.MULTILINE)
+    assert "## [1.0.0rc1] - 2026-08-27" in changelog
     assert "no guaranteed response or remediation service-level agreement" in " ".join(
         support.split()
     )
