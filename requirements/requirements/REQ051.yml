@@ -13,9 +13,10 @@ references:
 - keyword: path = "src/slygentify/_version.py"
   path: pyproject.toml
   type: file
-reviewed: wNYjNkiYN2ThUuXe401_KMKb_ezIaSpc7yhDavuWm8U=
+reviewed: null
 text: |
   Slygentify shall build source and wheel distributions containing only the package runtime,
   package metadata, license, changelog, and README, independently of ambient untracked
-  checkout content. Package version metadata shall derive from one private source while the
-  public slygentify.__version__ value remains unchanged.
+  checkout content. Package version metadata shall derive from one private source and match
+  the public slygentify.__version__ value. Repeated builds from the same source with the same
+  source epoch and locked build backend shall produce byte-identical artifacts.

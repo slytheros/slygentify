@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import os
 import re
 import subprocess
 import tarfile
@@ -14,15 +16,38 @@ import pytest
 @pytest.mark.verifies("TST052")
 def test_distribution_artifacts_are_contained_and_preserve_runtime_contract(tmp_path: Path) -> None:
     repository_root = Path(__file__).parents[1]
-    output = tmp_path / "dist"
-    result = subprocess.run(
-        ["uv", "build", "--no-sources", "--out-dir", str(output)],
-        cwd=repository_root,
-        capture_output=True,
-        check=False,
-        text=True,
-    )
-    assert result.returncode == 0, result.stdout + result.stderr
+    outputs = (tmp_path / "first", tmp_path / "second")
+    environment = os.environ | {"SOURCE_DATE_EPOCH": "1700000000"}
+    for output in outputs:
+        result = subprocess.run(
+            [
+                "uv",
+                "build",
+                "--offline",
+                "--no-build-isolation",
+                "--no-sources",
+                "--no-create-gitignore",
+                "--out-dir",
+                str(output),
+            ],
+            cwd=repository_root,
+            capture_output=True,
+            check=False,
+            env=environment,
+            text=True,
+        )
+        assert result.returncode == 0, result.stdout + result.stderr
+
+    output = outputs[0]
+    first_hashes = {
+        path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in sorted(outputs[0].iterdir())
+    }
+    second_hashes = {
+        path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in sorted(outputs[1].iterdir())
+    }
+    assert first_hashes == second_hashes
 
     sdist = output / "slygentify-0.1.0.tar.gz"
     wheel = output / "slygentify-0.1.0-py3-none-any.whl"

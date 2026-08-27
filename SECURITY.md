@@ -16,6 +16,10 @@ service-level agreement. The maintainer may coordinate an embargoed fix through 
 GitHub security advisory and request a CVE when warranted. An authorized human controls
 disclosure, merge, tagging, and publication.
 
+The [maintainer release process](docs/releasing.md#suspected-compromise) defines how to
+stop publication, preserve provenance evidence, and recover forward after a suspected
+release compromise.
+
 ## Supported versions
 
 Before 1.0, only the current development version is considered for best-effort security

@@ -4,16 +4,17 @@ header: |
   Contained distribution artifact tests
 level: 1.52
 links:
-- REQ051: wNYjNkiYN2ThUuXe401_KMKb_ezIaSpc7yhDavuWm8U=
+- REQ051: null
 normative: true
 ref: ''
 references:
 - keyword: TST052
   path: tests/test_repository_quality.py
   type: file
-reviewed: NknG-XjedpWhj_Fgg3lAvoYHVVOo5eKmv2SqvfKKzgU=
+reviewed: null
 text: |
-  Build the source and wheel distributions in an isolated temporary directory. Verify that
-  the source distribution contains only the approved runtime and release files, that the
-  wheel contains no developer acceptance helpers, and that its version, license, schemas,
-  and console entry point remain present.
+  Build the source and wheel distributions twice in isolated temporary directories with the
+  same source epoch and locked backend. Verify identical SHA-256 digests, that the source
+  distribution contains only the approved runtime and release files, that the wheel contains
+  no developer acceptance helpers, and that its version, license, schemas, and console entry
+  point remain present.

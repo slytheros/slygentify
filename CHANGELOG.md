@@ -6,6 +6,9 @@ major versions are independent compatibility surfaces.
 
 ## Unreleased
 
+- Add reproducible, human-gated PyPI and TestPyPI release workflows with provenance,
+  twelve-context installation verification, fail-closed partial recovery, and a public
+  maintainer runbook.
 - Contain source and wheel distributions to the runtime package and release metadata, and
   keep acceptance-measurement helpers as development-only tooling.
 - Derive package metadata and the public `slygentify.__version__` value from one private

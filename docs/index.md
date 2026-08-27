@@ -43,5 +43,6 @@ decision history. Those tracked maintainer records are not user capability claim
 ## Project policies
 
 The repository root contains the changelog, support and security policies, contributor
-guide, Apache-2.0 license, and project overview. See [migration guidance](migration.md)
-for package and JSON compatibility rules.
+guide, Apache-2.0 license, and project overview. See the
+[maintainer release process](releasing.md) for human-gated publication and recovery, and
+[migration guidance](migration.md) for package and JSON compatibility rules.
