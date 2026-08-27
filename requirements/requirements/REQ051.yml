@@ -13,7 +13,7 @@ references:
 - keyword: path = "src/slygentify/_version.py"
   path: pyproject.toml
   type: file
-reviewed: null
+reviewed: gt-WABhHDoW_YQGQN0YTOfFns3YgTSOjtxUCp8WcYhg=
 text: |
   Slygentify shall build source and wheel distributions containing only the package runtime,
   package metadata, license, changelog, and README, independently of ambient untracked

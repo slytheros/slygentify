@@ -13,7 +13,7 @@ references:
 - keyword: Human-gated release process
   path: docs/releasing.md
   type: file
-reviewed: null
+reviewed: E7lgRnz451A1ATzgn4cHM8L52PFQl6Q-DnHMi3Gq5Lk=
 text: |
   Slygentify shall publish only protected main-branch tags in canonical vX.Y.Z or
   vX.Y.Z-rc.N form whose package version matches exactly. A release shall build one
