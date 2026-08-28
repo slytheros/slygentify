@@ -126,3 +126,8 @@ symbolic link, directory, or malformed state. Writes are atomic, guidance first 
 second. If the second write fails, the error reports the changed guidance location and a
 safe recovery. If generated guidance already matches but the sidecar is missing, init can
 repair only the sidecar.
+
+For an unmanaged or human-edited safe regular `AGENTS.md`, ordinary init instead prints
+a deterministic paste-ready section and exits 4. It does not write the guidance or state;
+the user owns the manual merge. Dry-run continues to display the complete candidate
+artifacts and exits 4 for the same manual-incorporation outcome.

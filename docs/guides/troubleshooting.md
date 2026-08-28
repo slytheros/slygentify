@@ -37,11 +37,15 @@ configuration sources.
 See the [configuration reference](../configuration-and-provenance.md) for the accepted
 shape and path rules.
 
-## Init refuses to create or regenerate guidance
+## Init preserves existing guidance
 
-Run `slygentify init PATH --dry-run` and review the ownership state, diagnostic, and
-recovery text. Ordinary init intentionally refuses unmanaged, human-edited, missing
-managed, malformed, and unsafe targets to preserve existing work. Do not use `--replace`
+For an unmanaged or human-edited safe regular `AGENTS.md`, ordinary init prints a
+paste-ready Slygentify section, preserves the file, and exits 4. Paste the section where
+it fits your existing guidance; this deliberate manual path does not create managed
+provenance state. Run `slygentify init PATH --dry-run` to review the full candidate and
+sidecar before deciding whether to replace the file.
+
+Missing managed, malformed, and unsafe targets still fail closed. Do not use `--replace`
 as routine recovery: it can discard a regular `AGENTS.md`, creates no backup, and never
 permits unsafe entries.
 
