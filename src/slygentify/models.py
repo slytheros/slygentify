@@ -53,7 +53,7 @@ def _references(values: tuple[str, ...], field: str) -> None:
         raise ValueError(f"{field} must be unique and sorted")
 
 
-@implements("REQ010", "REQ046")
+@implements("REQ010")
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Repository:
     """The selected repository represented without a host-absolute path."""
@@ -168,7 +168,7 @@ class Finding:
         _references(self.evidence_ids, "evidence_ids")
 
 
-@implements("REQ010")
+@implements("REQ010", "REQ046")
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Diagnostic:
     """An inspection diagnostic with an explicit public disposition."""

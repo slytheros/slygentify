@@ -198,6 +198,9 @@ def init_command(
             err=True,
         )
     manual_paste = not adopt and _requires_manual_paste(plan.ownership, replace)
+    if manual_paste:
+        for diagnostic in plan.diagnostics:
+            _render_initialization_diagnostic(diagnostic, severity="Notice")
 
     if dry_run:
         typer.echo(f"Ownership: {plan.ownership}")
