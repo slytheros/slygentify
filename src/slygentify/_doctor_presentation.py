@@ -75,11 +75,11 @@ def render_doctor_report(
             console.print(
                 Text(
                     f"{diagnostic.severity.upper()} {diagnostic.classification.upper()} "
-                    f"[{diagnostic.code}] {_target(diagnostic)}",
+                    f"{diagnostic.disposition.upper()} [{diagnostic.code}] {_target(diagnostic)}",
                     style=_SEVERITY_STYLES[severity],
                 )
             )
-            console.print(f"  Problem: {diagnostic.problem}")
+            console.print(f"  Description: {diagnostic.problem}")
             console.print(f"  Effect: {diagnostic.effect}")
             if diagnostic.category is not None:
                 console.print(f"  Category: {diagnostic.category}")

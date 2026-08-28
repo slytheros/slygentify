@@ -307,6 +307,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                 False,
                 None,
                 (key,),
+                disposition="limitation",
             )
         )
 
@@ -400,6 +401,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                     "Next: correct the declaration or remove unsupported pip-only syntax.",
                     True,
                     root,
+                    disposition="problem",
                 )
             )
             return
@@ -453,6 +455,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                     "Next: correct the TOML syntax or encoding and scan again.",
                     True,
                     root,
+                    disposition="problem",
                 )
             )
             continue
@@ -477,6 +480,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                     "uv workspace members and exclusions must be lists of literal strings.",
                     True,
                     None,
+                    disposition="problem",
                 )
             )
         qualifiers = [
@@ -533,6 +537,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                     "Python INI configuration is invalid.",
                     True,
                     _parent(path),
+                    disposition="problem",
                 )
             )
             continue
@@ -603,6 +608,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                     False,
                     root,
                     (key,),
+                    disposition="limitation",
                 )
             )
 
@@ -680,6 +686,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                                 False,
                                 root,
                                 (key,),
+                                disposition="limitation",
                             )
                         )
             dependencies = project.get("dependencies")
@@ -818,6 +825,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                         True,
                         root,
                         (workspace_key,),
+                        disposition="problem",
                     )
                 )
             else:
@@ -834,6 +842,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                                 True,
                                 root,
                                 (workspace_key,),
+                                disposition="problem",
                             )
                         )
                         continue
@@ -863,6 +872,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                                 True,
                                 root,
                                 (workspace_key,),
+                                disposition="problem",
                             )
                         )
                     for member_root in sorted(matches):
@@ -922,6 +932,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                             ".python-version is not valid UTF-8.",
                             True,
                             root,
+                            disposition="problem",
                         )
                     )
                 else:
@@ -947,6 +958,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                         "Requirements evidence is not valid UTF-8.",
                         True,
                         root,
+                        disposition="problem",
                     )
                 )
                 continue
@@ -994,6 +1006,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                     False,
                     None,
                     (key,),
+                    disposition="limitation",
                 )
             )
 
@@ -1063,6 +1076,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                         ),
                         True,
                         root if root in qualified_roots else None,
+                        disposition="limitation" if unsupported else "problem",
                     )
                 )
                 continue
@@ -1166,6 +1180,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                     False,
                     subject,
                     (key,),
+                    disposition="notice",
                 )
             )
         else:
@@ -1202,6 +1217,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                 False,
                 subject,
                 (key,),
+                disposition="limitation",
             )
         )
 
@@ -1223,7 +1239,11 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
         except (UnicodeError, yaml.YAMLError, _YamlStructureError):
             diagnostics.append(
                 _DiagnosticCandidate(
-                    "python.invalid-ci-workflow", path, "CI workflow YAML is invalid.", True
+                    "python.invalid-ci-workflow",
+                    path,
+                    "CI workflow YAML is invalid.",
+                    True,
+                    disposition="problem",
                 )
             )
             continue
@@ -1341,6 +1361,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                                 False,
                                 subject,
                                 (key,),
+                                disposition="limitation",
                             )
                         )
 
@@ -1356,6 +1377,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                         "A GitLab local include cycle was not expanded.",
                         False,
                         ".",
+                        disposition="problem",
                     )
                 )
                 return
@@ -1367,6 +1389,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                         "GitLab local include nesting exceeded the supported bound.",
                         True,
                         ".",
+                        disposition="limitation",
                     )
                 )
                 return
@@ -1381,7 +1404,12 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
             except (UnicodeError, yaml.YAMLError, _YamlStructureError):
                 diagnostics.append(
                     _DiagnosticCandidate(
-                        "python.invalid-ci-workflow", path, "GitLab CI YAML is invalid.", True, "."
+                        "python.invalid-ci-workflow",
+                        path,
+                        "GitLab CI YAML is invalid.",
+                        True,
+                        ".",
+                        disposition="problem",
                     )
                 )
                 return
@@ -1405,6 +1433,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                                 "A GitLab local include is missing or escapes the repository.",
                                 True,
                                 ".",
+                                disposition="problem",
                             )
                         )
                     else:
@@ -1434,6 +1463,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                             False,
                             ".",
                             (key,),
+                            disposition="limitation",
                         )
                     )
             reserved = {
@@ -1517,6 +1547,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                     False,
                     root if root in qualified_roots else None,
                     conflict_keys,
+                    disposition="problem",
                 )
             )
     for root, declarations in runtimes.items():
@@ -1559,6 +1590,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                     False,
                     root,
                     conflict_keys,
+                    disposition="problem",
                 )
             )
     for root, by_tool in tools.items():
@@ -1575,6 +1607,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                         False,
                         root if root in qualified_roots else None,
                         tuple(keys),
+                        disposition="problem",
                     )
                 )
 

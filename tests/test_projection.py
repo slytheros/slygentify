@@ -213,6 +213,7 @@ def _result(*, completion: str = "partial") -> ScanResult:
                     location="apps/api",
                     message="API metadata conflicts.",
                     evidence_ids=("e_boundary",),
+                    disposition="limitation",
                 ),
                 Diagnostic(
                     id="d_lib",
@@ -435,11 +436,26 @@ def test_projection_json_round_trip_schema_and_forward_compatibility() -> None:
     assert load_scan_projection_json(data) == projection
     assert validate_scan_projection(projection) == projection
     mapping = json.loads(data)
+    assert mapping["diagnostics"][0]["disposition"] == "limitation"
     Draft202012Validator(scan_projection_json_schema()).validate(mapping)
     mapping["future_projection_field"] = {"retained_by_future_producers": True}
     mapping["repository"]["future_repository_field"] = 1
     mapping["navigation"]["future_navigation_field"] = 1
     assert load_scan_projection_json(json.dumps(mapping)) == projection
+    old_mapping = json.loads(data)
+    for diagnostic in old_mapping["diagnostics"]:
+        del diagnostic["disposition"]
+    expected_old = replace(
+        projection,
+        diagnostics=tuple(
+            replace(diagnostic, disposition="problem") for diagnostic in projection.diagnostics
+        ),
+    )
+    assert load_scan_projection_json(json.dumps(old_mapping)) == expected_old
+    invalid_mapping = json.loads(data)
+    invalid_mapping["diagnostics"][0]["disposition"] = "other"
+    with pytest.raises(ScanValidationError):
+        load_scan_projection_json(json.dumps(invalid_mapping))
     with pytest.raises(ScanValidationError):
         load_scan_json(data)
     with pytest.raises(ScanValidationError, match="only ScanProjection"):

@@ -327,6 +327,7 @@ def test_deterministic_resource_limits_return_partial_results(
     assert f"scan.limits.{reason}" in (cause.recovery or "")
     assert cause.boundary is not None
     assert cause.boundary.effective_limit is not None
+    assert cause.disposition == "limitation"
 
 
 @pytest.mark.verifies("TST013")
@@ -381,6 +382,7 @@ def test_private_partial_cause_normalization_deduplicates_one_boundary_event(
         "bad",
         "File could not be read safely.",
         True,
+        disposition="problem",
     )
     inspection = _Inspection(
         files={},
@@ -424,7 +426,9 @@ def test_private_partial_cause_normalization_deduplicates_one_boundary_event(
     )
     assert (
         _matching_boundary(
-            DiagnosticCandidate("other.code", "bad", "Another condition.", False),
+            DiagnosticCandidate(
+                "other.code", "bad", "Another condition.", False, disposition="problem"
+            ),
             (boundary,),
         )
         is None

@@ -54,9 +54,10 @@ slygentify scan path/to/repository --git-executable path/to/git
 ```
 
 The text report groups repository orientation, workflows, architecture, automation,
-concerns, inspection boundaries, and source provenance. Needs attention leads with
-Problems & next steps, nests source-related unknown findings under their diagnostic,
-and reports both issue and canonical-record counts. Unmatched unknowns, explicit
+concerns, inspection boundaries, and source provenance. Attention & limitations splits
+diagnostics into Problems & next steps, Limitations & explanations, and Notices; nests
+source-related unknown findings under their diagnostic; and reports neutral item and
+canonical-record counts overall. Unmatched unknowns, explicit
 cautions, and recommendations remain separate. `--format json` writes only
 canonical schema-major-1 JSON to standard output. `--interactive` requires interactive
 input and output terminals and cannot be combined with JSON format; it provides a
@@ -89,8 +90,8 @@ slygentify doctor path/to/repository --git-executable path/to/git
 ```
 
 Default text identifies the resolved repository, complete or partial status, severity
-counts, and every diagnostic with its claim classification, stable code, target,
-problem, effect, and remediation. `--verbose` additionally prints diagnostic evidence
+counts, and every diagnostic with its claim classification, disposition, stable code,
+target, description, effect, and remediation. `--verbose` additionally prints diagnostic evidence
 references, including the originating scan code or boundary reason for every distinct
 partial-inspection cause, one complete evidence appendix, and every skipped scope. Human wording and
 layout may evolve and must not be parsed by automation. `--format json` writes exactly

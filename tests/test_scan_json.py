@@ -33,6 +33,11 @@ from tests.scan_samples import sample_mapping, sample_result
 @pytest.mark.verifies("TST018")
 def test_validate_scan_accepts_public_values_and_ignores_same_major_unknown_properties() -> None:
     mapping = sample_mapping()
+    diagnostics = mapping["diagnostics"]
+    assert isinstance(diagnostics, list)
+    first_diagnostic = diagnostics[0]
+    assert isinstance(first_diagnostic, dict)
+    assert "disposition" not in first_diagnostic
     mapping["future_top_level"] = {"future": True}
     repository = mapping["repository"]
     assert isinstance(repository, dict)
@@ -44,6 +49,8 @@ def test_validate_scan_accepts_public_values_and_ignores_same_major_unknown_prop
     assert validate_scan(result) == result
     loaded = load_scan_json(json.dumps(mapping))
     assert loaded == result
+    assert loaded.diagnostics[0].disposition == "problem"
+    assert json.loads(dump_scan_json(loaded))["diagnostics"][0]["disposition"] == "problem"
     assert "future_top_level" not in json.loads(dump_scan_json(loaded))
     assert "future_repository_field" not in json.loads(dump_scan_json(loaded))["repository"]
 
@@ -53,6 +60,7 @@ def test_scan_diagnostic_structure_round_trips_additively() -> None:
     result = sample_result()
     diagnostic = replace(
         result.diagnostics[0],
+        disposition="limitation",
         category="inspection.invalid-input",
         problem="A manifest could not be validated",
         effect="Its package declarations were omitted",
@@ -64,6 +72,7 @@ def test_scan_diagnostic_structure_round_trips_additively() -> None:
     document = json.loads(dump_scan_json(structured))
 
     assert document["diagnostics"][0]["category"] == "inspection.invalid-input"
+    assert document["diagnostics"][0]["disposition"] == "limitation"
     assert document["diagnostics"][0]["problem"] == "A manifest could not be validated"
     assert load_scan_json(json.dumps(document)) == structured
 
@@ -83,6 +92,7 @@ def test_scan_diagnostic_structure_round_trips_additively() -> None:
         (("evidence", 0, "locator"), 1),
         (("findings", 0, "classification"), "certain"),
         (("diagnostics", 0, "subject_id"), 1),
+        (("diagnostics", 0, "disposition"), "other"),
         (("skipped_scopes", 0, "consumed"), 1.0),
     ],
 )
@@ -275,6 +285,10 @@ def test_schema_is_packaged_fresh_valid_and_accepts_canonical_documents() -> Non
     assert second["$id"] == "schemas/scan-v1.schema.json"
     jsonschema.Draft202012Validator.check_schema(second)
     jsonschema.Draft202012Validator(second).validate(json.loads(dump_scan_json(sample_result())))
+    invalid_disposition = json.loads(dump_scan_json(sample_result()))
+    invalid_disposition["diagnostics"][0]["disposition"] = "other"
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.Draft202012Validator(second).validate(invalid_disposition)
     invalid = sample_mapping()
     repository = invalid["repository"]
     assert isinstance(repository, dict)
@@ -316,6 +330,7 @@ def test_schema_public_model_and_private_adapter_fields_do_not_drift() -> None:
         "evidence": {"locator", "verification_method"},
         "finding": set(),
         "diagnostic": {
+            "disposition",
             "subject_id",
             "location",
             "category",

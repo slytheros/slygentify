@@ -19,7 +19,7 @@ references:
 - keyword: REQ033
   path: src/slygentify/_presentation.py
   type: file
-reviewed: s8BvJmGGVchlcMjCCcwE0LW-12qR-MGz53k8DaAwlpQ=
+reviewed: Qx0tctNLiXLCVkwb13hKecGM5AVNvLYoPlSsW84Z9hE=
 text: |
   `slygentify scan --interactive` shall open an opt-in Textual explorer before the one
   bounded scan completes and show an indeterminate scanning status without changing the
@@ -34,5 +34,7 @@ text: |
   population of high-cardinality record groups. Sources & provenance shall remain complete
   but outside the primary component workflow. A question-mark key shall open a dismissible
   glossary without adding a permanent navigation branch. Claim classifications shall remain
-  explicit without relying on color. Interactive mode shall require both input and output
+  explicit without relying on color. Diagnostic disposition routing, neutral counts,
+  selected detail, pairing, filtering, and lazy high-cardinality grouping shall match the
+  static report. Interactive mode shall require both input and output
   TTYs and shall fail as Typer usage before scanning when that requirement is not met.

@@ -147,7 +147,8 @@
       "remediation": "Leave human-owned guidance unchanged or adopt it through a reviewed initialization flow.",
       "evidence_ids": [
         "doctor-evidence_3d174a30bb0de8ba2e92e619181ef64724502b096643c98513ff0e48652c9d62"
-      ]
+      ],
+      "disposition": "notice"
     },
     {
       "id": "doctor-diagnostic_693bc6146b5948a386a3661aad679bffac6691c2442f4227a5e5716a513624e8",
@@ -162,7 +163,8 @@
       "evidence_ids": [
         "doctor-evidence_a62d46c10e953b51697b4561530d1f38b89476356ea9a9c110689f5d024801e5",
         "javascript-inspect-v1_31e49b927e3d7d4f3ff116325f47b4da0aeb998292ebc404b8d16291b2247124"
-      ]
+      ],
+      "disposition": "problem"
     }
   ],
   "skipped_scopes": []

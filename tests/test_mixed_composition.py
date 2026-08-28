@@ -307,6 +307,7 @@ def test_cmake_and_esp_idf_markers_are_generic_without_execution(tmp_path: Path)
     ambiguous = next(
         item for item in result.diagnostics if item.location == "ambiguous/CMakeLists.txt"
     )
+    assert ambiguous.disposition == "limitation"
     assert 'path = "ambiguous"' in ambiguous.message
     assert "Next:" in ambiguous.message
 
@@ -330,6 +331,7 @@ def test_kicad_artifact_without_project_is_unknown_and_malformed_projects_are_pa
         if item.code == "composition.ambiguous-boundary"
         and item.location == "orphan/board.kicad_pcb"
     )
+    assert diagnostic.disposition == "limitation"
     assert '[[scan.components]] with path = "orphan"' in diagnostic.message
     assert sum(item.code == "inspection.invalid-manifest" for item in result.diagnostics) == 2
 

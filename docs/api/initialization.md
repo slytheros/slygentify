@@ -9,6 +9,8 @@ root `AGENTS.md` guidance with its deterministic ownership sidecar.
 `InitializationPlan` without writing. It includes ownership classification,
 applicability, separate actions and exact bytes for `AGENTS.md` and
 `.slygentify/state.json`, and actionable diagnostics.
+Each `InitializationDiagnostic` exposes a `problem` or `notice` disposition. Current
+initialization conditions do not use `limitation`; operational failures remain problems.
 
 Ordinary plans apply only to `new`, `clean-managed`, and `recoverable-state` ownership.
 `replace=True` is required for unmanaged, human-edited, or missing managed artifacts;

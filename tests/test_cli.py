@@ -57,7 +57,8 @@ def test_init_cli_refusal_replacement_and_no_change(tmp_path: Path) -> None:
 
     paste_guidance = runner.invoke(app, ["init", str(root)])
     assert paste_guidance.exit_code == 4
-    assert paste_guidance.stderr == ""
+    assert "Notice [initialization.unmanaged] AGENTS.md" in paste_guidance.stderr
+    assert "Disposition: Notice" in paste_guidance.stderr
     assert "Existing AGENTS.md was preserved." in paste_guidance.stdout
     assert "## Slygentify bootstrap guidance" in paste_guidance.stdout
     assert "# AGENTS.md" not in paste_guidance.stdout
@@ -67,6 +68,7 @@ def test_init_cli_refusal_replacement_and_no_change(tmp_path: Path) -> None:
     replaced = runner.invoke(app, ["init", str(root), "--replace"])
     assert replaced.exit_code == 0
     assert "Warning [initialization.replace-without-backup] AGENTS.md" in replaced.stderr
+    assert "Disposition: Notice" in replaced.stderr
     assert "Slygentify will not create a backup" in replaced.stderr
     assert "Regenerated" in replaced.stdout
 
@@ -107,7 +109,8 @@ def test_init_cli_reports_planning_and_apply_errors(
     assert "Ownership: unmanaged" in dry_run.stdout
     assert "--- AGENTS.md ---" in dry_run.stdout
     assert "--- provenance summary ---" in dry_run.stdout
-    assert dry_run.stderr == ""
+    assert "Notice [initialization.unmanaged] AGENTS.md" in dry_run.stderr
+    assert "Disposition: Notice" in dry_run.stderr
     assert plan_initialization(root, replace=True).can_apply
 
     def fail_plan(*_args: object, **_kwargs: object) -> object:
@@ -117,7 +120,8 @@ def test_init_cli_reports_planning_and_apply_errors(
     planning_error = runner.invoke(app, ["init", str(root)])
     assert planning_error.exit_code == 1
     assert "Error [initialization.path] ." in planning_error.stderr
-    assert "Problem: bad path." in planning_error.stderr
+    assert "Disposition: Problem" in planning_error.stderr
+    assert "Description: bad path." in planning_error.stderr
     assert "Effect: Initialization did not complete" in planning_error.stderr
     assert (
         "Next: Run slygentify init --dry-run to review the current state." in planning_error.stderr
@@ -164,7 +168,7 @@ def test_init_cli_reports_planning_and_apply_errors(
     assert "slygentify doctor ." in repaired_result.stdout
 
 
-@pytest.mark.verifies("TST054")
+@pytest.mark.verifies("TST040", "TST054")
 def test_init_cli_prints_deterministic_paste_guidance_for_human_edits(tmp_path: Path) -> None:
     root = _repository(tmp_path)
     runner = CliRunner()
@@ -177,7 +181,8 @@ def test_init_cli_prints_deterministic_paste_guidance_for_human_edits(tmp_path: 
 
     expected = _render_paste_snippet(generate_agents_document(scan_repository(root)).markdown)
     assert result.exit_code == 4
-    assert result.stderr == ""
+    assert "Notice [initialization.human-edited] AGENTS.md" in result.stderr
+    assert "Disposition: Notice" in result.stderr
     assert result.stdout.endswith(expected)
     assert "# AGENTS.md" not in result.stdout
     assert "managed-artifact lifecycle" not in result.stdout
@@ -244,5 +249,6 @@ max_component_entries = "unlimited"
 
     assert result.exit_code == 0
     assert "Warning [initialization.relaxed-limits] slygentify.toml" in result.stderr
+    assert "Disposition: Notice" in result.stderr
     assert "raises or disables an AGENTS.md byte or component-entry limit" in result.stderr
     assert "--- AGENTS.md ---" in result.stdout

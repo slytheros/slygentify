@@ -263,6 +263,7 @@ def test_unmanaged_edited_missing_and_replace_lifecycle(tmp_path: Path) -> None:
     unmanaged = plan_initialization(root)
     assert unmanaged.ownership == "unmanaged"
     assert not unmanaged.can_apply
+    assert {item.disposition for item in unmanaged.diagnostics} == {"notice"}
     replacement = plan_initialization(root, replace=True)
     assert replacement.can_apply
     apply_initialization(replacement)
@@ -271,6 +272,7 @@ def test_unmanaged_edited_missing_and_replace_lifecycle(tmp_path: Path) -> None:
     edited = plan_initialization(root)
     assert edited.ownership == "human-edited"
     assert not edited.can_apply
+    assert {item.disposition for item in edited.diagnostics} == {"notice"}
     assert plan_initialization(root, replace=True).can_apply
 
 
@@ -379,6 +381,7 @@ def test_unsafe_and_concurrent_state_are_refused(tmp_path: Path) -> None:
     unsafe = plan_initialization(root, replace=True)
     assert unsafe.ownership == "unsafe-entry"
     assert not unsafe.can_apply
+    assert {item.disposition for item in unsafe.diagnostics} == {"problem"}
     (root / "AGENTS.md").rmdir()
 
     plan = plan_initialization(root)

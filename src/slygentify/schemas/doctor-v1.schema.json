@@ -143,6 +143,13 @@
         "code": {
           "$ref": "#/$defs/nonEmptyString"
         },
+        "disposition": {
+          "enum": [
+            "problem",
+            "limitation",
+            "notice"
+          ]
+        },
         "severity": {
           "enum": [
             "info",

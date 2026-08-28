@@ -61,7 +61,7 @@ from slygentify import apply_initialization, plan_initialization
 
 plan = plan_initialization("path/to/repository")
 for diagnostic in plan.diagnostics:
-    print(diagnostic.code, diagnostic.recovery)
+    print(diagnostic.disposition, diagnostic.code, diagnostic.recovery)
 
 if plan.can_apply:
     result = apply_initialization(plan)

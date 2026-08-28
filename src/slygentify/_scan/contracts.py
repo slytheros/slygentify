@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from slygentify._diagnostics import compose_message
-from slygentify.models import SkippedScope
+from slygentify.models import DiagnosticDisposition, SkippedScope
 from slygentify.traceability import implements
 
 EvidenceKey = tuple[str, str, str | None, str]
@@ -106,6 +106,7 @@ class DiagnosticCandidate:
     problem: str
     effect: str
     partial: bool
+    disposition: DiagnosticDisposition
     subject_path: str | None = None
     evidence_keys: tuple[EvidenceKey, ...] = ()
     recovery: str | None = None
@@ -126,9 +127,12 @@ class DiagnosticCandidate:
         recovery: str | None | object = _UNSET,
         category: str | None = None,
         safety_rationale: str | None = None,
+        disposition: DiagnosticDisposition,
     ) -> None:
         """Accept explicit diagnostic structure, with legacy message migration support."""
 
+        if disposition not in {"problem", "limitation", "notice"}:
+            raise ValueError("diagnostic candidate disposition is not supported")
         explicit = problem is not None or effect is not None or recovery is not _UNSET
         if explicit:
             if message is not None or problem is None or effect is None or recovery is _UNSET:
@@ -164,6 +168,7 @@ class DiagnosticCandidate:
         object.__setattr__(self, "recovery", resolved_recovery)
         object.__setattr__(self, "category", category)
         object.__setattr__(self, "safety_rationale", safety_rationale)
+        object.__setattr__(self, "disposition", disposition)
 
     @property
     def message(self) -> str:
@@ -183,6 +188,7 @@ class PartialCause:
     effect: str
     recovery: str | None
     evidence_ids: tuple[str, ...]
+    disposition: DiagnosticDisposition
     boundary: SkippedScope | None = None
 
 

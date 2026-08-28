@@ -31,6 +31,7 @@ from slygentify._scan import _scan_foundation, _ScanFoundationError
 from slygentify._scan.normalization import _id
 from slygentify._version import __version__
 from slygentify.models import (
+    DiagnosticDisposition,
     DoctorDiagnostic,
     DoctorResult,
     Evidence,
@@ -114,6 +115,7 @@ class DoctorInputError(Exception):
             "Doctor did not emit a result and did not modify repository files.",
             recovery="Correct PATH or the explicitly selected Git executable, then rerun doctor.",
             safety_rationale="Doctor cannot safely infer a replacement target or executable from invalid caller input.",
+            disposition="problem",
         )
 
 
@@ -129,6 +131,7 @@ class DoctorOperationalError(Exception):
             "Doctor did not emit a result and did not modify repository files.",
             recovery="Correct the reported environment or tool condition, then retry doctor.",
             safety_rationale="Doctor is read-only and cannot safely repair an operational environment failure.",
+            disposition="problem",
         )
 
 
@@ -252,6 +255,7 @@ def _invalid_configuration_result(root: Path) -> DoctorResult:
         effect="Doctor did not traverse repository content because configuration cannot be trusted.",
         remediation="Correct slygentify.toml for the installed schema, then rerun doctor.",
         evidence_ids=(config_evidence.id,),
+        disposition="problem",
     )
     repository = Repository(
         id=_id("repository", "."), root=".", kind="git", evidence_ids=(evidence.id,)
@@ -304,6 +308,7 @@ def _append_diagnostic(
     effect: str,
     remediation: str | None,
     evidence_ids: Iterable[str],
+    disposition: DiagnosticDisposition,
     category: str | None = None,
     safety_rationale: str | None = None,
 ) -> None:
@@ -322,6 +327,7 @@ def _append_diagnostic(
             evidence_ids=references,
             category=category,
             safety_rationale=safety_rationale,
+            disposition=disposition,
         )
     )
 
@@ -403,6 +409,7 @@ def doctor_repository(
             effect="Doctor cannot rely on managed ownership or compare recorded repository knowledge.",
             remediation="Upgrade to the latest reviewed Slygentify build and rerun slygentify init . --dry-run. If it still fails, rename the state file to a new non-existing backup name, rerun the dry-run, and apply only a recoverable or otherwise safe plan.",
             evidence_ids=(state_evidence,),
+            disposition="problem",
             category=invalid_state_category,
             safety_rationale="Doctor is read-only and invalid state cannot safely establish ownership for automatic replacement.",
         )
@@ -425,6 +432,7 @@ def doctor_repository(
             effect="Doctor cannot establish whether the guidance reflects current repository knowledge.",
             remediation="Leave human-owned guidance unchanged or adopt it through a reviewed initialization flow.",
             evidence_ids=(guidance_evidence,),
+            disposition="notice",
         )
     else:
         current_state = state_from_scan(
@@ -457,6 +465,7 @@ def doctor_repository(
                 effect="Managed guidance may no longer describe the repository component boundaries.",
                 remediation="Review component boundaries and regenerate managed guidance after confirmation.",
                 evidence_ids=(comparison,),
+                disposition="problem",
             )
         if tooling_drift:
             comparison = _comparison_evidence(
@@ -476,6 +485,7 @@ def doctor_repository(
                 effect="Managed workflow guidance may no longer identify the current tooling contract.",
                 remediation="Confirm the authoritative workflow and regenerate managed guidance after review.",
                 evidence_ids=(comparison,),
+                disposition="problem",
             )
         for item in path_diagnostics:
             path_evidence = _comparison_evidence(
@@ -496,6 +506,7 @@ def doctor_repository(
                 effect="Related repository knowledge cannot be relied upon without review.",
                 remediation="Restore the path, update the declaration, or retire the reference.",
                 evidence_ids=(*item.evidence_ids, path_evidence),
+                disposition="problem",
             )
         missing_locations = {
             item.location
@@ -521,6 +532,7 @@ def doctor_repository(
                 effect="Dependent managed knowledge cannot be reverified from current repository evidence.",
                 remediation="Restore or replace the evidence, update configuration, or retire the dependent claim.",
                 evidence_ids=(missing_evidence,),
+                disposition="problem",
             )
         for command_input in _command_became_unverifiable(recorded, current_state, result):
             command_evidence = _comparison_evidence(
@@ -541,6 +553,7 @@ def doctor_repository(
                 effect="Managed command knowledge cannot be relied upon without manual review.",
                 remediation="Use a literal supported declaration where practical or verify the command manually in an authorized environment.",
                 evidence_ids=(command_evidence,),
+                disposition="limitation",
             )
         recorded_artifact = next(
             (item for item in recorded.artifacts if item.location == AGENTS_FILENAME), None
@@ -564,6 +577,7 @@ def doctor_repository(
                 effect="Doctor cannot establish whether the guidance reflects current repository knowledge.",
                 remediation="Leave human-owned guidance unchanged or adopt it through a reviewed initialization flow.",
                 evidence_ids=(guidance_evidence,),
+                disposition="notice",
             )
         else:
             fresh_guidance = generate_agents_document(
@@ -592,6 +606,7 @@ def doctor_repository(
                         effect="The managed guidance contract cannot be relied upon.",
                         remediation="Restore the visible markers or review a dry-run before adopting again.",
                         evidence_ids=(artifact_evidence,),
+                        disposition="problem",
                     )
                 elif section_digest(current_section) == recorded_artifact.sha256:
                     if current_section != fresh_section:
@@ -606,6 +621,7 @@ def doctor_repository(
                             effect="The managed artifact is stale relative to current repository evidence.",
                             remediation="Review fresh generation and explicitly regenerate the artifact if accepted.",
                             evidence_ids=(artifact_evidence,),
+                            disposition="problem",
                         )
                 elif current_section != fresh_section:
                     _append_diagnostic(
@@ -619,6 +635,7 @@ def doctor_repository(
                         effect="The section may be a human edit and cannot be classified automatically.",
                         remediation="Preserve the file and review the visible managed section before replacing it.",
                         evidence_ids=(artifact_evidence,),
+                        disposition="problem",
                     )
                 else:
                     artifact_state_stale = True
@@ -637,6 +654,7 @@ def doctor_repository(
                         effect="The managed-artifact contract cannot be relied upon.",
                         remediation="Review a dry-run and explicitly recreate or retire managed ownership.",
                         evidence_ids=(artifact_evidence,),
+                        disposition="problem",
                     )
                 elif current_digest == recorded_artifact.sha256 and fresh_digest != current_digest:
                     _append_diagnostic(
@@ -650,6 +668,7 @@ def doctor_repository(
                         effect="The managed artifact is stale relative to current repository evidence.",
                         remediation="Review fresh generation and explicitly regenerate the artifact if accepted.",
                         evidence_ids=(artifact_evidence,),
+                        disposition="problem",
                     )
                 elif current_digest not in {recorded_artifact.sha256, fresh_digest}:
                     _append_diagnostic(
@@ -663,6 +682,7 @@ def doctor_repository(
                         effect="The content may be a human edit and cannot be classified automatically.",
                         remediation="Preserve the file, review a dry-run or diff, and replace only with explicit authorization.",
                         evidence_ids=(artifact_evidence,),
+                        disposition="problem",
                     )
                 elif current_digest == fresh_digest and current_digest != recorded_artifact.sha256:
                     artifact_state_stale = True
@@ -685,6 +705,7 @@ def doctor_repository(
                 effect="Refreshing provenance is useful, but current normalized knowledge and guidance agree.",
                 remediation="Review the changed evidence and regenerate state if the normalized result remains acceptable.",
                 evidence_ids=(stale_evidence,),
+                disposition="notice",
             )
 
     if result.completion == "partial":
@@ -717,6 +738,7 @@ def doctor_repository(
                     _doctor_sentence(cause.recovery) if cause.recovery is not None else None
                 ),
                 evidence_ids=(*cause.evidence_ids, partial_evidence),
+                disposition=cause.disposition,
             )
         completion = "partial"
 

@@ -75,8 +75,9 @@ GLOSSARY: tuple[GlossaryEntry, ...] = (
     GlossaryEntry(
         "diagnostic",
         "Diagnostic",
-        "A problem encountered while inspecting",
-        "An actionable inspection problem. Diagnostics do not currently carry a public severity level.",
+        "A condition encountered while inspecting",
+        "A diagnostic is a problem, a trustworthy limitation, or a noteworthy notice. Its "
+        "disposition is independent of claim classification, completion, and exit status.",
     ),
     GlossaryEntry(
         "skipped-scope",

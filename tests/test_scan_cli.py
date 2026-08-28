@@ -34,7 +34,7 @@ from slygentify._presentation import (
     render_scan_report,
 )
 from slygentify.cli import app
-from slygentify.models import ClaimClassification
+from slygentify.models import ClaimClassification, DiagnosticDisposition
 from tests.scan_samples import sample_result
 
 
@@ -205,7 +205,7 @@ def test_scan_text_is_complete_component_first_default(tmp_path: Path) -> None:
     assert ". - generic/package (facets: generic; role: unknown)" in result.stdout
     assert "What it is" in result.stdout
     assert "Repository-wide workflows" in result.stdout
-    assert "Needs attention" in result.stdout
+    assert "Attention & limitations" in result.stdout
     assert "Sources & provenance (2)" in result.stdout
     assert "[manifest] Cargo.toml" in result.stdout
     assert "Claim terms: VERIFIED = directly supported" in result.stdout
@@ -449,9 +449,9 @@ def test_presentation_index_covers_all_record_kinds_and_user_focused_groups() ->
         ("Architecture", "Tools"),
         ("Architecture", "Relationships"),
         ("Automation", "CI workflows & commands"),
-        ("Needs attention", "Problems & next steps"),
-        ("Needs attention", "Unknowns to confirm"),
-        ("Needs attention", "Recommendations"),
+        ("Attention & limitations", "Problems & next steps"),
+        ("Attention & limitations", "Unknowns to confirm"),
+        ("Attention & limitations", "Recommendations"),
     ]
     assert [record_kind(record) for record in index.iter_records()] == [
         "repository",
@@ -484,7 +484,8 @@ def test_presentation_index_covers_all_record_kinds_and_user_focused_groups() ->
         recovery="Review the repository input.",
     )
     structured_detail = index.record_detail(structured)
-    assert "Problem: A structured problem." in structured_detail
+    assert "Disposition: Problem" in structured_detail
+    assert "Description: A structured problem." in structured_detail
     assert "Effect: A structured effect." in structured_detail
     assert (
         "Why no automatic repair: Automatic repair is outside scan's read-only boundary."
@@ -498,7 +499,7 @@ def test_presentation_index_covers_all_record_kinds_and_user_focused_groups() ->
         "How to work on it",
         "Architecture",
         "Automation",
-        "Needs attention",
+        "Attention & limitations",
         "Setup (1)",
         "Relationships (1)",
         "Problems & next steps",
@@ -592,7 +593,7 @@ def test_attention_pairs_related_unknowns_without_losing_records() -> None:
     attention = tuple(
         group
         for group in presentation.component_groups(component.id)
-        if group.section == "Needs attention"
+        if group.section == "Attention & limitations"
     )
 
     assert [(group.subsection, len(group.records)) for group in attention] == [
@@ -600,16 +601,87 @@ def test_attention_pairs_related_unknowns_without_losing_records() -> None:
         ("Cautions", 1),
         ("Unknowns to confirm", 1),
     ]
-    problems = presentation.attention_problems(attention[0])
+    problems = presentation.attention_diagnostics(attention[0])
     assert problems[0].diagnostic == diagnostic
     assert problems[0].related_unknowns == (paired,)
     assert presentation.attention_counts(attention) == (3, 4)
     output = _render(result, width=160)
-    assert "Needs attention (3 issues; 4 records)" in output
+    assert "Attention & limitations (3 items; 4 records)" in output
     assert "Related context (1)" in output
     assert output.count(paired.summary) == 1
     assert output.count(unmatched.summary) == 1
     assert output.count(caution.summary) == 1
+
+
+@pytest.mark.verifies("TST019", "TST046")
+def test_attention_routes_all_dispositions_and_pairs_unknowns_losslessly() -> None:
+    scan = sample_result()
+    component = scan.components[0]
+    dispositions: tuple[DiagnosticDisposition, ...] = ("problem", "limitation", "notice")
+    diagnostics = tuple(
+        sorted(
+            (
+                replace(
+                    scan.diagnostics[0],
+                    id=f"diagnostic_{disposition}",
+                    code=f"example.{disposition}",
+                    subject_id=component.id,
+                    evidence_ids=(),
+                    disposition=disposition,
+                )
+                for disposition in dispositions
+            ),
+            key=lambda item: (item.code, item.subject_id or item.location or "", item.id),
+        )
+    )
+    findings = tuple(
+        sorted(
+            (
+                Finding(
+                    id=f"unknown_{disposition}",
+                    code=f"example.{disposition}",
+                    classification="unknown",
+                    subject_id=component.id,
+                    summary=f"Related {disposition} context.",
+                    evidence_ids=(),
+                )
+                for disposition in dispositions
+            ),
+            key=lambda item: (item.code, item.subject_id, item.id),
+        )
+    )
+    result = replace(scan, findings=findings, diagnostics=diagnostics)
+    presentation = ScanPresentation(result, Path("repository"))
+    groups = tuple(
+        group
+        for group in presentation.component_groups(component.id)
+        if group.section == "Attention & limitations"
+    )
+
+    assert [(group.subsection, len(group.records)) for group in groups] == [
+        ("Problems & next steps", 2),
+        ("Limitations & explanations", 2),
+        ("Notices", 2),
+    ]
+    assert [
+        presentation.attention_diagnostics(group)[0].diagnostic.disposition for group in groups
+    ] == ["problem", "limitation", "notice"]
+    assert {
+        record.id
+        for group in groups
+        for record in group.records
+        if isinstance(record, (Diagnostic, Finding))
+    } == {
+        *(item.id for item in diagnostics),
+        *(item.id for item in findings),
+    }
+    output = _render(result, width=180)
+    assert "Attention & limitations (3 items; 6 records)" in output
+    assert "Problems & next steps (1 problem; 2 records)" in output
+    assert "Limitations & explanations (1 limitation; 2 records)" in output
+    assert "Notices (1 notice; 2 records)" in output
+    for finding in findings:
+        assert output.count(finding.summary) == 1
 
 
 @pytest.mark.verifies("TST019")
@@ -634,7 +706,7 @@ def test_static_report_retains_high_cardinality_diagnostics_exactly() -> None:
 
     output = _render(replace(scan, diagnostics=diagnostics), width=200)
 
-    assert ". - repeated.code (50 issues; 50 records)" in output
+    assert ". - repeated.code (50 problems; 50 records)" in output
     for index in range(50):
         assert output.count(f"Unique message {index}\n") == 1
 
@@ -646,7 +718,7 @@ def test_static_report_uses_a_diagnostic_location_when_no_subject_exists() -> No
 
     output = _render(replace(scan, diagnostics=(diagnostic,)))
 
-    assert "pyproject.toml - example.diagnostic (1 issue; 1 record)" in output
+    assert "pyproject.toml - example.diagnostic (1 problem; 1 record)" in output
     assert "example.diagnostic @ pyproject.toml" in output
 
 

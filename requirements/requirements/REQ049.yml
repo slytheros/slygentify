@@ -13,14 +13,14 @@ references:
 - keyword: REQ049
   path: src/slygentify/cli.py
   type: file
-reviewed: p_t5Ni61246e_aXiaXfdtOKpnKPtBYu9PY0Caw6ideo=
+reviewed: 78CjidCpUh9qaLHnM1ZNNg3pDWJW9eDk9n9CEiMaRQE=
 text: |
   `slygentify doctor [PATH] --format text|json [--verbose]
   [--git-executable PATH]` shall call the static doctor core without prompting,
   forward only the explicitly selected Git executable, and never execute a discovered
   project command. Text shall identify the resolved root, completion, severity counts,
   and every diagnostic grouped by severity with claim classification, code, target,
-  problem, effect, and remediation; verbose text shall additionally expose evidence
+  disposition, description, effect, and remediation; verbose text shall additionally expose evidence
   references, the originating scan code or boundary reason for each partial cause, every
   evidence record once, and every skipped scope. JSON shall emit one
   canonical DoctorResult and reject verbose mode. Result output shall use stdout with

@@ -78,7 +78,9 @@ selecting one. Doctor does not execute discovered validation commands.
 
 A `complete` scan completed within the supported inspection boundary; it is not proof
 that every repository fact is known. A `partial` scan succeeded but omitted or limited
-some evidence. Diagnostics and skipped scopes explain the boundary. Findings preserve
+some evidence. Diagnostics and skipped scopes explain the boundary. Diagnostic
+dispositions distinguish problems, trustworthy limitations, and notices without changing
+claim classification, completion, or exit behavior. Findings preserve
 whether claims are verified, inferred, recommended, or unknown.
 
 The detailed contracts are in [interaction design](docs/interaction-design.md),

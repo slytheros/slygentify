@@ -4,13 +4,14 @@ header: |
   Initialization CLI tests
 level: 1.41
 links:
-- REQ040: XaJeoIGGLUHMhcuygjtA18fGZgxBxkIiMhCAEi_Ymv0=
+- REQ040: KghQmNdauhqd4N7f9UU73JKH8ijllbxBrVA65dYPBP8=
 normative: true
 ref: ''
 references:
 - keyword: TST040
   path: tests/test_cli.py
   type: file
-reviewed: pGsFZ-Ngy_TgmCY0jgXNIPPMAIo7aSNfGeYFsaFkkvA=
+reviewed: lw_ybsiJRFbHNKOarlkhow3cwE1R8-B91tk0eEyvLsU=
 text: |
-  Verify initialization CLI dry-run review, replacement warnings, diagnostics, and exits.
+  Verify initialization CLI dry-run review, replacement warnings, notice/problem
+  dispositions and rendering, diagnostics, writes, refusals, and unchanged exits.

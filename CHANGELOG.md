@@ -6,11 +6,15 @@ major versions are independent compatibility surfaces.
 
 ## Unreleased
 
+- Add explicit `problem`, `limitation`, and `notice` dispositions across scan, map,
+  doctor, and initialization diagnostics while keeping schema-major-1 readers compatible.
+- Route scan and explorer diagnostics into Problems & next steps, Limitations &
+  explanations, and Notices with lossless pairing and neutral aggregate counts.
 - Preserve distinct structured partial-scan causes through doctor so each malformed
   input, unavailable Git lookup, unsafe path, unresolved reference, or resource boundary
   receives an exact effect and safe next step.
-- Rework scan and explorer attention output around Problems & next steps, related unknown
-  context, explicit caution routing, and separate issue/record counts while retaining
+- Rework scan and explorer attention output around disposition groups, related unknown
+  context, explicit caution routing, and separate item/record counts while retaining
   every canonical record.
 - Remove raw parser detail from diagnostics and make supported recovery guidance
   condition-specific, including intentional exclusion where appropriate.

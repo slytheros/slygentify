@@ -183,7 +183,8 @@ def test_write_failures_leave_safe_recovery_paths_and_actionable_cli_output(
     (root / "AGENTS.md").write_text("secret-do-not-print", encoding="utf-8")
     result = CliRunner().invoke(app, ["init", str(root)])
     assert result.exit_code == 4
-    assert result.stderr == ""
+    assert "Notice [initialization.human-edited] AGENTS.md" in result.stderr
+    assert "Disposition: Notice" in result.stderr
     assert "Existing AGENTS.md was preserved." in result.stdout
     assert "secret-do-not-print" not in result.stderr
     assert "secret-do-not-print" not in result.stdout

@@ -162,6 +162,12 @@ max_entries = "unlimited"
 
     assert [item.path for item in result.components] == ["service"]
     assert "configuration.relaxed-limits" in {item.code for item in result.diagnostics}
+    assert (
+        next(
+            item for item in result.diagnostics if item.code == "configuration.relaxed-limits"
+        ).disposition
+        == "notice"
+    )
     assert "generated" in {item.scope for item in result.skipped_scopes}
 
 
@@ -187,6 +193,12 @@ def test_configuration_retains_conflicting_detected_ecosystem(tmp_path: Path) ->
     result = scan_repository(root)
     assert result.components[0].ecosystem == "mixed"
     assert "configuration.component-conflict" in {item.code for item in result.diagnostics}
+    assert (
+        next(
+            item for item in result.diagnostics if item.code == "configuration.component-conflict"
+        ).disposition
+        == "problem"
+    )
 
 
 @pytest.mark.verifies("TST035")
