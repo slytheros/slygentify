@@ -10,15 +10,18 @@ references:
 - keyword: REQ046
   path: src/slygentify/_scan/contracts.py
   type: file
-reviewed: MdJQv_89Gao0JlvI7fWwakeg5TUSZN9uRkpPPILl13I=
+reviewed: clASir0dXUVWCOTfjOE_OurS_Tc7LLZ3qerIyknh6f8=
 text: |
-  User-visible diagnostics shall distinguish the observed problem from its effect on
-  retained, omitted, withheld, or partial evidence. A diagnostic shall include recovery
-  text only when a safe, concrete review or correction is available, shall not recommend
-  weaker safety boundaries or unapproved effects, expose raw parser, Git, or operating
-  system exception text, or disclose secret-shaped content. Resolvable malformed,
-  missing, unreadable, conflict, dynamic, unsupported, and resource-limit conditions
-  shall name a condition-specific safe next step, including intentional exclusion where
-  appropriate. Private scan candidates shall retain explicit problem, effect, recovery,
-  and partial-cause structure and compose the public message deterministically without
-  changing the public diagnostic data model.
+  Every Slygentify-authored result diagnostic, operational error, refusal, and warning
+  shall identify a stable code and safe target, distinguish the observed problem from its
+  effect on retained, omitted, withheld, refused, or partial work, and provide recovery
+  only when it is safe and concrete. A diagnostic that refuses automatic repair shall
+  state the ownership or safety rationale. Diagnostics shall not recommend weaker safety
+  boundaries or unapproved effects, expose raw parser, Git, or operating-system exception
+  text, or disclose secret-shaped content. Resolvable malformed, missing, unreadable,
+  conflict, dynamic, unsupported, and resource-limit conditions shall name a
+  condition-specific safe next step. Scan and map retain their compatible message while
+  producers additionally expose optional structured category, problem, effect, recovery,
+  and safety-rationale fields; doctor retains remediation and adds category and safety
+  rationale. Private diagnostic candidates shall retain explicit structure and compose
+  compatible public messages deterministically.

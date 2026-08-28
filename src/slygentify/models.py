@@ -178,6 +178,11 @@ class Diagnostic:
     location: str | None
     message: str
     evidence_ids: tuple[str, ...]
+    category: str | None = None
+    problem: str | None = None
+    effect: str | None = None
+    recovery: str | None = None
+    safety_rationale: str | None = None
 
     def __post_init__(self) -> None:
         _non_empty(self.id, "id")
@@ -189,6 +194,17 @@ class Diagnostic:
         if self.location is not None:
             _safe_path(self.location, "location")
         _non_empty(self.message, "message")
+        for name, value in (
+            ("category", self.category),
+            ("problem", self.problem),
+            ("effect", self.effect),
+            ("recovery", self.recovery),
+            ("safety_rationale", self.safety_rationale),
+        ):
+            if value is not None:
+                _non_empty(value, name)
+        if (self.problem is None) != (self.effect is None):
+            raise ValueError("diagnostic problem and effect must be present together")
         _references(self.evidence_ids, "evidence_ids")
 
 
@@ -336,6 +352,8 @@ class DoctorDiagnostic:
     effect: str
     remediation: str | None
     evidence_ids: tuple[str, ...]
+    category: str | None = None
+    safety_rationale: str | None = None
 
     def __post_init__(self) -> None:
         _non_empty(self.id, "id")
@@ -354,6 +372,10 @@ class DoctorDiagnostic:
         _non_empty(self.effect, "effect")
         if self.remediation is not None:
             _non_empty(self.remediation, "remediation")
+        if self.category is not None:
+            _non_empty(self.category, "category")
+        if self.safety_rationale is not None:
+            _non_empty(self.safety_rationale, "safety_rationale")
         _references(self.evidence_ids, "evidence_ids")
 
 

@@ -206,4 +206,17 @@ def test_map_cli_defaults_help_and_errors(monkeypatch: pytest.MonkeyPatch) -> No
     assert "positive integer or 'unlimited'" in non_integer_limit.stderr
     assert operational_error.exit_code == 1
     assert operational_error.stdout == ""
-    assert operational_error.stderr == "Error: unsafe scope\n"
+    assert "Error [map.operation-failed] ." in operational_error.stderr
+    assert "unsafe scope" not in operational_error.stderr
+    assert "Effect: Slygentify did not emit a map result" in operational_error.stderr
+
+    monkeypatch.setattr(
+        cli,
+        "map_repository",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            ScanError("safe invalid input", code="map.invalid-input")
+        ),
+    )
+    classified_error = runner.invoke(app, ["map"])
+    assert classified_error.exit_code == 1
+    assert "Error [map.invalid-input] ." in classified_error.stderr

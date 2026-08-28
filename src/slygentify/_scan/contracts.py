@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
+from slygentify._diagnostics import compose_message
 from slygentify.models import SkippedScope
 from slygentify.traceability import implements
 
@@ -108,6 +109,8 @@ class DiagnosticCandidate:
     subject_path: str | None = None
     evidence_keys: tuple[EvidenceKey, ...] = ()
     recovery: str | None = None
+    category: str | None = None
+    safety_rationale: str | None = None
 
     def __init__(
         self,
@@ -121,6 +124,8 @@ class DiagnosticCandidate:
         problem: str | None = None,
         effect: str | None = None,
         recovery: str | None | object = _UNSET,
+        category: str | None = None,
+        safety_rationale: str | None = None,
     ) -> None:
         """Accept explicit diagnostic structure, with legacy message migration support."""
 
@@ -157,6 +162,8 @@ class DiagnosticCandidate:
         object.__setattr__(self, "subject_path", subject_path)
         object.__setattr__(self, "evidence_keys", evidence_keys)
         object.__setattr__(self, "recovery", resolved_recovery)
+        object.__setattr__(self, "category", category)
+        object.__setattr__(self, "safety_rationale", safety_rationale)
 
     @property
     def message(self) -> str:
@@ -220,18 +227,8 @@ def _default_recovery(code: str, location: str, *, partial: bool) -> str | None:
     return None
 
 
-def _sentence(text: str) -> str:
-    normalized = " ".join(text.split()).rstrip(".")
-    if not normalized:
-        raise ValueError("diagnostic text must not be empty")
-    return f"{normalized}."
-
-
 @implements("REQ046")
 def compose_diagnostic_message(problem: str, effect: str, recovery: str | None = None) -> str:
     """Compose problem, observable effect, and optional safe recovery text."""
 
-    message = f"{_sentence(problem)} {_sentence(effect)}"
-    if recovery is not None:
-        message = f"{message} Next: {_sentence(recovery)}"
-    return message
+    return compose_message(problem, effect, recovery)

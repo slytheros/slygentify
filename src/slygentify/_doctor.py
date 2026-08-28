@@ -10,6 +10,7 @@ from pathlib import Path, PurePosixPath
 from typing import Literal
 
 from slygentify._configuration import EffectiveConfiguration, load_configuration
+from slygentify._diagnostics import DiagnosticDetail
 from slygentify._generation import generate_agents_document
 from slygentify._managed_section import (
     ManagedSectionError,
@@ -104,9 +105,31 @@ _COMMAND_SOURCE_KINDS = frozenset({"ci-command", "declared-command"})
 class DoctorInputError(Exception):
     """A caller-selected doctor target or option prevented a repository result."""
 
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.diagnostic = DiagnosticDetail(
+            "doctor.invalid-input",
+            ".",
+            "Doctor could not safely validate the selected input.",
+            "Doctor did not emit a result and did not modify repository files.",
+            recovery="Correct PATH or the explicitly selected Git executable, then rerun doctor.",
+            safety_rationale="Doctor cannot safely infer a replacement target or executable from invalid caller input.",
+        )
+
 
 class DoctorOperationalError(Exception):
     """An operational failure prevented a trustworthy doctor result."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.diagnostic = DiagnosticDetail(
+            "doctor.operation-failed",
+            ".",
+            "Doctor could not produce a trustworthy result.",
+            "Doctor did not emit a result and did not modify repository files.",
+            recovery="Correct the reported environment or tool condition, then retry doctor.",
+            safety_rationale="Doctor is read-only and cannot safely repair an operational environment failure.",
+        )
 
 
 def _evidence_id(kind: str, location: str, locator: str | None = None) -> str:
@@ -155,12 +178,12 @@ def _safe_managed_section(root: Path) -> bytes | None:
         return None
 
 
-def _load_state(root: Path) -> tuple[StateDocument | None, bool]:
+def _load_state(root: Path) -> tuple[StateDocument | None, str | None]:
     """Return valid state or a bounded invalid-state marker without raising."""
 
     target = root.joinpath(*PurePosixPath(STATE_LOCATION).parts)
     if not os.path.lexists(target):
-        return None, False
+        return None, None
     try:
         metadata = target.lstat()
         if (
@@ -168,10 +191,15 @@ def _load_state(root: Path) -> tuple[StateDocument | None, bool]:
             or stat.S_ISLNK(metadata.st_mode)
             or metadata.st_size > _MAX_STATE_BYTES
         ):
-            return None, True
-        return load_state_json(target.read_bytes()), False
-    except (OSError, StateError):
-        return None, True
+            return (
+                None,
+                "state.unsafe-entry" if metadata.st_size <= _MAX_STATE_BYTES else "state.too-large",
+            )
+        return load_state_json(target.read_bytes()), None
+    except OSError:
+        return None, "state.unreadable"
+    except StateError as error:
+        return None, error.category
 
 
 def _projection(state: StateDocument, codes: frozenset[str]) -> tuple[object, ...]:
@@ -276,6 +304,8 @@ def _append_diagnostic(
     effect: str,
     remediation: str | None,
     evidence_ids: Iterable[str],
+    category: str | None = None,
+    safety_rationale: str | None = None,
 ) -> None:
     references = tuple(sorted(set(evidence_ids)))
     diagnostics.append(
@@ -290,6 +320,8 @@ def _append_diagnostic(
             effect=effect,
             remediation=remediation,
             evidence_ids=references,
+            category=category,
+            safety_rationale=safety_rationale,
         )
     )
 
@@ -336,7 +368,7 @@ def doctor_repository(
     except ValueError:
         return _invalid_configuration_result(root)
 
-    recorded, invalid_state = _load_state(root)
+    recorded, invalid_state_category = _load_state(root)
     try:
         execution = _scan_foundation(
             root, git_executable=git_executable, configuration=configuration
@@ -353,7 +385,7 @@ def doctor_repository(
     diagnostics: list[DoctorDiagnostic] = []
     completion: Literal["complete", "partial"] = result.completion
 
-    if invalid_state:
+    if invalid_state_category is not None:
         state_evidence = _comparison_evidence(
             evidence,
             kind="invalid-state",
@@ -367,10 +399,12 @@ def doctor_repository(
             classification="verified",
             subject_id=result.repository.id,
             location=STATE_LOCATION,
-            problem="Managed provenance state is malformed, unsupported, oversized, or unsafe.",
+            problem="The generated ownership and provenance record for AGENTS.md could not be validated.",
             effect="Doctor cannot rely on managed ownership or compare recorded repository knowledge.",
-            remediation="Inspect the state and regenerate it only through a reviewed initialization flow.",
+            remediation="Upgrade to the latest reviewed Slygentify build and rerun slygentify init . --dry-run. If it still fails, rename the state file to a new non-existing backup name, rerun the dry-run, and apply only a recoverable or otherwise safe plan.",
             evidence_ids=(state_evidence,),
+            category=invalid_state_category,
+            safety_rationale="Doctor is read-only and invalid state cannot safely establish ownership for automatic replacement.",
         )
         completion = "partial"
     elif recorded is None:

@@ -33,6 +33,27 @@ and unsafe targets fail closed.
 not merge text. It never authorizes replacing a symbolic link, directory, or malformed
 state.
 
+## Invalid provenance state
+
+`.slygentify/state.json` is Slygentify's generated ownership and provenance record for
+`AGENTS.md`. If init reports that it is invalid, it leaves both artifacts unchanged and
+does not let `--replace` bypass that protection. First upgrade to the latest reviewed
+build and rerun `slygentify init PATH --dry-run`. If it still fails, retain the sidecar
+by renaming it to a new, non-existing backup name, then rerun the dry-run and apply only
+an expected safe ownership state.
+
+On POSIX shells, first confirm the backup is absent, then rename:
+
+```console
+test ! -e .slygentify/state.json.rejected && mv .slygentify/state.json .slygentify/state.json.rejected
+```
+
+In PowerShell:
+
+```powershell
+if (-not (Test-Path -LiteralPath .slygentify/state.json.rejected)) { Move-Item -LiteralPath .slygentify/state.json -Destination .slygentify/state.json.rejected }
+```
+
 ## Python
 
 ```python

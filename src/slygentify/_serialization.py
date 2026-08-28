@@ -85,6 +85,11 @@ class _DiagnosticInput(_InputModel):
     location: str | None = None
     message: str
     evidence_ids: list[str]
+    category: str | None = None
+    problem: str | None = None
+    effect: str | None = None
+    recovery: str | None = None
+    safety_rationale: str | None = None
 
 
 class _SkippedScopeInput(_InputModel):
@@ -237,6 +242,11 @@ def _result_mapping(result: ScanResult) -> dict[str, object]:
         _optional(record, "location", diagnostic_item.location)
         record["message"] = diagnostic_item.message
         record["evidence_ids"] = list(diagnostic_item.evidence_ids)
+        _optional(record, "category", diagnostic_item.category)
+        _optional(record, "problem", diagnostic_item.problem)
+        _optional(record, "effect", diagnostic_item.effect)
+        _optional(record, "recovery", diagnostic_item.recovery)
+        _optional(record, "safety_rationale", diagnostic_item.safety_rationale)
         diagnostics.append(record)
     skipped_scopes: list[dict[str, object]] = []
     for skipped_item in result.skipped_scopes:
@@ -319,6 +329,11 @@ def _public(value: _ScanInput) -> ScanResult:
             location=item.location,
             message=item.message,
             evidence_ids=tuple(item.evidence_ids),
+            category=item.category,
+            problem=item.problem,
+            effect=item.effect,
+            recovery=item.recovery,
+            safety_rationale=item.safety_rationale,
         )
         for item in value.diagnostics
     )

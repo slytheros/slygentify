@@ -4,7 +4,7 @@ header: |
   Diagnostic quality and presentation tests
 level: 1.47
 links:
-- REQ046: MdJQv_89Gao0JlvI7fWwakeg5TUSZN9uRkpPPILl13I=
+- REQ046: clASir0dXUVWCOTfjOE_OurS_Tc7LLZ3qerIyknh6f8=
 normative: true
 ref: ''
 references:
@@ -14,11 +14,11 @@ references:
 - keyword: TST046
   path: tests/test_mixed_composition.py
   type: file
-reviewed: EVE40UGIUjJP1P0EgshSamMojvpmaYqJYrPj636hOYs=
+reviewed: WyUEaiO9sfEY2Oqk9MAh9QJtaVc6xR5LBXeViJQKV5o=
 text: |
-  Verify explicit and deterministic problem/effect/recovery composition, recovery and
-  intentional no-recovery cases across diagnostic subsystems, condition-specific actions
-  for malformed, missing, unreadable, conflict, dynamic, unsupported, and exact
-  resource-limit conditions, actionable mixed-boundary guidance, consistent map and
-  initialization failures, and absence of duplicated recovery, raw exception text, or
-  secret disclosure.
+  Verify explicit and deterministic problem/effect/recovery composition across init,
+  scan, map, and doctor result diagnostics, operational failures, refusals, and warnings;
+  condition-specific actions for malformed, missing, unreadable, conflict, dynamic,
+  unsupported, and exact resource-limit conditions; machine-readable state categories;
+  compatible scan/map JSON fields; backup-first invalid-state recovery; and absence of
+  duplicated recovery, raw exception text, host paths, or secret disclosure.

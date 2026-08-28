@@ -269,6 +269,27 @@ def test_invalid_state_is_partial_but_allows_fresh_scan(tmp_path: Path) -> None:
 
     assert result.completion == "partial"
     assert _codes(result) == {"doctor.state.invalid"}
+    diagnostic = result.diagnostics[0]
+    assert diagnostic.category == "state.unsupported-schema"
+    assert diagnostic.safety_rationale is not None
+
+
+@pytest.mark.verifies("TST047", "TST046")
+def test_doctor_classifies_oversized_state_without_disclosure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _root(tmp_path)
+    state_directory = root / ".slygentify"
+    state_directory.mkdir()
+    (state_directory / "state.json").write_bytes(b"sentinel-secret-state")
+    monkeypatch.setattr(doctor, "_MAX_STATE_BYTES", 8)
+
+    result = doctor.doctor_repository(root)
+
+    diagnostic = next(item for item in result.diagnostics if item.code == "doctor.state.invalid")
+    assert diagnostic.category == "state.too-large"
+    assert "sentinel-secret-state" not in diagnostic.problem
+    assert "sentinel-secret-state" not in (diagnostic.remediation or "")
 
 
 @pytest.mark.verifies("TST047")
@@ -581,4 +602,21 @@ def test_private_safe_read_helpers_reject_missing_unsafe_and_unreadable_entries(
     state_directory = root / ".slygentify"
     state_directory.mkdir()
     (state_directory / "state.json").mkdir()
-    assert doctor._load_state(root) == (None, True)
+    assert doctor._load_state(root) == (None, "state.unsafe-entry")
+
+
+@pytest.mark.verifies("TST047")
+def test_private_state_loader_classifies_unreadable_state(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _root(tmp_path)
+    state_directory = root / ".slygentify"
+    state_directory.mkdir()
+    (state_directory / "state.json").write_bytes(b"{}")
+
+    def unreadable(*args: object, **kwargs: object) -> bytes:
+        raise OSError("state read failure")
+
+    monkeypatch.setattr(Path, "read_bytes", unreadable)
+
+    assert doctor._load_state(root) == (None, "state.unreadable")

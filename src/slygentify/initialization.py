@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from slygentify._diagnostics import DiagnosticDetail, compose_message
 from slygentify._generation import generate_agents_document
 from slygentify._managed_section import (
     ManagedSectionError,
@@ -60,11 +61,18 @@ class InitializationError(Exception):
         *,
         changed_locations: tuple[str, ...] = (),
         recovery: str = "Run slygentify init --dry-run to review the current state.",
+        target: str = ".",
+        category: str | None = None,
+        effect: str = "Initialization did not complete and no additional repository files were changed.",
+        safety_rationale: str | None = None,
     ) -> None:
         super().__init__(message)
         self.code = code
         self.changed_locations = changed_locations
         self.recovery = recovery
+        self.diagnostic = DiagnosticDetail(
+            code, target, message, effect, category, recovery, safety_rationale
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,6 +82,11 @@ class InitializationDiagnostic:
     code: str
     message: str
     recovery: str
+    target: str = "."
+    category: str | None = None
+    problem: str | None = None
+    effect: str | None = None
+    safety_rationale: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -132,8 +145,26 @@ def _action(path: Path, data: bytes) -> ArtifactAction:
     return "no_change" if path.read_bytes() == data else "replace"
 
 
-def _diagnostic(code: str, message: str, recovery: str) -> InitializationDiagnostic:
-    return InitializationDiagnostic(code, message, recovery)
+def _diagnostic(
+    code: str,
+    target: str,
+    problem: str,
+    effect: str,
+    recovery: str,
+    *,
+    category: str | None = None,
+    safety_rationale: str | None = None,
+) -> InitializationDiagnostic:
+    return InitializationDiagnostic(
+        code,
+        compose_message(problem, effect, recovery),
+        recovery,
+        target,
+        category,
+        problem,
+        effect,
+        safety_rationale,
+    )
 
 
 def _can_replace(ownership: OwnershipState, requested: bool) -> bool:
@@ -269,15 +300,19 @@ def plan_initialization(
         state_action = plan_state_write(root, state).action
     except InitializationError:
         raise
-    except StateError:
+    except StateError as error:
         ownership = "invalid-state"
         agents_action = "replace" if os.path.lexists(agents) else "create"
         state_action = "replace" if os.path.lexists(state_target) else "create"
         diagnostics.append(
             _diagnostic(
                 "initialization.invalid-state",
-                "Initialization refused because provenance state is malformed or unsupported.",
-                "Inspect and repair the state manually; automatic replacement is unavailable.",
+                ".slygentify/state.json",
+                "The generated ownership and provenance record for AGENTS.md could not be validated.",
+                "Initialization did not trust, replace, or write the provenance state, and no files were changed.",
+                "Upgrade to the latest reviewed Slygentify build and rerun slygentify init . --dry-run. If it still fails, rename the state file to a new non-existing backup name, rerun the dry-run, and apply only a recoverable or otherwise safe plan.",
+                category=error.category,
+                safety_rationale="Slygentify cannot establish ownership of AGENTS.md from invalid state, so automatic replacement could overwrite user-managed guidance.",
             )
         )
     except OSError:
@@ -287,8 +322,12 @@ def plan_initialization(
         diagnostics.append(
             _diagnostic(
                 "initialization.unsafe-entry",
-                "Initialization refused because an artifact or provenance target is unsafe.",
+                ".slygentify/state.json",
+                "An AGENTS.md artifact or provenance target is an unsafe filesystem entry.",
+                "Initialization did not follow, replace, or write the unsafe entry, and no files were changed.",
                 "Inspect the entry manually; symbolic links and non-regular targets are never replaced.",
+                category="state.unsafe-entry",
+                safety_rationale="Following or replacing a symbolic link or non-regular target could escape repository containment or overwrite an unintended file.",
             )
         )
     can_adopt = adopt and existing_state is None and ownership == "unmanaged"
@@ -301,12 +340,15 @@ def plan_initialization(
         diagnostics.append(
             _diagnostic(
                 f"initialization.{ownership}",
+                AGENTS_FILENAME,
                 (
                     "--adopt requires an existing unmanaged AGENTS.md without provenance state."
                     if adopt
                     else f"Ordinary initialization refuses {ownership.replace('-', ' ')} AGENTS.md content."
                 ),
+                "Initialization preserved the existing AGENTS.md and did not write provenance state.",
                 "Review the dry-run and use --replace only after preserving any content you need.",
+                safety_rationale="Slygentify does not replace content whose ownership or human edits it cannot validate without explicit authorization.",
             )
         )
     return InitializationPlan(

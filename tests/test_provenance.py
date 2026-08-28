@@ -87,6 +87,21 @@ def test_state_round_trip_is_canonical_and_schema_is_packaged() -> None:
 
 
 @pytest.mark.verifies("TST036")
+def test_state_loader_classifies_parser_recursion_without_disclosure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def recursive_parse(*args: object, **kwargs: object) -> object:
+        raise RecursionError("untrusted nesting")
+
+    monkeypatch.setattr(json, "loads", recursive_parse)
+    with pytest.raises(StateError) as raised:
+        load_state_json(b"{}")
+
+    assert raised.value.category == "state.invalid-json"
+    assert "untrusted nesting" not in str(raised.value)
+
+
+@pytest.mark.verifies("TST036")
 def test_legacy_v1_state_remains_readable() -> None:
     state = _state()
     legacy = StateDocument(

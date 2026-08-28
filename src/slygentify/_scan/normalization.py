@@ -595,6 +595,14 @@ def _normalize(
             location=diagnostic_candidate.location,
             message=diagnostic_candidate.message,
             evidence_ids=diagnostic_evidence_ids,
+            category=diagnostic_candidate.category,
+            problem=diagnostic_candidate.problem,
+            effect=diagnostic_candidate.effect,
+            recovery=diagnostic_candidate.recovery,
+            safety_rationale=(
+                diagnostic_candidate.safety_rationale
+                or "Slygentify inspection is read-only and does not rewrite repository content."
+            ),
         )
         if diagnostic_candidate.partial:
             cause_candidates.append((diagnostic_candidate, diagnostic_evidence_ids))
