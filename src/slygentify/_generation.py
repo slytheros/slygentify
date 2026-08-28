@@ -72,14 +72,17 @@ def _render(
         "## How to use Slygentify\n\n",
         "- This file is bootstrap guidance; a fresh `slygentify map` result is authoritative "
         "for current repository facts.\n",
-        "- Start with `slygentify map --scope .`. Follow `navigation.children` to a component "
-        "path and rerun with that path; repeat until `navigation.owner` is the component for "
-        "the task. A planned file path is also a valid scope.\n",
-        "- The default returns `orientation` and `boundaries`; request `workflows`, "
-        "`architecture`, or `automation` with repeated `--section` options when needed.\n",
-        "- Interpret claims as verified facts, deterministic inferences, optional "
-        "recommendations, or explicit unknowns. Follow evidence references before relying "
-        "on an important claim.\n\n",
+        "- Start with `slygentify map --scope .`; follow `navigation.children` and rerun until "
+        "`navigation.owner` matches the task. Planned paths are valid scopes.\n",
+        "- Defaults are `orientation` and `boundaries`; request `workflows`, `architecture`, "
+        "or `automation` with `--section` when needed.\n",
+        "- Treat claims as verified facts, inferences, recommendations, or unknowns; follow "
+        "evidence before relying on an important claim.\n\n",
+        "## Maintenance\n\n",
+        "- Run read-only `slygentify doctor .` after structural, tooling, or workflow changes, "
+        "or in CI.\n",
+        "- For findings, review `slygentify init --dry-run`; regenerate only with explicit "
+        "authorization.\n\n",
         "## Bootstrap component index\n\n",
     ]
     evidence_ids: set[str] = set()

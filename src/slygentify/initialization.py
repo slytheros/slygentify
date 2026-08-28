@@ -11,6 +11,14 @@ from pathlib import Path
 from typing import Literal
 
 from slygentify._generation import generate_agents_document
+from slygentify._managed_section import (
+    ManagedSectionError,
+    append_managed_section,
+    extract_managed_section,
+    render_managed_section,
+    replace_managed_section,
+    section_digest,
+)
 from slygentify._provenance import (
     Artifact,
     StateError,
@@ -76,9 +84,11 @@ class InitializationPlan:
     ownership: OwnershipState
     can_apply: bool
     replace_requested: bool
+    adopt_requested: bool
     agents_action: ArtifactAction
     state_action: ArtifactAction
     agents_markdown: str
+    managed_section: str | None
     state_json: bytes
     diagnostics: tuple[InitializationDiagnostic, ...]
     warnings: tuple[str, ...] = ()
@@ -130,9 +140,9 @@ def _can_replace(ownership: OwnershipState, requested: bool) -> bool:
     return requested and ownership in {"unmanaged", "human-edited", "missing-managed-artifact"}
 
 
-@implements("REQ002", "REQ003", "REQ004", "REQ005", "REQ038", "REQ039", "REQ044")
+@implements("REQ002", "REQ003", "REQ004", "REQ005", "REQ038", "REQ039", "REQ044", "REQ053")
 def plan_initialization(
-    path: str | os.PathLike[str] = ".", *, replace: bool = False
+    path: str | os.PathLike[str] = ".", *, replace: bool = False, adopt: bool = False
 ) -> InitializationPlan:
     """Scan, render, and classify a reviewable initialization operation without writing."""
     from slygentify._scan import _scan_foundation, _ScanFoundationError
@@ -149,42 +159,59 @@ def plan_initialization(
         max_bytes=execution.configuration.max_agents_bytes,
         max_component_entries=execution.configuration.max_component_entries,
     )
-    agents_data = guidance.markdown.encode("utf-8")
+    generated_data = guidance.markdown.encode("utf-8")
+    managed_section = render_managed_section(guidance.markdown)
     preliminary_state = state_from_scan(
         execution.result,
         execution.configuration,
         execution.content_fingerprints,
     )
     input_ids = {item.id for item in preliminary_state.inputs}
-    artifact = Artifact(
+    fallback_artifact = Artifact(
         AGENTS_FILENAME,
-        hashlib.sha256(agents_data).hexdigest(),
+        hashlib.sha256(generated_data).hexdigest(),
         tuple(item for item in guidance.evidence_ids if item in input_ids),
     )
-    state = state_from_scan(
-        execution.result,
-        execution.configuration,
-        execution.content_fingerprints,
-        artifacts=(artifact,),
+    state_data = dump_state_json(
+        state_from_scan(
+            execution.result,
+            execution.configuration,
+            execution.content_fingerprints,
+            artifacts=(fallback_artifact,),
+        )
     )
-    state_data = dump_state_json(state)
     diagnostics: list[InitializationDiagnostic] = []
     ownership: OwnershipState
+    agents_data = generated_data
+    output_section: str | None = None
+    existing_state = None
+    recorded: Artifact | None = None
     try:
         if os.path.lexists(agents) and not _regular(agents):
             raise OSError("AGENTS.md is unsafe")
         parent = state_target.parent
         if os.path.lexists(parent) and (not parent.is_dir() or parent.is_symlink()):
             raise OSError("provenance directory is unsafe")
-        existing_state = None
         if os.path.lexists(state_target):
             if not _regular(state_target):
                 raise OSError("provenance state is unsafe")
             existing_state = load_state_json(state_target.read_bytes())
+        if adopt and replace:
+            raise InitializationError(
+                "initialization.options", "--adopt cannot be combined with --replace"
+            )
         if existing_state is None and not os.path.lexists(agents):
             ownership = "new"
         elif existing_state is None:
-            ownership = "recoverable-state" if agents.read_bytes() == agents_data else "unmanaged"
+            current = agents.read_bytes()
+            if current == generated_data:
+                ownership = "recoverable-state"
+            elif adopt:
+                agents_data = append_managed_section(current, managed_section)
+                output_section = managed_section.decode("utf-8")
+                ownership = "unmanaged"
+            else:
+                ownership = "unmanaged"
         else:
             recorded = next(
                 (item for item in existing_state.artifacts if item.location == AGENTS_FILENAME),
@@ -196,15 +223,52 @@ def plan_initialization(
                 ownership = "missing-managed-artifact"
             else:
                 current = agents.read_bytes()
-                digest = hashlib.sha256(current).hexdigest()
-                if digest == recorded.sha256:
-                    ownership = "clean-managed"
-                elif current == agents_data:
-                    ownership = "recoverable-state"
+                if recorded.ownership == "section":
+                    try:
+                        current_section = extract_managed_section(current)
+                    except ManagedSectionError:
+                        ownership = "missing-managed-artifact"
+                    else:
+                        if section_digest(current_section) == recorded.sha256:
+                            agents_data = replace_managed_section(
+                                current, recorded.sha256, managed_section
+                            )
+                            output_section = managed_section.decode("utf-8")
+                            ownership = "clean-managed"
+                        elif current_section == managed_section:
+                            agents_data = current
+                            output_section = managed_section.decode("utf-8")
+                            ownership = "recoverable-state"
+                        else:
+                            ownership = "human-edited"
                 else:
-                    ownership = "human-edited"
+                    digest = hashlib.sha256(current).hexdigest()
+                    if digest == recorded.sha256:
+                        ownership = "clean-managed"
+                    elif current == generated_data:
+                        ownership = "recoverable-state"
+                    else:
+                        ownership = "human-edited"
+        ownership_mode: Literal["document", "section"] = "section" if output_section else "document"
+        artifact = Artifact(
+            AGENTS_FILENAME,
+            section_digest(managed_section)
+            if ownership_mode == "section"
+            else hashlib.sha256(agents_data).hexdigest(),
+            tuple(item for item in guidance.evidence_ids if item in input_ids),
+            ownership_mode,
+        )
+        state = state_from_scan(
+            execution.result,
+            execution.configuration,
+            execution.content_fingerprints,
+            artifacts=(artifact,),
+        )
+        state_data = dump_state_json(state)
         agents_action = _action(agents, agents_data)
         state_action = plan_state_write(root, state).action
+    except InitializationError:
+        raise
     except StateError:
         ownership = "invalid-state"
         agents_action = "replace" if os.path.lexists(agents) else "create"
@@ -227,14 +291,21 @@ def plan_initialization(
                 "Inspect the entry manually; symbolic links and non-regular targets are never replaced.",
             )
         )
-    can_apply = ownership in {"new", "clean-managed", "recoverable-state"} or _can_replace(
-        ownership, replace
+    can_adopt = adopt and existing_state is None and ownership == "unmanaged"
+    can_apply = (
+        ownership in {"new", "clean-managed", "recoverable-state"}
+        or _can_replace(ownership, replace)
+        or can_adopt
     )
     if not can_apply and not diagnostics:
         diagnostics.append(
             _diagnostic(
                 f"initialization.{ownership}",
-                f"Ordinary initialization refuses {ownership.replace('-', ' ')} AGENTS.md content.",
+                (
+                    "--adopt requires an existing unmanaged AGENTS.md without provenance state."
+                    if adopt
+                    else f"Ordinary initialization refuses {ownership.replace('-', ' ')} AGENTS.md content."
+                ),
                 "Review the dry-run and use --replace only after preserving any content you need.",
             )
         )
@@ -243,9 +314,11 @@ def plan_initialization(
         ownership,
         can_apply,
         replace,
+        adopt,
         agents_action,
         state_action,
-        guidance.markdown,
+        agents_data.decode("utf-8"),
+        output_section,
         state_data,
         tuple(diagnostics),
         (("slygentify.toml raises or disables an AGENTS.md byte or component-entry limit."),)
@@ -290,7 +363,9 @@ def apply_initialization(plan: InitializationPlan) -> InitializationResult:
     """Revalidate and atomically apply one applicable initialization plan."""
     if not isinstance(plan, InitializationPlan):
         raise InitializationError("initialization.plan", "initialization plan is invalid")
-    current = plan_initialization(plan.repository_root, replace=plan.replace_requested)
+    current = plan_initialization(
+        plan.repository_root, replace=plan.replace_requested, adopt=plan.adopt_requested
+    )
     if (
         not current.can_apply
         or current.agents_markdown != plan.agents_markdown

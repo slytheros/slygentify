@@ -112,22 +112,22 @@ invocation. A higher or unlimited resource setting never weakens these boundarie
 
 ## `.slygentify/state.json`
 
-`slygentify init` writes deterministic schema-major-1 provenance beside generated
+`slygentify init` writes deterministic schema-major-2 provenance beside generated
 guidance. The sidecar records safe relative locations, SHA-256 digests, effective limits,
-derivations, generated-artifact digests, completion, and skipped scopes. It contains no
+derivations, generated-artifact ownership, completion, and skipped scopes. It contains no
 timestamps, host paths, source bodies, environment values, or credentials. Packaged
-[`state-v1.schema.json`](schemas.md) describes the
-document. Scan and map do not read or write it; a fresh scan remains authoritative.
+[`state-v2.schema.json`](schemas.md) describes the document; legacy v1 sidecars remain
+readable. Scan and map do not read or write it; a fresh scan remains authoritative.
 
-When the recorded digest matches a regular `AGENTS.md`, init may regenerate it. Missing,
-unmatched, malformed, or unsafe state is protected by default. `--dry-run` displays both
-exact artifacts. `--replace` may discard an existing regular `AGENTS.md` but never a
-symbolic link, directory, or malformed state. Writes are atomic, guidance first and state
-second. If the second write fails, the error reports the changed guidance location and a
-safe recovery. If generated guidance already matches but the sidecar is missing, init can
-repair only the sidecar.
+When a whole-document digest matches a regular `AGENTS.md`, init may regenerate it. An
+adopted visible section records its own digest, so later updates preserve human changes
+outside the fixed markers and refuse a changed or malformed section. Missing, unmatched,
+malformed, or unsafe state is protected by default. `--dry-run` displays generated
+guidance plus a provenance summary; `--show-state` displays exact state JSON. `--replace`
+may discard an existing regular `AGENTS.md` but never a symbolic link, directory, or
+malformed state. Writes are atomic, guidance first and state second.
 
 For an unmanaged or human-edited safe regular `AGENTS.md`, ordinary init instead prints
-a deterministic paste-ready section and exits 4. It does not write the guidance or state;
-the user owns the manual merge. Dry-run continues to display the complete candidate
-artifacts and exits 4 for the same manual-incorporation outcome.
+a deterministic paste-ready section and exits 4. `init --adopt` is an explicit, safe
+alternative only for unmanaged guidance without provenance: it appends a marked visible
+section and writes v2 state, without echoing surrounding user content during review.

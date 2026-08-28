@@ -29,7 +29,7 @@ Choose the command that matches your goal:
 | --- | --- | --- |
 | Understand an unfamiliar repository | `slygentify scan PATH` | Read-only human report or canonical JSON. |
 | Get bounded context for one task | `slygentify map PATH --scope PATH` | Read-only canonical JSON projection. |
-| Preview root agent guidance | `slygentify init PATH --dry-run` | Read-only exact proposed artifacts. |
+| Preview root agent guidance | `slygentify init PATH --dry-run` | Read-only guidance and provenance summary; add `--show-state` for exact state JSON. |
 | Check managed guidance against fresh evidence | `slygentify doctor PATH` | Read-only report; warnings can produce exit 1. |
 
 For a safe first pass, inspect the repository, narrow the context, and review guidance

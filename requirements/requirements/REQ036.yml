@@ -13,11 +13,12 @@ references:
 - keyword: REQ036
   path: src/slygentify/_scan/orchestration.py
   type: file
-reviewed: KU2mrUPYA8harg_CY_tYKMM071KhxNUVZ6wFbPGGwgY=
+reviewed: No0ooXF6FRTrg1akVjaOVG6BnT4oFDQiq8MQHrnZ3CQ=
 text: |
-  Slygentify shall validate and serialize schema-major-1 provenance state as
+  Slygentify shall read legacy schema-major-1 and validate and serialize schema-major-2
+  provenance state as
   deterministic UTF-8 JSON containing only safe repository-relative metadata, hashes,
   derivations, artifacts, completion, and skipped scope records. Inputs shall retain
   digests for safely read evidence files, and every derivation and generated-artifact
   evidence relationship shall resolve to those captured inputs without retaining source
-  content.
+  content. Version 2 artifacts shall identify whole-document or managed-section ownership.

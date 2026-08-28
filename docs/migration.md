@@ -19,10 +19,10 @@ the next package major.
 
 ## JSON Schema versions
 
-Scan, map, doctor, and initialization state have separately identified schema-major-1
-documents. Package and wire major versions do not advance together automatically.
-Readers accept documented same-major additive fields while producers emit only canonical
-declared fields.
+Scan, map, doctor, and initialization state have separately identified documents.
+Initialization state v2 supersedes v1: readers retain v1 support and producers write v2,
+which adds whole-document or visible-section ownership. Package and wire major versions
+do not advance together automatically.
 
 Deprecated JSON fields remain accepted throughout their schema major. Removal requires
 the next applicable schema major, an explicit reader or migration path, and updated

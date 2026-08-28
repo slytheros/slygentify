@@ -5,7 +5,7 @@ header: |
 level: 1.4
 links:
 - REQ003: Rztc5vyoQKlUTObLfeMRJgx_EyDKdGD1EIcwRGWJIFM=
-- REQ004: rjDQbuZhpnVthvw0W9RnrJRHvZYPO-fcROjgUcuj2P4=
+- REQ004: UA6LjfeTM_T7yq75JWMTzSJOQZTekg_yJmXcCgfgyxM=
 normative: true
 ref: ''
 references:
@@ -15,7 +15,8 @@ references:
 - keyword: TST004
   path: tests/test_cli.py
   type: file
-reviewed: MICUQwsTtM0XORVQ5LqLWX3O95TWiO6UvZ5_uEu7Ri8=
+reviewed: uRgfvLt0k6vFPTDtiMtA759UL5gP48xbxDBUhWZqwEk=
 text: |
-  Verify init creation, dry-run output without writes, operational failure reporting,
-  and the documented success, failure, and command-usage exit codes.
+  Verify init creation, compact dry-run and explicit state output without writes,
+  operational failure reporting, and the documented success, failure, and command-usage
+  exit codes.

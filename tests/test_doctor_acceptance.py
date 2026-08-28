@@ -306,7 +306,7 @@ def test_invalid_state_continues_safe_inspection_without_ownership_noise(
         target.write_bytes(b"{}")
     else:
         document = json.loads(target.read_bytes())
-        document["schema_version"] = 2
+        document["schema_version"] = 3
         target.write_text(json.dumps(document), encoding="utf-8")
     agents_before = (repository.root / "AGENTS.md").read_bytes()
 

@@ -13,7 +13,8 @@ references:
 - keyword: REQ004
   path: src/slygentify/cli.py
   type: file
-reviewed: rjDQbuZhpnVthvw0W9RnrJRHvZYPO-fcROjgUcuj2P4=
+reviewed: UA6LjfeTM_T7yq75JWMTzSJOQZTekg_yJmXcCgfgyxM=
 text: |
   Slygentify init shall support a dry-run that validates preconditions and displays the
-  exact proposed AGENTS.md and provenance state without modifying the repository.
+  complete proposed guidance and a deterministic provenance summary without modifying the
+  repository. An explicit show-state review shall display exact proposed provenance JSON.

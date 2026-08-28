@@ -75,6 +75,7 @@ class Artifact:
     location: str
     sha256: str
     evidence_ids: tuple[str, ...]
+    ownership: Literal["document", "section"] = "document"
 
 
 @dataclass(frozen=True, slots=True)
@@ -208,11 +209,10 @@ def _document(value: object) -> StateDocument:
         "completion",
         "skipped_scopes",
     }
-    if not required <= item.keys() or item.get("schema_version") != 1:
+    schema_version = item.get("schema_version")
+    if not required <= item.keys() or schema_version not in {1, 2}:
         raise _error("provenance state schema version is unsupported")
-    if isinstance(
-        item["schema_version"], bool
-    ):  # pragma: no cover - equality check above rejects bool
+    if isinstance(schema_version, bool):  # pragma: no cover - equality check above rejects bool
         raise _error()
     configuration: StateConfiguration | None = None
     if "configuration" in item:
@@ -338,15 +338,19 @@ def _document(value: object) -> StateDocument:
     artifacts: list[Artifact] = []
     for raw in raw_artifacts:
         record = _mapping(raw)
-        if (
-            not {"location", "sha256", "evidence_ids"} <= record.keys()
-        ):  # pragma: no cover - strict producer supplies fields
+        if not {"location", "sha256", "evidence_ids"} <= record.keys():
+            raise _error()
+        ownership = record.get("ownership", "document")
+        if ownership not in {"document", "section"} or (
+            schema_version == 1 and ownership != "document"
+        ):
             raise _error()
         artifacts.append(
             Artifact(
                 _path(record["location"]),
                 _digest(record["sha256"]),
                 _refs(record["evidence_ids"], input_ids),
+                cast(Literal["document", "section"], ownership),
             )
         )
     if tuple(artifacts) != tuple(
@@ -365,7 +369,7 @@ def _document(value: object) -> StateDocument:
     ):  # pragma: no cover - canonical producer ordering
         raise _error()
     return StateDocument(
-        1,
+        schema_version,
         _text(item["producer_version"]),
         configuration,
         tuple(limits),
@@ -378,6 +382,10 @@ def _document(value: object) -> StateDocument:
 
 
 def _mapping_from_state(value: StateDocument) -> dict[str, object]:
+    if value.schema_version not in {1, 2} or (
+        value.schema_version == 1 and any(item.ownership != "document" for item in value.artifacts)
+    ):
+        raise _error("provenance state schema version is unsupported")
     configuration = (
         None
         if value.configuration is None
@@ -426,12 +434,17 @@ def _mapping_from_state(value: StateDocument) -> dict[str, object]:
         for value in value.derivations
     ]
     result["artifacts"] = [
-        {
-            "location": value.location,
-            "sha256": value.sha256,
-            "evidence_ids": list(value.evidence_ids),
-        }
-        for value in value.artifacts
+        dict(
+            (key, item)
+            for key, item in (
+                ("location", artifact.location),
+                ("sha256", artifact.sha256),
+                ("evidence_ids", list(artifact.evidence_ids)),
+                ("ownership", artifact.ownership if value.schema_version == 2 else None),
+            )
+            if item is not None
+        )
+        for artifact in value.artifacts
     ]
     result["completion"] = value.completion
     result["skipped_scopes"] = [
@@ -495,11 +508,11 @@ def dump_state_json(value: StateDocument) -> bytes:
 
 @implements("REQ036")
 def state_json_schema() -> dict[str, object]:
-    """Return a fresh copy of the packaged state schema."""
+    """Return a fresh copy of the latest packaged state schema."""
     try:
         value = json.loads(
             resources.files("slygentify")
-            .joinpath("schemas/state-v1.schema.json")
+            .joinpath("schemas/state-v2.schema.json")
             .read_text(encoding="utf-8")
         )
     except (
@@ -519,6 +532,7 @@ def state_from_scan(
     files: Mapping[str, bytes | str],
     *,
     artifacts: tuple[Artifact, ...] = (),
+    schema_version: Literal[1, 2] = 2,
 ) -> StateDocument:
     """Derive state only from scan data and already captured content fingerprints."""
     if not isinstance(result, ScanResult) or not isinstance(configuration, EffectiveConfiguration):
@@ -565,7 +579,7 @@ def state_from_scan(
         else StateConfiguration("slygentify.toml", configuration.sha256)
     )
     return StateDocument(
-        1,
+        schema_version,
         result.producer_version,
         config,
         limits,

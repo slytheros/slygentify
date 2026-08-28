@@ -1,0 +1,1805 @@
+{
+  "schema_version": 2,
+  "producer_version": "1.0.0rc1",
+  "effective_limits": [
+    {
+      "name": "max_depth",
+      "default": 256,
+      "requested": 256,
+      "effective": 256,
+      "source": "default"
+    },
+    {
+      "name": "max_entries",
+      "default": 1000000,
+      "requested": 1000000,
+      "effective": 1000000,
+      "source": "default"
+    },
+    {
+      "name": "max_file_bytes",
+      "default": 268435456,
+      "requested": 268435456,
+      "effective": 268435456,
+      "source": "default"
+    },
+    {
+      "name": "max_total_bytes",
+      "default": 17179869184,
+      "requested": 17179869184,
+      "effective": 17179869184,
+      "source": "default"
+    },
+    {
+      "name": "max_elapsed_seconds",
+      "default": 1800,
+      "requested": 1800,
+      "effective": 1800,
+      "source": "default"
+    },
+    {
+      "name": "max_open_files",
+      "default": 256,
+      "requested": 256,
+      "effective": 256,
+      "source": "default"
+    },
+    {
+      "name": "max_memory_bytes",
+      "default": 2147483648,
+      "requested": 2147483648,
+      "effective": 2147483648,
+      "source": "default"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "javascript-inspect-v1_15878297e6d12719eb12fe5b1b3535f5816244310548d8b25963b56a1bcc70c0",
+      "source_kind": "package-metadata",
+      "location": "docs/examples/tutorial-repository/packages/web/package.json",
+      "locator": "/name",
+      "sha256": "adc6fee54859253348deddf8b819c6e3a0a0a59831a5411051663f79fb8f45d9",
+      "rule_id": "package-metadata",
+      "rule_version": 1
+    },
+    {
+      "id": "javascript-inspect-v1_1e3bdee28b7299f6d11b9d82eff86771c2b61e21f344c435a9dc1cd71d562232",
+      "source_kind": "runtime",
+      "location": "docs/examples/tutorial-repository/packages/web/package.json",
+      "locator": "/engines/node",
+      "sha256": "adc6fee54859253348deddf8b819c6e3a0a0a59831a5411051663f79fb8f45d9",
+      "rule_id": "runtime",
+      "rule_version": 1
+    },
+    {
+      "id": "javascript-inspect-v1_29c09ae1e507a3e311018692c4d5d450a3e86a99f6fadd452b73550e605b5402",
+      "source_kind": "manifest",
+      "location": "docs/examples/tutorial-repository/packages/web/package.json",
+      "sha256": "adc6fee54859253348deddf8b819c6e3a0a0a59831a5411051663f79fb8f45d9",
+      "rule_id": "manifest",
+      "rule_version": 1
+    },
+    {
+      "id": "javascript-inspect-v1_37acb5cf0e4cbb1836fc118b871e5e076682a680b1675b4eeb48201d2d23b8ff",
+      "source_kind": "package-metadata",
+      "location": "docs/examples/tutorial-repository/examples/demo/package.json",
+      "locator": "/name",
+      "sha256": "0cc13f43e85a434e553e42b7668f9707efa96c50cb9468d7cb4478775bcdb0ca",
+      "rule_id": "package-metadata",
+      "rule_version": 1
+    },
+    {
+      "id": "javascript-inspect-v1_46937872c3a94cbffcde8bb6aacff178744c4da77127c57c82c258581dff8791",
+      "source_kind": "tool-configuration",
+      "location": "docs/examples/tutorial-repository/packages/web/tsconfig.json",
+      "sha256": "4c57d9f56b3baa94c5430a7e39cee319ccd54f451cef320bada430fb251215aa",
+      "rule_id": "tool-configuration",
+      "rule_version": 1
+    },
+    {
+      "id": "javascript-inspect-v1_81779e4bed15e69106a9a4e5e201554b8569314fe60be8f6c0f7abc3f5d2079c",
+      "source_kind": "package-metadata",
+      "location": "docs/examples/tutorial-repository/packages/web/package.json",
+      "locator": "/private",
+      "sha256": "adc6fee54859253348deddf8b819c6e3a0a0a59831a5411051663f79fb8f45d9",
+      "rule_id": "package-metadata",
+      "rule_version": 1
+    },
+    {
+      "id": "javascript-inspect-v1_84980c5052e453a00183c98eea024dcd98202186f1525fafe24cab2a5422143d",
+      "source_kind": "manifest",
+      "location": "docs/examples/tutorial-repository/packages/broken/package.json",
+      "sha256": "83eae7e6a4d3c71bcc96328c519fba2941ee486968a6d6322fb08ceb44e3efd6",
+      "rule_id": "manifest",
+      "rule_version": 1
+    },
+    {
+      "id": "javascript-inspect-v1_b320d3687aa4b01ad25247ffba9611019e90c3090b928300cc4a643a8f2ec0a5",
+      "source_kind": "manifest",
+      "location": "docs/examples/tutorial-repository/examples/demo/package.json",
+      "sha256": "0cc13f43e85a434e553e42b7668f9707efa96c50cb9468d7cb4478775bcdb0ca",
+      "rule_id": "manifest",
+      "rule_version": 1
+    },
+    {
+      "id": "javascript-inspect-v1_df09cfec363c5b2ea0d340054a9afd8bc233cb30e0fc6f1000efe2150263ab22",
+      "source_kind": "package-metadata",
+      "location": "docs/examples/tutorial-repository/examples/demo/package.json",
+      "locator": "/private",
+      "sha256": "0cc13f43e85a434e553e42b7668f9707efa96c50cb9468d7cb4478775bcdb0ca",
+      "rule_id": "package-metadata",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_0e7060528114fc9683702cd547f7520d3e939954b929a07d7c5b791f6268579b",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release-testpypi.yml",
+      "locator": "/jobs/build/steps/7/run",
+      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_112b313363e0b38bf980327ed989d1de772452f27fd7059c909a75a897c15492",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release-testpypi.yml",
+      "locator": "/jobs/build/steps/4/run",
+      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_11b87c5f01e3ab3c520e4a6ff74bfcf9f596f43f7056b837afa0212ebb9a887b",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release.yml",
+      "locator": "/jobs/verify-pypi/steps/5/run",
+      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_1ad5f69dc4cd9a84120725fb85a02849320dfd95f2bd1cb1b2198ec56ad89cdc",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release-testpypi.yml",
+      "locator": "/jobs/build/steps/8/run",
+      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_1c63caf1e5b8a8f3e189d34bd7e90f1e8ef2ac93047e4ab2f252ecc900c4cb86",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release-testpypi.yml",
+      "locator": "/jobs/verify-testpypi/steps/5/run",
+      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_2c161c8da6d84c21797f47c5e7838d44673b795ec382c6f9e9dfae6729dcfbce",
+      "source_kind": "dependency",
+      "location": "pyproject.toml",
+      "locator": "project.dependencies[1]",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "dependency",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_2d57d362d555d8d2d802c4f2fe03d97f5654ab24805375d23f2f2062086d0e46",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release.yml",
+      "locator": "/jobs/build/steps/4/run",
+      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_2efe8fa2a8b84458ef7800e81890cc31f3e217344f13047e25c81c329354cda3",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release.yml",
+      "locator": "/jobs/build/steps/6/run",
+      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_2f1b8a4162133894f141bc288273b34373d703bcb7e2274b1b523620f2e9150d",
+      "source_kind": "manifest",
+      "location": "docs/examples/tutorial-repository/pyproject.toml",
+      "locator": "project",
+      "sha256": "9b6d61ab60b594b3121a1b4e68fd4e8947c936f1be93614e4654e4fd3fecaea6",
+      "rule_id": "manifest",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_32cf593703e85147cbb72401cef7ae9cc63eff7f90f30753189fd43cf9b91e19",
+      "source_kind": "dependency",
+      "location": "pyproject.toml",
+      "locator": "dependency-groups.docs[1]",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "dependency",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_33f42088bda6ed64c1afb44273c69df4f2b87aa8deac929b2e9211174af4aa0b",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release.yml",
+      "locator": "/jobs/verify-pypi/steps/2/run",
+      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_343842a89b9d43e7ca835d30f19e0f7435e94ff01f6e25e85f1221ee636095a1",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/quality.yml",
+      "locator": "/jobs/tests/steps/2/run",
+      "sha256": "d07a42443898a71bd415dd05ba70848b5043d8df18f02fc26463810621142d38",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_3ac0df9701e270e8e2365b8b288830aa4d5528f1887f38358e6ff840352c169d",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release-testpypi.yml",
+      "locator": "/jobs/preflight/steps/2/run",
+      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_3ad34300316edc8c7f28c7521ebd6137dc613e691f308ef7f9de6a1982d9d1b4",
+      "source_kind": "dependency",
+      "location": "pyproject.toml",
+      "locator": "project.dependencies[6]",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "dependency",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_3b7262b71f97a96d751f0490551b80961c2b4c2a8889389dc36edcf5c9f72cda",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/quality.yml",
+      "locator": "/jobs/quality/steps/5/run",
+      "sha256": "d07a42443898a71bd415dd05ba70848b5043d8df18f02fc26463810621142d38",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_3ca1f9997fa36a81679eadf46cb7db7faf48a9681650322b2a18a9d3a3692825",
+      "source_kind": "tool-configuration",
+      "location": "pyproject.toml",
+      "locator": "tool.coverage",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "tool-configuration",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_3ec3dd1f13c2def687b101c22336b9a1ad6386339c95bc63392b74cebf82dca2",
+      "source_kind": "dependency",
+      "location": "pyproject.toml",
+      "locator": "project.dependencies[5]",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "dependency",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_4178ded3e257021108499e2d4a2b669b366b460b62fa3b79f4e46aabf1eb539c",
+      "source_kind": "tool-configuration",
+      "location": "pyproject.toml",
+      "locator": "dependency-groups.dev[5]",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "tool-configuration",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_4291e974b5862c4412e4827dee90e184923fcb1fb9b3063f4c0ac6e1da289d28",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release.yml",
+      "locator": "/jobs/build/steps/5/run",
+      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_47c1db5fe764bcfa6ba3d31fd7bd3ae2036762f8609f2889f6257102574457ce",
+      "source_kind": "runtime",
+      "location": "docs/examples/tutorial-repository/pyproject.toml",
+      "locator": "project.requires-python",
+      "sha256": "9b6d61ab60b594b3121a1b4e68fd4e8947c936f1be93614e4654e4fd3fecaea6",
+      "rule_id": "runtime",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_4a6a91511e7689c91f4ea693c86301c0f58aaadccec3c61f6a558553ee08c539",
+      "source_kind": "runtime",
+      "location": "pyproject.toml",
+      "locator": "project.requires-python",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "runtime",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_51f75ac7e1aaef424dae43c0e4ad4aac4c6336ac0356f569b594c7fcb4723eb7",
+      "source_kind": "tool-configuration",
+      "location": "pyproject.toml",
+      "locator": "dependency-groups.dev[6]",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "tool-configuration",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_548473471731c7ddeaf229f4ac238fb4684a7a56221b27ed1812fea87c0c668a",
+      "source_kind": "dependency",
+      "location": "pyproject.toml",
+      "locator": "project.dependencies[2]",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "dependency",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_55896f3731636092fd303f3d91787b96369d312ac62bb7f282e242030748e9ec",
+      "source_kind": "manifest",
+      "location": "pyproject.toml",
+      "locator": "build-system",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "manifest",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_5710e73b659ac8397fa7fe92f1f027d5223632a4e2417bed255eb916623226d7",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release-testpypi.yml",
+      "locator": "/jobs/install-artifacts/steps/2/run",
+      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_5776cdb5092a0c5d4d41ff42a4180403780fe47c219ad428b172696567603414",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release.yml",
+      "locator": "/jobs/preflight/steps/2/run",
+      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_5a6e1e42f99f1e408cf556be0ca3eb89b023f1f21aad4c38e228e5aaa914e706",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/quality.yml",
+      "locator": "/jobs/quality/steps/7/run",
+      "sha256": "d07a42443898a71bd415dd05ba70848b5043d8df18f02fc26463810621142d38",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_5c433e278f3cf393f1f15684d91e7995cb1b53ea7b690d2e0f6498785d622a48",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release-testpypi.yml",
+      "locator": "/jobs/build/steps/5/run",
+      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_6241df104c41884b97d6b6764a8d453d36f550d4164662645cf55eb45d28af7b",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release.yml",
+      "locator": "/jobs/build/steps/1/run",
+      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_64dbdf8a4ca13ab8bb573039141b066a823ea6fd57ededbb072a07f696b5d41c",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release-testpypi.yml",
+      "locator": "/jobs/build/steps/3/run",
+      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_66df610ea0bada2bfd1d6da32f25b7e6099f57d53daccadb9d1818594f7e908a",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release-testpypi.yml",
+      "locator": "/jobs/install-artifacts/steps/4/run",
+      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_6b570826e27dc0e9eddcf7d4ce86fd55fdc9b4e01da038f2146f2b66786e7adb",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/quality.yml",
+      "locator": "/jobs/package/steps/4/run",
+      "sha256": "d07a42443898a71bd415dd05ba70848b5043d8df18f02fc26463810621142d38",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_6b74071f8ea0abd77de52a6f32bac07396436f34ebe472b59e31143b59696e6e",
+      "source_kind": "dependency",
+      "location": "pyproject.toml",
+      "locator": "dependency-groups.dev[2]",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "dependency",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_6f2c13d50773b6825e7d9fe0db74dc7a4f1c1e462e2bbd8906f65cd3ec58e584",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/quality.yml",
+      "locator": "/jobs/package/steps/2/run",
+      "sha256": "d07a42443898a71bd415dd05ba70848b5043d8df18f02fc26463810621142d38",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_6fe0769b07fe6597baa6add8fab6ca0db38a44e8cf0f45b7b0bb13d4ad0789eb",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/quality.yml",
+      "locator": "/jobs/quality/steps/6/run",
+      "sha256": "d07a42443898a71bd415dd05ba70848b5043d8df18f02fc26463810621142d38",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_7253eac904a34889fb5092581071de0421248a5afe85b796b5f4bf072f89a854",
+      "source_kind": "tool-configuration",
+      "location": "pyproject.toml",
+      "locator": "tool.ruff",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "tool-configuration",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_746aa4662542bcce8419485fb8712fc2e702c8cc6b2db2a2038406bdeb3afe99",
+      "source_kind": "manifest",
+      "location": "pyproject.toml",
+      "locator": "project",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "manifest",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_7b36f84d113fd02deff80d458948b8a325636635f9224614711fdbbdd9123382",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release.yml",
+      "locator": "/jobs/attest/steps/2/run",
+      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_7b887d65c6d1be5024ab474331c9d5a53e625c2ea309d37a5c6bc8b747928bd9",
+      "source_kind": "dependency",
+      "location": "pyproject.toml",
+      "locator": "dependency-groups.dev[5]",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "dependency",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_7e1555eb2faf567a5eb241f85163c27db25953c41ad8bfb151e78e91cdef01ce",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release.yml",
+      "locator": "/jobs/install-pypi/steps/2/run",
+      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_7e939c7ebbf1a48aacc892921451b4dbbca4430197e6576316050d080889be04",
+      "source_kind": "dependency",
+      "location": "pyproject.toml",
+      "locator": "dependency-groups.dev[0]",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "dependency",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_8456c7666b54948f4485f8f8c3076ee36182a6699a20a2e2b583ecfe774e65ec",
+      "source_kind": "dependency",
+      "location": "pyproject.toml",
+      "locator": "project.dependencies[0]",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "dependency",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_84718ff5e23f4a6502732027eedab1db1ca51f1d2d8bd45f6d56411b4f9f7cd8",
+      "source_kind": "dependency",
+      "location": "pyproject.toml",
+      "locator": "dependency-groups.dev[8]",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "dependency",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_87ea67fba16776aefe3b892f5f1d01bbc815f3ab15d244761e2f38a6b65f2add",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/quality.yml",
+      "locator": "/jobs/quality/steps/4/run",
+      "sha256": "d07a42443898a71bd415dd05ba70848b5043d8df18f02fc26463810621142d38",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_8d21351517b8c380dd9fba1b3dcc4d04a63a6c543cedb90ca4c222fac941da70",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release.yml",
+      "locator": "/jobs/build/steps/8/run",
+      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_8dc7b4378899b571f27b1abe7f03245c21c96e25c069aa6d7442dfa8a74c8bad",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/quality.yml",
+      "locator": "/jobs/tests/steps/3/run",
+      "sha256": "d07a42443898a71bd415dd05ba70848b5043d8df18f02fc26463810621142d38",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_8f342e5eb18732c442264d870e3dbb7476557f1bdd8cfeb25e2557aba9fb3e84",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release-testpypi.yml",
+      "locator": "/jobs/install-testpypi/steps/4/run",
+      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_90973a331a4ae3b24beada5db659b945e1ee11205c05bcc491a3c2ef8a536aac",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release.yml",
+      "locator": "/jobs/build/steps/7/run",
+      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_93215594511e707f45194662828e53873b112fda5dafd5c1a3a872ffedf71953",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/quality.yml",
+      "locator": "/jobs/quality/steps/3/run",
+      "sha256": "d07a42443898a71bd415dd05ba70848b5043d8df18f02fc26463810621142d38",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_9404b034fd4539b9658d1f98e33c88b9413f2edd344af9f4c0b3fbd592d61436",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release-testpypi.yml",
+      "locator": "/jobs/verify-testpypi/steps/2/run",
+      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_a068f7fb0f96c49976be3dfd26e947648bb7078d149586a4815f0937ffacaf05",
+      "source_kind": "dependency",
+      "location": "pyproject.toml",
+      "locator": "dependency-groups.dev[10]",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "dependency",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_a1a15a76457fc248aa0fd82d282aaff10772a2d4af99ac17221e30c3d1e96727",
+      "source_kind": "dependency",
+      "location": "pyproject.toml",
+      "locator": "project.dependencies[3]",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "dependency",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_a2b8cebd3b642ebe0e1ba6ca588968db7873ffc804f1f74eb35a15916af59640",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/security.yml",
+      "locator": "/jobs/dependency-audit/steps/2/run",
+      "sha256": "20644ca3c066515f89f8a1c116c5f06aca2dff0252f5b8b3f1d27b17d230a0fc",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_a3438c84bae236c27c346a353c14d395d1f0a63483fb08a9f6ec7db324ff20a8",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release-testpypi.yml",
+      "locator": "/jobs/build/steps/1/run",
+      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_aa74fd4b96eb4176863f3bb42fb97c3a68f9743532a6281418d49f04bbcba2c3",
+      "source_kind": "dependency",
+      "location": "pyproject.toml",
+      "locator": "dependency-groups.docs[0]",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "dependency",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_ac73a397a4d31388609b129ac9d2a8e101c11b4c0692e74680b9ce389fce5188",
+      "source_kind": "tool-configuration",
+      "location": "pyproject.toml",
+      "locator": "tool.pytest",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "tool-configuration",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_affe753e014b6cf4b93d3e37e826d4d928c02c25534d737e7629e8307805cc7f",
+      "source_kind": "tool-configuration",
+      "location": "pyproject.toml",
+      "locator": "dependency-groups.dev[7]",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "tool-configuration",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_b1147735b31804e5b09ddca1e7e97d06b59ef238fb7d209f4d4648db045c1b89",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release-testpypi.yml",
+      "locator": "/jobs/attest/steps/2/run",
+      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_b151c0bec60887acc8f0842187bbec2f10be1e85d3e3c089b48925a808ed0548",
+      "source_kind": "tool-configuration",
+      "location": "docs/examples/tutorial-repository/pyproject.toml",
+      "locator": "tool.pytest",
+      "sha256": "9b6d61ab60b594b3121a1b4e68fd4e8947c936f1be93614e4654e4fd3fecaea6",
+      "rule_id": "tool-configuration",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_b64d6cdc46bd90fc56b834a14eff48948955680124557e85015f997d50fe4e3c",
+      "source_kind": "tool-configuration",
+      "location": ".pre-commit-config.yaml",
+      "sha256": "346941ccf5debc41d5d4e6deca56d9ea4a70a133ce88e468e8569ce5ae09f58f",
+      "rule_id": "tool-configuration",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_ba6101b37e764fd1752d8b3bc914ed191eb00cb77d9c9761da892e31ae8fa42b",
+      "source_kind": "entry-point",
+      "location": "pyproject.toml",
+      "locator": "project.scripts.slygentify",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "entry-point",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_bcabdee15905639eae30c52a7cd18827da61314a9c9dcc91e31b09a6d0268261",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release-testpypi.yml",
+      "locator": "/jobs/verify-testpypi/steps/4/run",
+      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_bdb1fe17ddaa0e7bbe5ba009dd78dd93763d8985d0866e7568ced7ae56c0d0c2",
+      "source_kind": "dependency",
+      "location": "pyproject.toml",
+      "locator": "dependency-groups.dev[3]",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "dependency",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_c34a8e43d6ae0c7dc93a8abb1895dcca09133783cc184d9b0bf5ddac3ac7552e",
+      "source_kind": "dependency",
+      "location": "pyproject.toml",
+      "locator": "dependency-groups.dev[9]",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "dependency",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_caae39f75d58f3bb785279ab75f1464f7d37fdaf0c2e5878c7c978d101685659",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release.yml",
+      "locator": "/jobs/install-pypi/steps/4/run",
+      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_ce7c6d7b2d9a1a6c9e15847770ea9dbfdd3175095cf4dfaa24b5e3ab767657ff",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release.yml",
+      "locator": "/jobs/install-artifacts/steps/2/run",
+      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_ce884c6e1edcbb0295264daa1de397dade079f8f465e35ab5a4c3d1bb5a56da5",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release-testpypi.yml",
+      "locator": "/jobs/install-testpypi/steps/2/run",
+      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_cf6a33693467e1640cdc81f030714047788584f89b255d40aba58c46a0566c47",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release-testpypi.yml",
+      "locator": "/jobs/preflight/steps/4/run",
+      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_d3734b9350028160a63d36f969ddeac22dac1d45a0e8363911cc4a0ec5bb70a5",
+      "source_kind": "dependency",
+      "location": "pyproject.toml",
+      "locator": "dependency-groups.dev[4]",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "dependency",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_d3f0cdbbf8eaa74d1c0591b6a550d990ce1667be87728a2d438a93778fed04f0",
+      "source_kind": "dependency",
+      "location": "pyproject.toml",
+      "locator": "dependency-groups.dev[6]",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "dependency",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_d51a27db0231a482c87f6c1ba5de135bf181ccc9c21b71dd511f327577487635",
+      "source_kind": "metadata",
+      "location": "pyproject.toml",
+      "locator": "project.name",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "metadata",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_d6614e0509e1c491a54c8167973a12e77104d34bb1f8e858fe5842cc6fc9d734",
+      "source_kind": "tool-configuration",
+      "location": "pyproject.toml",
+      "locator": "dependency-groups.dev[3]",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "tool-configuration",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_da173c2f059d9bfa2a98d37c4c49a9d3663c59b8a9aee8ebdb550315907770b9",
+      "source_kind": "dependency",
+      "location": "pyproject.toml",
+      "locator": "dependency-groups.dev[1]",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "dependency",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_e5209596fb33d16e82ad267e19e3420b74773ba9d3f5df88a5a2a3e5d6dd8d6f",
+      "source_kind": "metadata",
+      "location": "pyproject.toml",
+      "locator": "project.dynamic[0]",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "metadata",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_ea1ae7fc1282f189563f036eb341b1e7fb54ddaf4f33d9b15cf57db6ac309be0",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/quality.yml",
+      "locator": "/jobs/quality/steps/2/run",
+      "sha256": "d07a42443898a71bd415dd05ba70848b5043d8df18f02fc26463810621142d38",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_ea4727fa911f414034eb80c3e9d3dfcd00e78804954646be8e9f6287544b14b8",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release.yml",
+      "locator": "/jobs/build/steps/3/run",
+      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_ecad69f6754570ded430e776b1a006ba6ce0205c08cbdf38442405d83eaff146",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release.yml",
+      "locator": "/jobs/preflight/steps/4/run",
+      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_ecc05c8d2f272beacd580a0833f35b04631ba381833b0c61c33dc627ff063639",
+      "source_kind": "dependency",
+      "location": "pyproject.toml",
+      "locator": "project.dependencies[4]",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "dependency",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_f07ee848bd0decffaa3ce4fa35e3809c0c4964136c57a376f19baba7f1c6e59f",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/quality.yml",
+      "locator": "/jobs/package/steps/3/run",
+      "sha256": "d07a42443898a71bd415dd05ba70848b5043d8df18f02fc26463810621142d38",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_f20a48b3bd1b9921501e0646adbd687813dbac4e068463ca7b3a9593001da89f",
+      "source_kind": "dependency",
+      "location": "pyproject.toml",
+      "locator": "dependency-groups.dev[7]",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "dependency",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_f3f503b17e830d5f6659deec6161e1f1a8d9fc4fea7dbb9a6e2bddaaed3d2d4e",
+      "source_kind": "metadata",
+      "location": "docs/examples/tutorial-repository/pyproject.toml",
+      "locator": "project.name",
+      "sha256": "9b6d61ab60b594b3121a1b4e68fd4e8947c936f1be93614e4654e4fd3fecaea6",
+      "rule_id": "metadata",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_f5cc61d7ecf98d3bdfaab4ec532ddbd46e787bfc0e0b78d78f0178360ca682eb",
+      "source_kind": "tool-configuration",
+      "location": "pyproject.toml",
+      "locator": "dependency-groups.dev[9]",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "tool-configuration",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_f5fb6b15b7c3af04914d0e1043a13b1cbd935712c7bc090e5dbd907131a88382",
+      "source_kind": "runtime",
+      "location": ".python-version",
+      "locator": "line:1",
+      "sha256": "73880611a18bf211ab229c2a2d93ec11a622693e79532c0b797b91fd056704dc",
+      "rule_id": "runtime",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_f702eef5ec99ec2157c5edc26548c4d1d6ba00950ffcf0cb37edc79777c89660",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release.yml",
+      "locator": "/jobs/install-artifacts/steps/4/run",
+      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_fa5451282e5a5906896cedc5090a8a9481d293e98fceafbe3c7d0cdb8917510d",
+      "source_kind": "tool-configuration",
+      "location": "pyproject.toml",
+      "locator": "tool.mypy",
+      "sha256": "98640a5006e764689f036b1e35fdb40fd051d96042f36567724a167828973955",
+      "rule_id": "tool-configuration",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_fb12450773ad932bee363e1346825d25fc81e3ef23704d10111d5723469d8802",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release-testpypi.yml",
+      "locator": "/jobs/build/steps/6/run",
+      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_fc4e1c6b626b76578d62b1dd8a329fbab7824864f658a1e096d45d09f2fa48bc",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release.yml",
+      "locator": "/jobs/verify-pypi/steps/4/run",
+      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    }
+  ],
+  "derivations": [
+    {
+      "subject_id": "component_116da1cdebd110afcba99005fb4938a4d3eb8ad2dfdcfbb0984d4c0353555219",
+      "claim_code": "composition.auxiliary-component",
+      "classification": "inferred",
+      "evidence_ids": [
+        "javascript-inspect-v1_b320d3687aa4b01ad25247ffba9611019e90c3090b928300cc4a643a8f2ec0a5"
+      ]
+    },
+    {
+      "subject_id": "component_a4abfcc52e146b1036b423c89aabab17f94bdf86d52bff5299c576b1fa935b43",
+      "claim_code": "composition.auxiliary-component",
+      "classification": "inferred",
+      "evidence_ids": [
+        "python-inspect-v1_2f1b8a4162133894f141bc288273b34373d703bcb7e2274b1b523620f2e9150d"
+      ]
+    },
+    {
+      "subject_id": "component_d262835024b4d26290914d8e3412e88c440534e0da733ad93e721ae73c2dd9f3",
+      "claim_code": "composition.auxiliary-component",
+      "classification": "inferred",
+      "evidence_ids": [
+        "javascript-inspect-v1_29c09ae1e507a3e311018692c4d5d450a3e86a99f6fadd452b73550e605b5402"
+      ]
+    },
+    {
+      "subject_id": "repository_c140010bf267fcd92f5cf59a9250459d63078cb45b41e6451fef20e19c9fd170",
+      "claim_code": "javascript.component.unknown",
+      "classification": "unknown",
+      "evidence_ids": [
+        "javascript-inspect-v1_84980c5052e453a00183c98eea024dcd98202186f1525fafe24cab2a5422143d"
+      ]
+    },
+    {
+      "subject_id": "component_116da1cdebd110afcba99005fb4938a4d3eb8ad2dfdcfbb0984d4c0353555219",
+      "claim_code": "javascript.component.verified",
+      "classification": "verified",
+      "evidence_ids": [
+        "javascript-inspect-v1_b320d3687aa4b01ad25247ffba9611019e90c3090b928300cc4a643a8f2ec0a5"
+      ]
+    },
+    {
+      "subject_id": "component_d262835024b4d26290914d8e3412e88c440534e0da733ad93e721ae73c2dd9f3",
+      "claim_code": "javascript.component.verified",
+      "classification": "verified",
+      "evidence_ids": [
+        "javascript-inspect-v1_29c09ae1e507a3e311018692c4d5d450a3e86a99f6fadd452b73550e605b5402"
+      ]
+    },
+    {
+      "subject_id": "component_116da1cdebd110afcba99005fb4938a4d3eb8ad2dfdcfbb0984d4c0353555219",
+      "claim_code": "javascript.package.metadata",
+      "classification": "verified",
+      "evidence_ids": [
+        "javascript-inspect-v1_37acb5cf0e4cbb1836fc118b871e5e076682a680b1675b4eeb48201d2d23b8ff"
+      ]
+    },
+    {
+      "subject_id": "component_116da1cdebd110afcba99005fb4938a4d3eb8ad2dfdcfbb0984d4c0353555219",
+      "claim_code": "javascript.package.metadata",
+      "classification": "verified",
+      "evidence_ids": [
+        "javascript-inspect-v1_df09cfec363c5b2ea0d340054a9afd8bc233cb30e0fc6f1000efe2150263ab22"
+      ]
+    },
+    {
+      "subject_id": "component_d262835024b4d26290914d8e3412e88c440534e0da733ad93e721ae73c2dd9f3",
+      "claim_code": "javascript.package.metadata",
+      "classification": "verified",
+      "evidence_ids": [
+        "javascript-inspect-v1_15878297e6d12719eb12fe5b1b3535f5816244310548d8b25963b56a1bcc70c0"
+      ]
+    },
+    {
+      "subject_id": "component_d262835024b4d26290914d8e3412e88c440534e0da733ad93e721ae73c2dd9f3",
+      "claim_code": "javascript.package.metadata",
+      "classification": "verified",
+      "evidence_ids": [
+        "javascript-inspect-v1_81779e4bed15e69106a9a4e5e201554b8569314fe60be8f6c0f7abc3f5d2079c"
+      ]
+    },
+    {
+      "subject_id": "component_d262835024b4d26290914d8e3412e88c440534e0da733ad93e721ae73c2dd9f3",
+      "claim_code": "javascript.runtime.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "javascript-inspect-v1_1e3bdee28b7299f6d11b9d82eff86771c2b61e21f344c435a9dc1cd71d562232"
+      ]
+    },
+    {
+      "subject_id": "component_d262835024b4d26290914d8e3412e88c440534e0da733ad93e721ae73c2dd9f3",
+      "claim_code": "javascript.tool.evidence",
+      "classification": "verified",
+      "evidence_ids": [
+        "javascript-inspect-v1_46937872c3a94cbffcde8bb6aacff178744c4da77127c57c82c258581dff8791"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_0e7060528114fc9683702cd547f7520d3e939954b929a07d7c5b791f6268579b"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_112b313363e0b38bf980327ed989d1de772452f27fd7059c909a75a897c15492"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_11b87c5f01e3ab3c520e4a6ff74bfcf9f596f43f7056b837afa0212ebb9a887b"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_1ad5f69dc4cd9a84120725fb85a02849320dfd95f2bd1cb1b2198ec56ad89cdc"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_1c63caf1e5b8a8f3e189d34bd7e90f1e8ef2ac93047e4ab2f252ecc900c4cb86"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_2d57d362d555d8d2d802c4f2fe03d97f5654ab24805375d23f2f2062086d0e46"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_2efe8fa2a8b84458ef7800e81890cc31f3e217344f13047e25c81c329354cda3"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_33f42088bda6ed64c1afb44273c69df4f2b87aa8deac929b2e9211174af4aa0b"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_343842a89b9d43e7ca835d30f19e0f7435e94ff01f6e25e85f1221ee636095a1"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_3ac0df9701e270e8e2365b8b288830aa4d5528f1887f38358e6ff840352c169d"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_3b7262b71f97a96d751f0490551b80961c2b4c2a8889389dc36edcf5c9f72cda"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_4291e974b5862c4412e4827dee90e184923fcb1fb9b3063f4c0ac6e1da289d28"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_5710e73b659ac8397fa7fe92f1f027d5223632a4e2417bed255eb916623226d7"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_5776cdb5092a0c5d4d41ff42a4180403780fe47c219ad428b172696567603414"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_5a6e1e42f99f1e408cf556be0ca3eb89b023f1f21aad4c38e228e5aaa914e706"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_5c433e278f3cf393f1f15684d91e7995cb1b53ea7b690d2e0f6498785d622a48"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_6241df104c41884b97d6b6764a8d453d36f550d4164662645cf55eb45d28af7b"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_64dbdf8a4ca13ab8bb573039141b066a823ea6fd57ededbb072a07f696b5d41c"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_66df610ea0bada2bfd1d6da32f25b7e6099f57d53daccadb9d1818594f7e908a"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_6b570826e27dc0e9eddcf7d4ce86fd55fdc9b4e01da038f2146f2b66786e7adb"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_6f2c13d50773b6825e7d9fe0db74dc7a4f1c1e462e2bbd8906f65cd3ec58e584"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_6fe0769b07fe6597baa6add8fab6ca0db38a44e8cf0f45b7b0bb13d4ad0789eb"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_7b36f84d113fd02deff80d458948b8a325636635f9224614711fdbbdd9123382"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_7e1555eb2faf567a5eb241f85163c27db25953c41ad8bfb151e78e91cdef01ce"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_87ea67fba16776aefe3b892f5f1d01bbc815f3ab15d244761e2f38a6b65f2add"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_8d21351517b8c380dd9fba1b3dcc4d04a63a6c543cedb90ca4c222fac941da70"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_8dc7b4378899b571f27b1abe7f03245c21c96e25c069aa6d7442dfa8a74c8bad"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_8f342e5eb18732c442264d870e3dbb7476557f1bdd8cfeb25e2557aba9fb3e84"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_90973a331a4ae3b24beada5db659b945e1ee11205c05bcc491a3c2ef8a536aac"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_93215594511e707f45194662828e53873b112fda5dafd5c1a3a872ffedf71953"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_9404b034fd4539b9658d1f98e33c88b9413f2edd344af9f4c0b3fbd592d61436"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_a2b8cebd3b642ebe0e1ba6ca588968db7873ffc804f1f74eb35a15916af59640"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_a3438c84bae236c27c346a353c14d395d1f0a63483fb08a9f6ec7db324ff20a8"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_b1147735b31804e5b09ddca1e7e97d06b59ef238fb7d209f4d4648db045c1b89"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_bcabdee15905639eae30c52a7cd18827da61314a9c9dcc91e31b09a6d0268261"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_caae39f75d58f3bb785279ab75f1464f7d37fdaf0c2e5878c7c978d101685659"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_ce7c6d7b2d9a1a6c9e15847770ea9dbfdd3175095cf4dfaa24b5e3ab767657ff"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_ce884c6e1edcbb0295264daa1de397dade079f8f465e35ab5a4c3d1bb5a56da5"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_cf6a33693467e1640cdc81f030714047788584f89b255d40aba58c46a0566c47"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_ea1ae7fc1282f189563f036eb341b1e7fb54ddaf4f33d9b15cf57db6ac309be0"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_ea4727fa911f414034eb80c3e9d3dfcd00e78804954646be8e9f6287544b14b8"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_ecad69f6754570ded430e776b1a006ba6ce0205c08cbdf38442405d83eaff146"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_f07ee848bd0decffaa3ce4fa35e3809c0c4964136c57a376f19baba7f1c6e59f"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_f702eef5ec99ec2157c5edc26548c4d1d6ba00950ffcf0cb37edc79777c89660"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_fb12450773ad932bee363e1346825d25fc81e3ef23704d10111d5723469d8802"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_fc4e1c6b626b76578d62b1dd8a329fbab7824864f658a1e096d45d09f2fa48bc"
+      ]
+    },
+    {
+      "subject_id": "component_a4abfcc52e146b1036b423c89aabab17f94bdf86d52bff5299c576b1fa935b43",
+      "claim_code": "python.component.verified",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_2f1b8a4162133894f141bc288273b34373d703bcb7e2274b1b523620f2e9150d"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.component.verified",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_55896f3731636092fd303f3d91787b96369d312ac62bb7f282e242030748e9ec",
+        "python-inspect-v1_746aa4662542bcce8419485fb8712fc2e702c8cc6b2db2a2038406bdeb3afe99"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.dependency.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_2c161c8da6d84c21797f47c5e7838d44673b795ec382c6f9e9dfae6729dcfbce"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.dependency.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_32cf593703e85147cbb72401cef7ae9cc63eff7f90f30753189fd43cf9b91e19"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.dependency.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_3ad34300316edc8c7f28c7521ebd6137dc613e691f308ef7f9de6a1982d9d1b4"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.dependency.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_3ec3dd1f13c2def687b101c22336b9a1ad6386339c95bc63392b74cebf82dca2"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.dependency.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_548473471731c7ddeaf229f4ac238fb4684a7a56221b27ed1812fea87c0c668a"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.dependency.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_6b74071f8ea0abd77de52a6f32bac07396436f34ebe472b59e31143b59696e6e"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.dependency.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_7b887d65c6d1be5024ab474331c9d5a53e625c2ea309d37a5c6bc8b747928bd9"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.dependency.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_7e939c7ebbf1a48aacc892921451b4dbbca4430197e6576316050d080889be04"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.dependency.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_8456c7666b54948f4485f8f8c3076ee36182a6699a20a2e2b583ecfe774e65ec"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.dependency.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_84718ff5e23f4a6502732027eedab1db1ca51f1d2d8bd45f6d56411b4f9f7cd8"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.dependency.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_a068f7fb0f96c49976be3dfd26e947648bb7078d149586a4815f0937ffacaf05"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.dependency.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_a1a15a76457fc248aa0fd82d282aaff10772a2d4af99ac17221e30c3d1e96727"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.dependency.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_aa74fd4b96eb4176863f3bb42fb97c3a68f9743532a6281418d49f04bbcba2c3"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.dependency.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_bdb1fe17ddaa0e7bbe5ba009dd78dd93763d8985d0866e7568ced7ae56c0d0c2"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.dependency.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_c34a8e43d6ae0c7dc93a8abb1895dcca09133783cc184d9b0bf5ddac3ac7552e"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.dependency.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_d3734b9350028160a63d36f969ddeac22dac1d45a0e8363911cc4a0ec5bb70a5"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.dependency.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_d3f0cdbbf8eaa74d1c0591b6a550d990ce1667be87728a2d438a93778fed04f0"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.dependency.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_da173c2f059d9bfa2a98d37c4c49a9d3663c59b8a9aee8ebdb550315907770b9"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.dependency.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_ecc05c8d2f272beacd580a0833f35b04631ba381833b0c61c33dc627ff063639"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.dependency.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_f20a48b3bd1b9921501e0646adbd687813dbac4e068463ca7b3a9593001da89f"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.entry-point.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_ba6101b37e764fd1752d8b3bc914ed191eb00cb77d9c9761da892e31ae8fa42b"
+      ]
+    },
+    {
+      "subject_id": "component_a4abfcc52e146b1036b423c89aabab17f94bdf86d52bff5299c576b1fa935b43",
+      "claim_code": "python.manifest.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_2f1b8a4162133894f141bc288273b34373d703bcb7e2274b1b523620f2e9150d"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.manifest.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_55896f3731636092fd303f3d91787b96369d312ac62bb7f282e242030748e9ec"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.manifest.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_746aa4662542bcce8419485fb8712fc2e702c8cc6b2db2a2038406bdeb3afe99"
+      ]
+    },
+    {
+      "subject_id": "component_a4abfcc52e146b1036b423c89aabab17f94bdf86d52bff5299c576b1fa935b43",
+      "claim_code": "python.metadata.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_f3f503b17e830d5f6659deec6161e1f1a8d9fc4fea7dbb9a6e2bddaaed3d2d4e"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.metadata.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_d51a27db0231a482c87f6c1ba5de135bf181ccc9c21b71dd511f327577487635"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.metadata.dynamic",
+      "classification": "unknown",
+      "evidence_ids": [
+        "python-inspect-v1_e5209596fb33d16e82ad267e19e3420b74773ba9d3f5df88a5a2a3e5d6dd8d6f"
+      ]
+    },
+    {
+      "subject_id": "component_a4abfcc52e146b1036b423c89aabab17f94bdf86d52bff5299c576b1fa935b43",
+      "claim_code": "python.runtime.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_47c1db5fe764bcfa6ba3d31fd7bd3ae2036762f8609f2889f6257102574457ce"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.runtime.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_4a6a91511e7689c91f4ea693c86301c0f58aaadccec3c61f6a558553ee08c539"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.runtime.declaration",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_f5fb6b15b7c3af04914d0e1043a13b1cbd935712c7bc090e5dbd907131a88382"
+      ]
+    },
+    {
+      "subject_id": "component_a4abfcc52e146b1036b423c89aabab17f94bdf86d52bff5299c576b1fa935b43",
+      "claim_code": "python.tool.evidence",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_b151c0bec60887acc8f0842187bbec2f10be1e85d3e3c089b48925a808ed0548"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.tool.evidence",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_3ca1f9997fa36a81679eadf46cb7db7faf48a9681650322b2a18a9d3a3692825"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.tool.evidence",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_4178ded3e257021108499e2d4a2b669b366b460b62fa3b79f4e46aabf1eb539c"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.tool.evidence",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_51f75ac7e1aaef424dae43c0e4ad4aac4c6336ac0356f569b594c7fcb4723eb7"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.tool.evidence",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_7253eac904a34889fb5092581071de0421248a5afe85b796b5f4bf072f89a854"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.tool.evidence",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_ac73a397a4d31388609b129ac9d2a8e101c11b4c0692e74680b9ce389fce5188"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.tool.evidence",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_affe753e014b6cf4b93d3e37e826d4d928c02c25534d737e7629e8307805cc7f"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.tool.evidence",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_b64d6cdc46bd90fc56b834a14eff48948955680124557e85015f997d50fe4e3c"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.tool.evidence",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_d6614e0509e1c491a54c8167973a12e77104d34bb1f8e858fe5842cc6fc9d734"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.tool.evidence",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_f5cc61d7ecf98d3bdfaab4ec532ddbd46e787bfc0e0b78d78f0178360ca682eb"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.tool.evidence",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_fa5451282e5a5906896cedc5090a8a9481d293e98fceafbe3c7d0cdb8917510d"
+      ]
+    }
+  ],
+  "artifacts": [
+    {
+      "location": "AGENTS.md",
+      "sha256": "2bec5a2d839eecdc5cb1936a44b8b7019513db735d4207050d26c2e29e334ad8",
+      "evidence_ids": [
+        "python-inspect-v1_55896f3731636092fd303f3d91787b96369d312ac62bb7f282e242030748e9ec"
+      ],
+      "ownership": "section"
+    }
+  ],
+  "completion": "partial",
+  "skipped_scopes": [
+    {
+      "scope": ".coverage",
+      "reason": "gitignore",
+      "omitted_scope": ".coverage"
+    },
+    {
+      "scope": ".mypy_cache",
+      "reason": "built_in_exclusion",
+      "omitted_scope": ".mypy_cache"
+    },
+    {
+      "scope": ".pytest_cache",
+      "reason": "built_in_exclusion",
+      "omitted_scope": ".pytest_cache"
+    },
+    {
+      "scope": ".ruff_cache",
+      "reason": "built_in_exclusion",
+      "omitted_scope": ".ruff_cache"
+    },
+    {
+      "scope": ".venv",
+      "reason": "built_in_exclusion",
+      "omitted_scope": ".venv"
+    },
+    {
+      "scope": "site",
+      "reason": "gitignore",
+      "omitted_scope": "site"
+    },
+    {
+      "scope": "src/slygentify/__pycache__",
+      "reason": "built_in_exclusion",
+      "omitted_scope": "src/slygentify/__pycache__"
+    },
+    {
+      "scope": "src/slygentify/_scan/__pycache__",
+      "reason": "built_in_exclusion",
+      "omitted_scope": "src/slygentify/_scan/__pycache__"
+    },
+    {
+      "scope": "src/slygentify/_scan/detectors/__pycache__",
+      "reason": "built_in_exclusion",
+      "omitted_scope": "src/slygentify/_scan/detectors/__pycache__"
+    },
+    {
+      "scope": "tests/__pycache__",
+      "reason": "built_in_exclusion",
+      "omitted_scope": "tests/__pycache__"
+    },
+    {
+      "scope": "tmp",
+      "reason": "gitignore",
+      "omitted_scope": "tmp"
+    },
+    {
+      "scope": "tools/__pycache__",
+      "reason": "built_in_exclusion",
+      "omitted_scope": "tools/__pycache__"
+    },
+    {
+      "scope": "tools/support/__pycache__",
+      "reason": "built_in_exclusion",
+      "omitted_scope": "tools/support/__pycache__"
+    }
+  ]
+}

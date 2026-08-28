@@ -32,12 +32,20 @@ def test_init_cli_dry_run_and_creation(tmp_path: Path) -> None:
     assert dry_run.exit_code == 0
     assert "Ownership: new" in dry_run.stdout
     assert "--- AGENTS.md ---" in dry_run.stdout
-    assert "--- .slygentify/state.json ---" in dry_run.stdout
+    assert "--- provenance summary ---" in dry_run.stdout
+    assert '"inputs"' not in dry_run.stdout
     assert not (root / "AGENTS.md").exists()
+
+    full_dry_run = runner.invoke(app, ["init", str(root), "--dry-run", "--show-state"])
+    assert full_dry_run.exit_code == 0
+    assert "--- .slygentify/state.json ---" in full_dry_run.stdout
+    assert '"inputs"' in full_dry_run.stdout
+    assert runner.invoke(app, ["init", str(root), "--show-state"]).exit_code == 2
 
     created = runner.invoke(app, ["init", str(root)])
     assert created.exit_code == 0
-    assert created.stdout == "Created AGENTS.md and .slygentify/state.json\n"
+    assert "Created AGENTS.md and .slygentify/state.json" in created.stdout
+    assert "slygentify doctor ." in created.stdout
     assert (root / "AGENTS.md").is_file()
 
 
@@ -63,7 +71,26 @@ def test_init_cli_refusal_replacement_and_no_change(tmp_path: Path) -> None:
 
     unchanged = runner.invoke(app, ["init", str(root)])
     assert unchanged.exit_code == 0
-    assert unchanged.stdout == "No changes.\n"
+    assert "No changes." in unchanged.stdout
+
+
+@pytest.mark.verifies("TST040", "TST054")
+def test_init_cli_adopts_without_echoing_existing_guidance(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    (root / "AGENTS.md").write_text("do-not-echo-this-human-guidance", encoding="utf-8")
+    runner = CliRunner()
+
+    dry_run = runner.invoke(app, ["init", str(root), "--adopt", "--dry-run"])
+    assert dry_run.exit_code == 0
+    assert "--- Slygentify bootstrap guidance ---" in dry_run.stdout
+    assert "do-not-echo-this-human-guidance" not in dry_run.stdout
+    assert not (root / ".slygentify" / "state.json").exists()
+    assert runner.invoke(app, ["init", str(root), "--adopt", "--replace"]).exit_code == 2
+
+    adopted = runner.invoke(app, ["init", str(root), "--adopt"])
+    assert adopted.exit_code == 0
+    assert "Adopted Slygentify bootstrap guidance" in adopted.stdout
+    assert "do-not-echo-this-human-guidance" in (root / "AGENTS.md").read_text(encoding="utf-8")
 
 
 @pytest.mark.verifies("TST040")
@@ -78,7 +105,7 @@ def test_init_cli_reports_planning_and_apply_errors(
     assert dry_run.exit_code == 4
     assert "Ownership: unmanaged" in dry_run.stdout
     assert "--- AGENTS.md ---" in dry_run.stdout
-    assert "--- .slygentify/state.json ---" in dry_run.stdout
+    assert "--- provenance summary ---" in dry_run.stdout
     assert dry_run.stderr == ""
     assert plan_initialization(root, replace=True).can_apply
 
@@ -130,7 +157,8 @@ def test_init_cli_reports_planning_and_apply_errors(
     monkeypatch.setattr("slygentify.cli.apply_initialization", repaired)
     repaired_result = runner.invoke(app, ["init", str(root), "--replace"])
     assert repaired_result.exit_code == 0
-    assert repaired_result.stdout == "Repaired .slygentify/state.json\n"
+    assert "Repaired .slygentify/state.json" in repaired_result.stdout
+    assert "slygentify doctor ." in repaired_result.stdout
 
 
 @pytest.mark.verifies("TST054")
