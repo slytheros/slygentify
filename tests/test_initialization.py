@@ -13,7 +13,7 @@ import pytest
 
 import slygentify.initialization as initialization
 from slygentify import InitializationError, apply_initialization, plan_initialization
-from slygentify._generation import generate_agents_document
+from slygentify._generation import _render_paste_snippet, generate_agents_document
 from slygentify._provenance import (
     Artifact,
     StateDocument,
@@ -55,6 +55,22 @@ def test_generator_is_deterministic_safe_and_explicit_about_partial_results() ->
     assert first.evidence_ids == ("evidence_b",)
     assert len(first.markdown.encode()) <= 4096
     assert _fingerprint("a" * 64) == "a" * 64
+
+
+@pytest.mark.verifies("TST054")
+def test_paste_snippet_is_deterministic_and_removes_document_only_content() -> None:
+    guidance = generate_agents_document(sample_result())
+
+    snippet = _render_paste_snippet(guidance.markdown)
+
+    assert snippet.startswith("## Slygentify bootstrap guidance\n\n")
+    assert "### How to use Slygentify" in snippet
+    assert "### Bootstrap component index" in snippet
+    assert "### Safety" in snippet
+    assert "# AGENTS.md" not in snippet
+    assert "managed-artifact lifecycle" not in snippet
+    with pytest.raises(ValueError, match="unexpected document preamble"):
+        _render_paste_snippet("not generated guidance\n")
 
 
 @pytest.mark.verifies("TST038", "TST044")

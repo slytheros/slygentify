@@ -1,0 +1,20 @@
+active: true
+derived: false
+header: |
+  Existing guidance paste assistance
+level: 1.53
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ053
+  path: src/slygentify/cli.py
+  type: file
+reviewed: BNynkLUA17k9T74nw9-y5SbFnl7YYP7tHjP_jMQMhzc=
+text: |
+  For an unmanaged or human-edited safe regular root AGENTS.md without --replace,
+  Slygentify init shall preserve the file, write deterministic paste-ready Slygentify
+  guidance to standard output without an error diagnostic, and exit 4 to identify manual
+  incorporation as required. The paste guidance shall not contain the generated document
+  title or managed-artifact boilerplate. A dry-run shall retain its exact-artifact review
+  output and exit 4 for the same ownership states.

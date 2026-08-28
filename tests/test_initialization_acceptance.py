@@ -144,7 +144,7 @@ def test_revalidation_rejects_lifecycle_races(tmp_path: Path, changed: str) -> N
     assert error.value.changed_locations == ()
 
 
-@pytest.mark.verifies("TST039", "TST040")
+@pytest.mark.verifies("TST039", "TST040", "TST054")
 def test_write_failures_leave_safe_recovery_paths_and_actionable_cli_output(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -182,6 +182,8 @@ def test_write_failures_leave_safe_recovery_paths_and_actionable_cli_output(
 
     (root / "AGENTS.md").write_text("secret-do-not-print", encoding="utf-8")
     result = CliRunner().invoke(app, ["init", str(root)])
-    assert result.exit_code == 1
-    assert "initialization.human-edited" in result.stderr
+    assert result.exit_code == 4
+    assert result.stderr == ""
+    assert "Existing AGENTS.md was preserved." in result.stdout
     assert "secret-do-not-print" not in result.stderr
+    assert "secret-do-not-print" not in result.stdout

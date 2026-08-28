@@ -20,8 +20,12 @@ slygentify init path/to/repository
 ```
 
 Ordinary application creates new guidance, regenerates unchanged managed guidance, or
-repairs a recoverable missing sidecar. Unmanaged, human-edited, missing managed,
-malformed, and unsafe targets fail closed.
+repairs a recoverable missing sidecar. When an unmanaged or human-edited safe regular
+`AGENTS.md` exists, ordinary init preserves it and prints a paste-ready Slygentify
+section for manual incorporation instead of replacing it. This result exits 4 and does
+not create `.slygentify/state.json`; use `--replace` only when intentionally adopting
+the generated document. Dry-run retains its complete exact-artifact review and also
+exits 4. Missing managed, malformed, and unsafe targets fail closed.
 
 `--replace` may discard an existing regular `AGENTS.md`. It creates no backup and does
 not merge text. It never authorizes replacing a symbolic link, directory, or malformed

@@ -5,7 +5,13 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from slygentify import InitializationError, InitializationResult, plan_initialization
+from slygentify import (
+    InitializationError,
+    InitializationResult,
+    plan_initialization,
+    scan_repository,
+)
+from slygentify._generation import _render_paste_snippet, generate_agents_document
 from slygentify.cli import app
 
 
@@ -35,15 +41,19 @@ def test_init_cli_dry_run_and_creation(tmp_path: Path) -> None:
     assert (root / "AGENTS.md").is_file()
 
 
-@pytest.mark.verifies("TST003", "TST040")
+@pytest.mark.verifies("TST003", "TST040", "TST054")
 def test_init_cli_refusal_replacement_and_no_change(tmp_path: Path) -> None:
     root = _repository(tmp_path)
     (root / "AGENTS.md").write_text("human", encoding="utf-8")
     runner = CliRunner()
 
-    refused = runner.invoke(app, ["init", str(root)])
-    assert refused.exit_code == 1
-    assert "initialization.unmanaged" in refused.stderr
+    paste_guidance = runner.invoke(app, ["init", str(root)])
+    assert paste_guidance.exit_code == 4
+    assert paste_guidance.stderr == ""
+    assert "Existing AGENTS.md was preserved." in paste_guidance.stdout
+    assert "## Slygentify bootstrap guidance" in paste_guidance.stdout
+    assert "# AGENTS.md" not in paste_guidance.stdout
+    assert "managed-artifact lifecycle" not in paste_guidance.stdout
     assert (root / "AGENTS.md").read_text(encoding="utf-8") == "human"
 
     replaced = runner.invoke(app, ["init", str(root), "--replace"])
@@ -65,9 +75,12 @@ def test_init_cli_reports_planning_and_apply_errors(
     (root / "AGENTS.md").write_text("human", encoding="utf-8")
 
     dry_run = runner.invoke(app, ["init", str(root), "--dry-run"])
-    assert dry_run.exit_code == 1
+    assert dry_run.exit_code == 4
     assert "Ownership: unmanaged" in dry_run.stdout
-    assert "initialization.unmanaged" in dry_run.stderr
+    assert "--- AGENTS.md ---" in dry_run.stdout
+    assert "--- .slygentify/state.json ---" in dry_run.stdout
+    assert dry_run.stderr == ""
+    assert plan_initialization(root, replace=True).can_apply
 
     def fail_plan(*_args: object, **_kwargs: object) -> object:
         raise InitializationError("initialization.path", "bad path")
@@ -80,8 +93,6 @@ def test_init_cli_reports_planning_and_apply_errors(
         "Next: Run slygentify init --dry-run to review the current state.\n"
     )
     monkeypatch.undo()
-
-    plan = plan_initialization(root, replace=True)
 
     def fail_apply(*_args: object, **_kwargs: object) -> object:
         raise InitializationError(
@@ -120,7 +131,43 @@ def test_init_cli_reports_planning_and_apply_errors(
     repaired_result = runner.invoke(app, ["init", str(root), "--replace"])
     assert repaired_result.exit_code == 0
     assert repaired_result.stdout == "Repaired .slygentify/state.json\n"
-    assert plan.can_apply
+
+
+@pytest.mark.verifies("TST054")
+def test_init_cli_prints_deterministic_paste_guidance_for_human_edits(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    runner = CliRunner()
+    assert runner.invoke(app, ["init", str(root)]).exit_code == 0
+    agents = root / "AGENTS.md"
+    agents.write_text("human-owned guidance\n", encoding="utf-8")
+    before = agents.read_bytes()
+
+    result = runner.invoke(app, ["init", str(root)])
+
+    expected = _render_paste_snippet(generate_agents_document(scan_repository(root)).markdown)
+    assert result.exit_code == 4
+    assert result.stderr == ""
+    assert result.stdout.endswith(expected)
+    assert "# AGENTS.md" not in result.stdout
+    assert "managed-artifact lifecycle" not in result.stdout
+    assert agents.read_bytes() == before
+
+
+@pytest.mark.verifies("TST040", "TST054")
+def test_init_cli_retains_diagnostics_for_invalid_state(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    state = root / ".slygentify" / "state.json"
+    state.parent.mkdir()
+    state.write_text('{"schema_version": 2}', encoding="utf-8")
+    runner = CliRunner()
+
+    dry_run = runner.invoke(app, ["init", str(root), "--dry-run"])
+    ordinary = runner.invoke(app, ["init", str(root)])
+
+    assert dry_run.exit_code == 1
+    assert "initialization.invalid-state" in dry_run.stderr
+    assert ordinary.exit_code == 1
+    assert "initialization.invalid-state" in ordinary.stderr
 
 
 @pytest.mark.verifies("TST004", "TST040")

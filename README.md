@@ -52,7 +52,9 @@ slygentify init path/to/repository
 
 Initialization writes `AGENTS.md` and `.slygentify/state.json` only after planning and
 revalidation. Existing unmanaged or human-edited guidance is preserved by default;
-`--replace` is an explicit destructive choice and does not create a backup or merge.
+ordinary `init` prints a paste-ready Slygentify section and exits 4 so a user can merge it
+manually. `--replace` is an explicit destructive choice and does not create a backup or
+merge.
 
 See the [first-repository tutorial](docs/tutorials/first-repository.md) for a runnable
 walkthrough, the [troubleshooting guide](docs/guides/troubleshooting.md) for safe
