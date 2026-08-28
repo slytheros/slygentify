@@ -27,6 +27,7 @@ class ScanError(Exception):
             category,
             recovery,
             "The command cannot safely guess a repository target or alter repository content to recover.",
+            disposition="problem",
         )
 
 

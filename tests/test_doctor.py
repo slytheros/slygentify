@@ -65,6 +65,7 @@ def _sample_execution(root: Path, result: object) -> SimpleNamespace:
                 effect=f"{boundary.omitted_scope} was omitted",
                 recovery="review the boundary and rerun doctor",
                 evidence_ids=(),
+                disposition="limitation",
                 boundary=boundary,
             )
             for boundary in skipped
@@ -188,6 +189,7 @@ def test_unmanaged_guidance_is_informational_without_writes(tmp_path: Path) -> N
     assert result.completion == "complete"
     assert _codes(result) == {"doctor.guidance.unmanaged"}
     assert result.diagnostics[0].classification == "unknown"
+    assert result.diagnostics[0].disposition == "notice"
     assert (root / "AGENTS.md").read_bytes() == before
     assert not (root / ".slygentify").exists()
 
@@ -304,6 +306,7 @@ def test_provenance_only_change_is_informational_state_stale(tmp_path: Path) -> 
 
     assert _codes(result) == {"doctor.state.stale"}
     assert result.diagnostics[0].severity == "info"
+    assert result.diagnostics[0].disposition == "notice"
 
 
 @pytest.mark.verifies("TST047")
@@ -497,6 +500,10 @@ def test_path_command_and_partial_rules_are_limited_to_supported_prior_knowledge
         "doctor.path.missing",
         "doctor.inspection.partial",
     } <= _codes(result)
+    by_code = {item.code: item for item in result.diagnostics}
+    assert by_code["doctor.command.unverifiable"].disposition == "limitation"
+    assert by_code["doctor.path.missing"].disposition == "problem"
+    assert by_code["doctor.inspection.partial"].disposition == "limitation"
     assert result.completion == "partial"
 
 
@@ -521,10 +528,12 @@ def test_doctor_reports_each_scan_partial_cause_with_exact_safe_action(
     ]
     by_location = {item.location: item for item in partials}
     manifest = by_location["package.json"]
+    assert manifest.disposition == "problem"
     assert "package boundary and declarations" in manifest.effect
     assert "intentionally exclude" in (manifest.remediation or "")
     assert "scan.limits" not in (manifest.remediation or "")
     git = by_location["."]
+    assert git.disposition == "limitation"
     assert "Gitignore" in git.effect
     assert "Git executable" in (git.remediation or "")
     evidence = {item.id: item for item in first.evidence}

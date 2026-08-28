@@ -300,7 +300,13 @@ def test_scripted_deadline_keeps_normalization_references_valid(
             FindingCandidate("test.finding", "verified", "services/api", "A finding.", (key,)),
         ),
         diagnostics=(
-            DiagnosticCandidate("test.diagnostic", "package.json", "A diagnostic.", False),
+            DiagnosticCandidate(
+                "test.diagnostic",
+                "package.json",
+                "A diagnostic.",
+                False,
+                disposition="problem",
+            ),
         ),
         relationships=(
             RelationshipCandidate("workspace-member", ".", "services/api", "verified", (key,)),

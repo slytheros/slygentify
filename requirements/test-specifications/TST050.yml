@@ -15,6 +15,8 @@ text: |
   stale, malformed, unmanaged, ambiguous, simultaneous cause-specific partial, and
   recovered states; every static
   doctor diagnostic's positive and clean-control behavior; deterministic Python, JSON,
-  human, CLI, stream, and exit contracts; portable repository-relative locations; and
+  human, CLI, stream, and exit contracts; problem, limitation, and notice assignments
+  with partial-cause propagation independent of severity and exit; portable
+  repository-relative locations; and
   the absence of repository writes, project-command execution, network access, ambient
   credential access, unsafe-link traversal, or repository-content disclosure.

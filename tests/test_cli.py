@@ -67,6 +67,7 @@ def test_init_cli_refusal_replacement_and_no_change(tmp_path: Path) -> None:
     replaced = runner.invoke(app, ["init", str(root), "--replace"])
     assert replaced.exit_code == 0
     assert "Warning [initialization.replace-without-backup] AGENTS.md" in replaced.stderr
+    assert "Disposition: Notice" in replaced.stderr
     assert "Slygentify will not create a backup" in replaced.stderr
     assert "Regenerated" in replaced.stdout
 
@@ -117,7 +118,8 @@ def test_init_cli_reports_planning_and_apply_errors(
     planning_error = runner.invoke(app, ["init", str(root)])
     assert planning_error.exit_code == 1
     assert "Error [initialization.path] ." in planning_error.stderr
-    assert "Problem: bad path." in planning_error.stderr
+    assert "Disposition: Problem" in planning_error.stderr
+    assert "Description: bad path." in planning_error.stderr
     assert "Effect: Initialization did not complete" in planning_error.stderr
     assert (
         "Next: Run slygentify init --dry-run to review the current state." in planning_error.stderr
@@ -244,5 +246,6 @@ max_component_entries = "unlimited"
 
     assert result.exit_code == 0
     assert "Warning [initialization.relaxed-limits] slygentify.toml" in result.stderr
+    assert "Disposition: Notice" in result.stderr
     assert "raises or disables an AGENTS.md byte or component-entry limit" in result.stderr
     assert "--- AGENTS.md ---" in result.stdout

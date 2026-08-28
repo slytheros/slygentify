@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from slygentify.models import DiagnosticDisposition
+
 
 def _sentence(value: str) -> str:
     """Normalize one concise diagnostic sentence."""
@@ -25,7 +27,7 @@ def compose_message(problem: str, effect: str, recovery: str | None = None) -> s
 
 @dataclass(frozen=True, slots=True)
 class DiagnosticDetail:
-    """Safe, command-neutral content for an actionable diagnostic."""
+    """Safe, command-neutral content for a diagnostic."""
 
     code: str
     target: str
@@ -34,6 +36,7 @@ class DiagnosticDetail:
     category: str | None = None
     recovery: str | None = None
     safety_rationale: str | None = None
+    disposition: DiagnosticDisposition = "problem"
 
     def __post_init__(self) -> None:
         required: tuple[tuple[str, str], ...] = (
@@ -55,6 +58,8 @@ class DiagnosticDetail:
                 not isinstance(optional_value, str) or not optional_value.strip()
             ):
                 raise ValueError(f"diagnostic {optional_name} must not be empty when present")
+        if self.disposition not in {"problem", "limitation", "notice"}:
+            raise ValueError("diagnostic disposition is not supported")
 
     @property
     def message(self) -> str:
@@ -65,9 +70,12 @@ def render_diagnostic(detail: DiagnosticDetail, severity: str) -> str:
     """Render a plain-text diagnostic without host or untrusted content."""
 
     lines = [f"{severity} [{detail.code}] {detail.target}"]
+    lines.append(f"Disposition: {detail.disposition.title()}")
     if detail.category is not None:
         lines.append(f"Category: {detail.category}")
-    lines.extend((f"Problem: {_sentence(detail.problem)}", f"Effect: {_sentence(detail.effect)}"))
+    lines.extend(
+        (f"Description: {_sentence(detail.problem)}", f"Effect: {_sentence(detail.effect)}")
+    )
     if detail.safety_rationale is not None:
         lines.append(f"Why no automatic repair: {_sentence(detail.safety_rationale)}")
     if detail.recovery is not None:

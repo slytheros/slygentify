@@ -38,6 +38,8 @@ input. Parser bounds and same-major additive-field behavior match scan JSON.
 Optional records and newly required evidence are indivisible units. Excluded selected
 records are counted by section and record kind. Projection JSON has its own version and
 cannot be loaded as a complete `ScanResult`.
+Included diagnostics preserve their disposition. Readers default disposition to
+`problem` for older schema-major-1 projections; current producers emit it.
 
 See the [map task guide](../guides/map.md) for CLI use and the
 [JSON Schema reference](../schemas.md) for the wire contract.

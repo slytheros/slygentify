@@ -369,6 +369,7 @@ class _RepositoryView:
                 path,
                 "Evidence file could not be read safely within the inspection limits.",
                 True,
+                disposition="limitation",
             )
         )
         self.partial = True
@@ -568,6 +569,7 @@ def _inspect(
                 "Tracked paths were unavailable; checked-out Gitignore rules were applied "
                 "without tracked-file exceptions.",
                 True,
+                disposition="limitation",
             )
         )
     if ledger.add(1):
@@ -606,6 +608,7 @@ def _inspect(
                     relative,
                     "Directory could not be inspected safely.",
                     True,
+                    disposition="problem",
                 )
             )
             partial = True
@@ -648,6 +651,7 @@ def _inspect(
                         gitignore.path,
                         "Gitignore rules could not be read safely.",
                         True,
+                        disposition="problem",
                     )
                 )
                 partial = True
@@ -769,7 +773,11 @@ def _inspect(
                 partial_skipped.append(file_skip)
                 diagnostics.append(
                     _DiagnosticCandidate(
-                        "inspection.unsafe-file", entry.path, "File could not be read safely.", True
+                        "inspection.unsafe-file",
+                        entry.path,
+                        "File could not be read safely.",
+                        True,
+                        disposition="problem",
                     )
                 )
                 partial = True

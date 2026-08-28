@@ -18,4 +18,6 @@ text: |
   cause-specific and de-duplicated partial inspection diagnostics for malformed input,
   unavailable Git tracking, unreadable or unsafe paths, unresolved references, and
   resource limits, unmanaged guidance, static command uncertainty, safe error isolation, and the absence
-  of doctor repository writes or discovered command execution.
+  of doctor repository writes or discovered command execution. Verify notice, limitation,
+  and problem assignments plus originating partial-cause disposition propagation without
+  changing severity, completion, or exit outcomes.

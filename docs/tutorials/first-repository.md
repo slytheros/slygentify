@@ -72,7 +72,7 @@ from slygentify import scan_repository
 result = scan_repository("path/to/tutorial-repository")
 print(result.completion)
 for diagnostic in result.diagnostics:
-    print(diagnostic.code, diagnostic.message)
+    print(diagnostic.disposition, diagnostic.code, diagnostic.message)
 ```
 
 Expected outcome: completion is `partial`; valid root, web, and demo components are still
@@ -154,7 +154,12 @@ from slygentify import doctor_repository
 
 assessment = doctor_repository("path/to/tutorial-repository")
 for diagnostic in assessment.diagnostics:
-    print(diagnostic.severity, diagnostic.code, diagnostic.remediation)
+    print(
+        diagnostic.severity,
+        diagnostic.disposition,
+        diagnostic.code,
+        diagnostic.remediation,
+    )
 ```
 
 Expected outcome before applying initialization: doctor reports unmanaged guidance and a

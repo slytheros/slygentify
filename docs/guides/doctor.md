@@ -12,7 +12,7 @@ slygentify doctor path/to/repository --verbose
 ```
 
 Default text includes the resolved repository, completion, severity counts, and every
-diagnostic's classification, stable code, target, problem, effect, and remediation.
+diagnostic's classification, disposition, stable code, target, description, effect, and remediation.
 Verbose mode adds evidence references, one evidence appendix, and every skipped scope.
 If fresh inspection is partial, doctor emits one `doctor.inspection.partial` warning for
 each distinct cause instead of one umbrella warning. Each warning keeps the exact safe
@@ -43,7 +43,7 @@ from slygentify import doctor_repository, dump_doctor_json
 
 result = doctor_repository("path/to/repository")
 for diagnostic in result.diagnostics:
-    print(diagnostic.severity, diagnostic.code, diagnostic.remediation)
+    print(diagnostic.severity, diagnostic.disposition, diagnostic.code, diagnostic.remediation)
 document = dump_doctor_json(result)
 ```
 

@@ -36,6 +36,7 @@ from slygentify._repository import (
 from slygentify._repository import (
     find_git_root as _find_git_root,
 )
+from slygentify.models import DiagnosticDisposition
 from slygentify.traceability import implements
 
 OwnershipState = Literal[
@@ -71,13 +72,21 @@ class InitializationError(Exception):
         self.changed_locations = changed_locations
         self.recovery = recovery
         self.diagnostic = DiagnosticDetail(
-            code, target, message, effect, category, recovery, safety_rationale
+            code,
+            target,
+            message,
+            effect,
+            category,
+            recovery,
+            safety_rationale,
+            disposition="problem",
         )
 
 
+@implements("REQ040", "REQ046")
 @dataclass(frozen=True, slots=True)
 class InitializationDiagnostic:
-    """A stable, actionable initialization diagnostic."""
+    """A stable initialization diagnostic with an explicit disposition."""
 
     code: str
     message: str
@@ -87,6 +96,11 @@ class InitializationDiagnostic:
     problem: str | None = None
     effect: str | None = None
     safety_rationale: str | None = None
+    disposition: DiagnosticDisposition = "problem"
+
+    def __post_init__(self) -> None:
+        if self.disposition not in {"problem", "limitation", "notice"}:
+            raise ValueError(f"unsupported diagnostic disposition: {self.disposition}")
 
 
 @dataclass(frozen=True, slots=True)
@@ -154,6 +168,7 @@ def _diagnostic(
     *,
     category: str | None = None,
     safety_rationale: str | None = None,
+    disposition: DiagnosticDisposition,
 ) -> InitializationDiagnostic:
     return InitializationDiagnostic(
         code,
@@ -164,6 +179,7 @@ def _diagnostic(
         problem,
         effect,
         safety_rationale,
+        disposition,
     )
 
 
@@ -313,6 +329,7 @@ def plan_initialization(
                 "Upgrade to the latest reviewed Slygentify build and rerun slygentify init . --dry-run. If it still fails, rename the state file to a new non-existing backup name, rerun the dry-run, and apply only a recoverable or otherwise safe plan.",
                 category=error.category,
                 safety_rationale="Slygentify cannot establish ownership of AGENTS.md from invalid state, so automatic replacement could overwrite user-managed guidance.",
+                disposition="problem",
             )
         )
     except OSError:
@@ -328,6 +345,7 @@ def plan_initialization(
                 "Inspect the entry manually; symbolic links and non-regular targets are never replaced.",
                 category="state.unsafe-entry",
                 safety_rationale="Following or replacing a symbolic link or non-regular target could escape repository containment or overwrite an unintended file.",
+                disposition="problem",
             )
         )
     can_adopt = adopt and existing_state is None and ownership == "unmanaged"
@@ -349,6 +367,7 @@ def plan_initialization(
                 "Initialization preserved the existing AGENTS.md and did not write provenance state.",
                 "Review the dry-run and use --replace only after preserving any content you need.",
                 safety_rationale="Slygentify does not replace content whose ownership or human edits it cannot validate without explicit authorization.",
+                disposition=("notice" if ownership in {"unmanaged", "human-edited"} else "problem"),
             )
         )
     return InitializationPlan(

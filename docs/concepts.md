@@ -17,6 +17,20 @@ Every conclusion retains one of four meanings:
 Evidence records identify repository-relative locations and concise observations. They
 do not expose the selected repository's host-absolute path.
 
+## Diagnostic dispositions
+
+Every diagnostic has one independent disposition:
+
+| Disposition | Meaning |
+| --- | --- |
+| Problem | Malformed, inconsistent, missing, unsafe, or failed state requiring intervention. |
+| Limitation | Trustworthy uncertainty caused by a deliberate static, safety, resource, or support boundary; it does not imply a repository defect. |
+| Notice | Retained state or a choice worth reviewing without implying a defect. |
+
+Disposition does not replace claim classification, doctor severity, completion, or exit
+status. For example, a static limitation can make inspection partial, while an
+informational doctor notice can still retain an `unknown` claim classification.
+
 ## Repositories and components
 
 A scan selects the nearest containing Git repository. Components are evidence-backed

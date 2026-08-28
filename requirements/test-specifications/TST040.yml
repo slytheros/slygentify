@@ -13,4 +13,5 @@ references:
   type: file
 reviewed: pGsFZ-Ngy_TgmCY0jgXNIPPMAIo7aSNfGeYFsaFkkvA=
 text: |
-  Verify initialization CLI dry-run review, replacement warnings, diagnostics, and exits.
+  Verify initialization CLI dry-run review, replacement warnings, notice/problem
+  dispositions and rendering, diagnostics, writes, refusals, and unchanged exits.

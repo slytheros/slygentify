@@ -28,3 +28,5 @@ text: |
   a complete ScanResult. The default canonical
   JSON including its final newline shall not exceed 8 KiB; if required metadata and
   owning context cannot fit, projection shall fail with actionable guidance.
+  Included diagnostics shall preserve disposition; schema-major-1 readers shall default an
+  omitted disposition to `problem`, while current producers shall emit it.

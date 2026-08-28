@@ -520,7 +520,7 @@ def test_public_python_json_text_cli_streams_and_exits_agree(
     text_result = CliRunner().invoke(app, ["doctor", str(repository.root), "--verbose"])
     assert text_result.exit_code == 1
     assert text_result.stderr == ""
-    assert "WARNING UNKNOWN [doctor.artifact.diverged]" in text_result.stdout
+    assert "WARNING UNKNOWN PROBLEM [doctor.artifact.diverged]" in text_result.stdout
 
     missing = CliRunner().invoke(app, ["doctor", str(tmp_path / "missing")])
     assert missing.exit_code == 2

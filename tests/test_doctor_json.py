@@ -58,6 +58,7 @@ def sample_doctor_result() -> DoctorResult:
             effect="Freshness cannot be established.",
             remediation=None,
             evidence_ids=("evidence-1",),
+            disposition="notice",
         ),
         DoctorDiagnostic(
             id="diagnostic-warning",
@@ -145,6 +146,7 @@ def test_doctor_json_is_canonical_and_omits_absent_optionals() -> None:
     assert "verification_method" not in document["evidence"][1]
     assert "location" not in document["diagnostics"][0]
     assert "remediation" not in document["diagnostics"][0]
+    assert [item["disposition"] for item in document["diagnostics"]] == ["notice", "problem"]
     assert "effective_limit" not in document["skipped_scopes"][0]
     assert "consumed" not in document["skipped_scopes"][0]
     assert dump_doctor_json(result) == encoded
@@ -160,6 +162,24 @@ def test_doctor_reader_ignores_additive_same_major_properties() -> None:
     document["skipped_scopes"][0]["future"] = None
 
     assert validate_doctor(document) == sample_doctor_result()
+
+
+@pytest.mark.verifies("TST048")
+def test_doctor_reader_defaults_old_diagnostics_and_schema_rejects_invalid_disposition() -> None:
+    result = sample_doctor_result()
+    document = json.loads(dump_doctor_json(result))
+    for diagnostic in document["diagnostics"]:
+        del diagnostic["disposition"]
+    expected = replace(
+        result,
+        diagnostics=tuple(replace(item, disposition="problem") for item in result.diagnostics),
+    )
+
+    assert validate_doctor(document) == expected
+    invalid = json.loads(dump_doctor_json(result))
+    invalid["diagnostics"][0]["disposition"] = "other"
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.Draft202012Validator(doctor_json_schema()).validate(invalid)
 
 
 @pytest.mark.verifies("TST048")

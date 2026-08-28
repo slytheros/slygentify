@@ -17,7 +17,7 @@ text: |
   site generation without private-history content; file-portable generated page URLs and
   valid generated internal link targets and fragments; complete generated coverage of public
   exports; valid and documented packaged Draft 2020-12 schemas; loadable canonical JSON
-  examples; byte-for-byte representative scan, map, and doctor output generated from a
+  examples with diagnostic dispositions; byte-for-byte representative scan, map, and doctor output generated from a
   deterministic public-safe fixture; intended multi-component, inferred, partial, and
   warning scenarios; compilable tutorial and task-guide Python examples; goal-oriented
   onboarding that distinguishes the Git repository boundary from optional executable

@@ -26,15 +26,17 @@ text: |
   supported inspection scope, supported ecosystems, and every component, relationship,
   finding, evidence record, diagnostic, and skipped scope in a component-first,
   deterministic hierarchy. Component content shall be organized as What it is, How to
-  work on it, Architecture, Automation, and Needs attention; repository-wide workflows,
+  work on it, Architecture, Automation, and Attention & limitations; repository-wide workflows,
   primary component navigation and secondary auxiliary-component navigation shall remain
   distinct without omitting canonical component records,
   actionable attention, and routine inspection boundaries shall remain separately
-  visible. Needs attention shall present diagnostics first as Problems & next steps,
-  nest an unknown finding under a diagnostic when their subject and source evidence
+  visible. Attention & limitations shall route diagnostics by explicit disposition into
+  Problems & next steps, Limitations & explanations, and Notices; nest an unknown finding
+  under a diagnostic when their subject and source evidence
   identify the same repository condition, present remaining unknowns as Unknowns to
   confirm, and route recommendations and explicitly reviewed caution finding codes
-  without keyword inference. It shall show both issue and canonical-record counts so
+  without keyword inference. It shall show neutral item and canonical-record counts overall
+  and disposition-specific nouns within diagnostic groups so
   grouping cannot imply data loss. Every evidence record shall appear
   in a final Sources & provenance appendix. Findings shall retain literal claim
   classifications and inspectable source citations. Repeated diagnostics and skipped

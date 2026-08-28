@@ -15,4 +15,5 @@ references:
 reviewed: 7lu1mPnn68mBO-EVKxt5ImBd-euauk2ptYxH11fPbZo=
 text: |
   Verify immutable keyword-only public values, path and scalar invariants, canonical
-  ordering, unique identities, component paths, and subject and evidence references.
+  ordering, unique identities, component paths, subject and evidence references, and
+  compatible diagnostic disposition defaults and validation.

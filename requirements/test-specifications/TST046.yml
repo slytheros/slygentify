@@ -21,4 +21,7 @@ text: |
   condition-specific actions for malformed, missing, unreadable, conflict, dynamic,
   unsupported, and exact resource-limit conditions; machine-readable state categories;
   compatible scan/map JSON fields; backup-first invalid-state recovery; and absence of
-  duplicated recovery, raw exception text, host paths, or secret disclosure.
+  duplicated recovery, raw exception text, host paths, or secret disclosure. Verify all
+  disposition values, invalid values, compatible public defaults, immutable public models,
+  representative subsystem assignments, and static enforcement that every private
+  producer supplies disposition explicitly without code or message inference.

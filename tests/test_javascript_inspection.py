@@ -192,6 +192,14 @@ def test_invalid_package_fields_are_partial_and_commands_are_redacted(tmp_path: 
     assert codes.count("javascript.invalid-manager-selection") == 2
     assert "javascript.invalid-workspace" in codes
     assert "javascript.sensitive-command-redacted" in codes
+    assert (
+        next(
+            item
+            for item in result.diagnostics
+            if item.code == "javascript.sensitive-command-redacted"
+        ).disposition
+        == "notice"
+    )
     document = dump_scan_json(result).decode()
     assert "TOKEN=literal" not in document
     assert "confirmed secret" not in document
@@ -541,6 +549,12 @@ def test_unsupported_tooling_and_same_root_generic_component_are_honest(tmp_path
     ]
     assert "javascript.unsupported-tooling.unknown" in _codes(result, "findings")
     assert "javascript.unsupported-tooling" in _codes(result, "diagnostics")
+    assert (
+        next(
+            item for item in result.diagnostics if item.code == "javascript.unsupported-tooling"
+        ).disposition
+        == "limitation"
+    )
 
 
 @pytest.mark.verifies("TST029", "TST025", "TST026", "TST027", "TST028")

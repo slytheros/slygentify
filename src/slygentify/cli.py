@@ -104,6 +104,7 @@ def _render_initialization_diagnostic(
         diagnostic.category,
         diagnostic.recovery,
         diagnostic.safety_rationale,
+        disposition=diagnostic.disposition,
     )
     typer.echo(render_diagnostic(detail, severity), err=True)
 
@@ -190,6 +191,7 @@ def init_command(
                     "Initialization used explicitly expanded generated-guidance limits.",
                     recovery="Review the expanded limits and restore the defaults if they were unintended.",
                     safety_rationale="Slygentify does not silently change an explicit repository configuration.",
+                    disposition="notice",
                 ),
                 "Warning",
             ),
@@ -235,6 +237,7 @@ def init_command(
                     "Slygentify will not create a backup or merge the existing guidance.",
                     recovery=None,
                     safety_rationale="The caller explicitly authorized replacement, but Slygentify cannot decide which human guidance should be retained.",
+                    disposition="notice",
                 ),
                 "Warning",
             ),
@@ -319,6 +322,7 @@ def scan_command(
                 "Slygentify could not safely inspect the selected repository.",
                 "Slygentify did not emit a scan result and did not modify repository files.",
                 recovery="Correct the selected input or environment condition, then rerun scan.",
+                disposition="problem",
             )
         )
         typer.echo(render_diagnostic(detail, "Error"), err=True)
@@ -443,6 +447,7 @@ def map_command(
                 "Slygentify did not emit a map result and did not modify repository files.",
                 recovery="Correct the selected repository or scope, then rerun map.",
                 safety_rationale="Map is read-only and cannot safely change repository content to resolve an invalid scope.",
+                disposition="problem",
             )
         typer.echo(render_diagnostic(detail, "Error"), err=True)
         raise typer.Exit(code=1) from None

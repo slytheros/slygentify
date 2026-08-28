@@ -43,7 +43,7 @@ ComponentSection = Literal[
     "How to work on it",
     "Architecture",
     "Automation",
-    "Needs attention",
+    "Attention & limitations",
 ]
 ComponentNavigationRole = Literal["unknown", "auxiliary"]
 
@@ -52,7 +52,7 @@ _COMPONENT_SECTION_ORDER: tuple[ComponentSection, ...] = (
     "How to work on it",
     "Architecture",
     "Automation",
-    "Needs attention",
+    "Attention & limitations",
 )
 _SUBSECTION_ORDER = {
     "Identity & role": 0,
@@ -71,15 +71,26 @@ _SUBSECTION_ORDER = {
     "Relationships": 24,
     "CI workflows & commands": 30,
     "Problems & next steps": 40,
-    "Cautions": 41,
-    "Unknowns to confirm": 42,
-    "Recommendations": 43,
-    "Excluded or limited areas": 44,
+    "Limitations & explanations": 41,
+    "Notices": 42,
+    "Cautions": 43,
+    "Unknowns to confirm": 44,
+    "Recommendations": 45,
+    "Excluded or limited areas": 46,
 }
 
 # Reviewed finding codes whose verified fact is itself cautionary. Unknown and
-# recommended records are routed by classification; diagnostics are always problems.
+# recommended records are routed by classification; diagnostics use their dispositions.
 _CAUTION_FINDING_CODES = frozenset({"javascript.npm-lock-precedence"})
+_DIAGNOSTIC_SUBSECTION_BY_DISPOSITION = {
+    "problem": "Problems & next steps",
+    "limitation": "Limitations & explanations",
+    "notice": "Notices",
+}
+_DIAGNOSTIC_NOUN_BY_SUBSECTION = {
+    subsection: disposition
+    for disposition, subsection in _DIAGNOSTIC_SUBSECTION_BY_DISPOSITION.items()
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -92,18 +103,23 @@ class RecordGroup:
 
 
 @dataclass(frozen=True, slots=True)
-class AttentionProblem:
+class AttentionDiagnostic:
     """One diagnostic and any canonical unknown findings it explains."""
 
     diagnostic: Diagnostic
     related_unknowns: tuple[Finding, ...]
 
 
-def attention_count_text(issue_count: int, record_count: int) -> str:
-    """Return grammatically counted issue and canonical-record text."""
-    issue_label = "issue" if issue_count == 1 else "issues"
+def attention_count_text(item_count: int, record_count: int, *, noun: str = "item") -> str:
+    """Return grammatically counted item and canonical-record text."""
+    item_label = noun if item_count == 1 else f"{noun}s"
     record_label_text = "record" if record_count == 1 else "records"
-    return f"{issue_count} {issue_label}; {record_count} {record_label_text}"
+    return f"{item_count} {item_label}; {record_count} {record_label_text}"
+
+
+def diagnostic_group_noun(subsection: str) -> str | None:
+    """Return the disposition noun represented by a diagnostic subsection."""
+    return _DIAGNOSTIC_NOUN_BY_SUBSECTION.get(subsection)
 
 
 def _path_parts(path: str) -> tuple[str, ...]:
@@ -258,11 +274,11 @@ class ScanPresentation:
         tokens = _tokens(self._finding_search_text(finding))
         code_tokens = _tokens(finding.code)
         if finding.code in _CAUTION_FINDING_CODES:
-            return "Needs attention", "Cautions"
+            return "Attention & limitations", "Cautions"
         if finding.classification == "unknown":
-            return "Needs attention", "Unknowns to confirm"
+            return "Attention & limitations", "Unknowns to confirm"
         if finding.classification == "recommended":
-            return "Needs attention", "Recommendations"
+            return "Attention & limitations", "Recommendations"
         if "ci" in code_tokens:
             return "Automation", "CI workflows & commands"
         if code_tokens & {"command", "script"}:
@@ -376,17 +392,18 @@ class ScanPresentation:
         diagnostics: tuple[Diagnostic, ...],
     ) -> None:
         """Pair a subject's unknowns with diagnostics and keep every record once."""
-        unknown_key = ("Needs attention", "Unknowns to confirm")
+        unknown_key = ("Attention & limitations", "Unknowns to confirm")
         unknowns = [
             record for record in grouped.pop(unknown_key, ()) if isinstance(record, Finding)
         ]
         remaining = list(unknowns)
-        problem_records: list[ScanRecord] = []
+        diagnostic_records: defaultdict[str, list[ScanRecord]] = defaultdict(list)
         for diagnostic in sorted(
             diagnostics,
             key=lambda item: (self.diagnostic_target(item), item.code, item.id),
         ):
-            problem_records.append(diagnostic)
+            subsection = _DIAGNOSTIC_SUBSECTION_BY_DISPOSITION[diagnostic.disposition]
+            diagnostic_records[subsection].append(diagnostic)
             related = [
                 finding
                 for finding in remaining
@@ -396,50 +413,51 @@ class ScanPresentation:
                     or bool(set(finding.evidence_ids) & set(diagnostic.evidence_ids))
                 )
             ]
-            problem_records.extend(related)
+            diagnostic_records[subsection].extend(related)
             remaining = [finding for finding in remaining if finding not in related]
-        grouped[("Needs attention", "Problems & next steps")].extend(problem_records)
+        for subsection, records in diagnostic_records.items():
+            grouped[("Attention & limitations", subsection)].extend(records)
         grouped[unknown_key].extend(remaining)
 
     @staticmethod
-    def attention_problems(group: RecordGroup) -> tuple[AttentionProblem, ...]:
-        """Recover diagnostic/related-unknown issue groups from a presentation group."""
-        assert group.subsection == "Problems & next steps"
-        problems: list[AttentionProblem] = []
+    def attention_diagnostics(group: RecordGroup) -> tuple[AttentionDiagnostic, ...]:
+        """Recover diagnostic and related-unknown groups from a presentation group."""
+        assert diagnostic_group_noun(group.subsection) is not None
+        diagnostics: list[AttentionDiagnostic] = []
         diagnostic: Diagnostic | None = None
         related: list[Finding] = []
         for record in group.records:
             if isinstance(record, Diagnostic):
                 if diagnostic is not None:
-                    problems.append(AttentionProblem(diagnostic, tuple(related)))
+                    diagnostics.append(AttentionDiagnostic(diagnostic, tuple(related)))
                 diagnostic = record
                 related = []
             else:
                 assert isinstance(record, Finding) and diagnostic is not None
                 related.append(record)
         assert diagnostic is not None
-        problems.append(AttentionProblem(diagnostic, tuple(related)))
-        return tuple(problems)
+        diagnostics.append(AttentionDiagnostic(diagnostic, tuple(related)))
+        return tuple(diagnostics)
 
     def attention_counts(self, groups: tuple[RecordGroup, ...]) -> tuple[int, int]:
-        """Return user-visible issue and canonical-record counts for attention groups."""
-        attention = tuple(group for group in groups if group.section == "Needs attention")
-        issue_count = sum(
-            len(self.attention_problems(group))
-            if group.subsection == "Problems & next steps"
+        """Return user-visible item and canonical-record counts for attention groups."""
+        attention = tuple(group for group in groups if group.section == "Attention & limitations")
+        item_count = sum(
+            len(self.attention_diagnostics(group))
+            if diagnostic_group_noun(group.subsection) is not None
             else len(group.records)
             for group in attention
         )
-        return issue_count, sum(len(group.records) for group in attention)
+        return item_count, sum(len(group.records) for group in attention)
 
     def component_attention_counts(self) -> tuple[int, int]:
-        issue_count = 0
+        item_count = 0
         record_count = 0
         for component in self.result.components:
-            issues, records = self.attention_counts(self.component_groups(component.id))
-            issue_count += issues
+            items, records = self.attention_counts(self.component_groups(component.id))
+            item_count += items
             record_count += records
-        return issue_count, record_count
+        return item_count, record_count
 
     def evidence_groups(self) -> tuple[tuple[str, tuple[Evidence, ...]], ...]:
         grouped: defaultdict[str, list[Evidence]] = defaultdict(list)
@@ -536,8 +554,9 @@ class ScanPresentation:
             location = record.location or "repository-wide"
             lines = [
                 f"Diagnostic: {record.code}",
+                f"Disposition: {record.disposition.title()}",
                 f"Applies to: {target} @ {location}",
-                f"Problem: {record.problem or record.message}",
+                f"Description: {record.problem or record.message}",
             ]
             if record.effect is not None:
                 lines.append(f"Effect: {record.effect}")
@@ -602,38 +621,48 @@ def _add_empty(branch: Tree, values: object) -> None:
 
 
 def _add_component_group(index: ScanPresentation, section: Tree, group: RecordGroup) -> None:
-    if group.subsection == "Problems & next steps":
-        problems = index.attention_problems(group)
+    noun = diagnostic_group_noun(group.subsection)
+    if noun is not None:
+        diagnostics = index.attention_diagnostics(group)
         diagnostic_branch = section.add(
             Text(
-                f"Problems & next steps ({attention_count_text(len(problems), len(group.records))})"
+                f"{group.subsection} "
+                f"({attention_count_text(len(diagnostics), len(group.records), noun=noun)})"
             )
         )
-        by_target: defaultdict[tuple[str, str], list[AttentionProblem]] = defaultdict(list)
-        for problem in problems:
+        by_target: defaultdict[tuple[str, str], list[AttentionDiagnostic]] = defaultdict(list)
+        for diagnostic_group in diagnostics:
             by_target[
-                (index.diagnostic_target(problem.diagnostic), problem.diagnostic.code)
-            ].append(problem)
+                (
+                    index.diagnostic_target(diagnostic_group.diagnostic),
+                    diagnostic_group.diagnostic.code,
+                )
+            ].append(diagnostic_group)
         for target, code in sorted(by_target):
-            target_problems = by_target[(target, code)]
-            record_count = sum(1 + len(problem.related_unknowns) for problem in target_problems)
+            target_diagnostics = by_target[(target, code)]
+            record_count = sum(1 + len(item.related_unknowns) for item in target_diagnostics)
             target_branch = diagnostic_branch.add(
                 Text(
                     f"{target} - {code} "
-                    f"({attention_count_text(len(target_problems), record_count)})"
+                    f"({attention_count_text(len(target_diagnostics), record_count, noun=noun)})"
                 )
             )
-            for problem in target_problems:
-                diagnostic = problem.diagnostic
-                if not problem.related_unknowns:
+            for diagnostic_group in target_diagnostics:
+                diagnostic = diagnostic_group.diagnostic
+                if not diagnostic_group.related_unknowns:
                     target_branch.add(record_label(index, diagnostic))
                     continue
-                issue = target_branch.add(
-                    Text(f"Issue ({attention_count_text(1, 1 + len(problem.related_unknowns))})")
+                item_branch = target_branch.add(
+                    Text(
+                        f"{noun.title()} "
+                        f"({attention_count_text(1, 1 + len(diagnostic_group.related_unknowns), noun=noun)})"
+                    )
                 )
-                issue.add(record_label(index, diagnostic))
-                context = issue.add(Text(f"Related context ({len(problem.related_unknowns)})"))
-                for finding in problem.related_unknowns:
+                item_branch.add(record_label(index, diagnostic))
+                context = item_branch.add(
+                    Text(f"Related context ({len(diagnostic_group.related_unknowns)})")
+                )
+                for finding in diagnostic_group.related_unknowns:
                     context.add(record_label(index, finding))
         return
     subsection = section.add(Text(f"{group.subsection} ({len(group.records)})"))
@@ -731,19 +760,21 @@ def build_report_tree(index: ScanPresentation) -> Tree:
     _add_empty(workflows, workflow_groups)
 
     attention_groups = tuple(
-        group for group in repository_groups if group.section == "Needs attention"
+        group for group in repository_groups if group.section == "Attention & limitations"
     )
-    component_issues, component_records = index.component_attention_counts()
-    repository_issues, repository_records = index.attention_counts(repository_groups)
-    attention_issues = component_issues + repository_issues
+    component_items, component_records = index.component_attention_counts()
+    repository_items, repository_records = index.attention_counts(repository_groups)
+    attention_items = component_items + repository_items
     attention_records = component_records + repository_records
     attention = root.add(
-        Text(f"Needs attention ({attention_count_text(attention_issues, attention_records)})")
+        Text(
+            f"Attention & limitations ({attention_count_text(attention_items, attention_records)})"
+        )
     )
     if component_records:
         attention.add(
             Text(
-                f"Component items: {attention_count_text(component_issues, component_records)} "
+                f"Component items: {attention_count_text(component_items, component_records)} "
                 "(shown once under their components)"
             )
         )

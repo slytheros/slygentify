@@ -25,5 +25,6 @@ text: |
   empty structural groups without expand controls, record leaves without disclosure icons,
   a collapsed provenance area, matching descendants retain their ancestors, collapsed
   high-cardinality groups are populated lazily, and non-TTY invocation fails before scan
-  work. Confirm the explorer preserves the unchanged normalized result and does not add
+  work. Confirm disposition routing, detail, search, filtering, pairing, counts, and lazy
+  grouping match the static report. Confirm the explorer preserves the unchanged normalized result and does not add
   repository writes, discovered-command execution, or network effects.

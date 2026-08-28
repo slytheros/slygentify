@@ -17,4 +17,5 @@ text: |
   navigation references, iterative and unmatched navigation, section routing, boundary
   intersection, evidence closure, canonical omissions and byte enforcement, source
   digests, schema round trips, forward-compatible loading, malformed-input rejection,
-  and separation from complete ScanResult documents.
+  compatible omitted-disposition defaults, deterministic disposition preservation and
+  emission, enum rejection, and separation from complete ScanResult documents.

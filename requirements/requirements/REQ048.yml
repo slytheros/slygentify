@@ -25,4 +25,6 @@ text: |
   non-finite values, and oversized or cyclic inputs, while ignoring additive unknown
   same-major object properties. Producers shall revalidate closed values and emit only
   declared fields in fixed order as deterministic UTF-8, LF, two-space-indented JSON
-  with one final newline and absent optional values omitted.
+  with one final newline and absent optional values omitted. Doctor diagnostic disposition
+  shall be an optional schema-major-1 enum for compatible readers, default to `problem`
+  when absent, and be emitted by current producers.

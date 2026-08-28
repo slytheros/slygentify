@@ -223,6 +223,7 @@ def _normalize(
                 "slygentify.toml",
                 "Configuration raises or disables one or more inspection limits.",
                 False,
+                disposition="notice",
             )
         )
     partial = (
@@ -266,6 +267,7 @@ def _normalize(
                     candidate.location,
                     "Normalized evidence exceeded the memory budget.",
                     True,
+                    disposition="limitation",
                 )
             )
             partial = True
@@ -290,6 +292,7 @@ def _normalize(
                     component_candidate.path,
                     "Component evidence was unavailable after normalization.",
                     True,
+                    disposition="limitation",
                 )
             )
             partial = True
@@ -332,6 +335,7 @@ def _normalize(
                     "Configured component ecosystem conflicts with detected evidence; both were retained.",
                     False,
                     path,
+                    disposition="problem",
                 )
             )
 
@@ -377,6 +381,7 @@ def _normalize(
                     True,
                     relationship_candidate.target_path if target_id is not None else None,
                     relationship_candidate.evidence_keys,
+                    disposition="problem",
                 )
             )
             partial = True
@@ -434,6 +439,7 @@ def _normalize(
                 "workspace declarations if the overlap is unintended.",
                 False,
                 target_path,
+                disposition="problem",
             )
         )
 
@@ -461,6 +467,7 @@ def _normalize(
                     "Normalized component relationships exceeded the memory budget.",
                     True,
                     paths_by_component_id[target_id],
+                    disposition="limitation",
                 )
             )
             partial = True
@@ -495,6 +502,7 @@ def _normalize(
                     "Normalized auxiliary component findings exceeded the memory budget.",
                     True,
                     component.path,
+                    disposition="limitation",
                 )
             )
             partial = True
@@ -534,6 +542,7 @@ def _normalize(
                     finding_candidate.subject_path or ".",
                     "Normalized findings exceeded the memory budget.",
                     True,
+                    disposition="limitation",
                 )
             )
             partial = True
@@ -564,6 +573,7 @@ def _normalize(
                     "the root slygentify.toml, or retain this unknown when the repository "
                     "intentionally has no supported component"
                 ),
+                disposition="limitation",
             )
         )
 
@@ -603,6 +613,7 @@ def _normalize(
                 diagnostic_candidate.safety_rationale
                 or "Slygentify inspection is read-only and does not rewrite repository content."
             ),
+            disposition=diagnostic_candidate.disposition,
         )
         if diagnostic_candidate.partial:
             cause_candidates.append((diagnostic_candidate, diagnostic_evidence_ids))
@@ -686,6 +697,7 @@ def _normalize(
                     effect=effect,
                     recovery=recovery,
                     evidence_ids=diagnostic_evidence_ids,
+                    disposition=diagnostic_candidate.disposition,
                     boundary=boundary,
                 )
             )
@@ -702,6 +714,7 @@ def _normalize(
                     effect=effect,
                     recovery=recovery,
                     evidence_ids=(),
+                    disposition="limitation",
                     boundary=boundary,
                 )
             )

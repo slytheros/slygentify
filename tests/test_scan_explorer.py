@@ -18,6 +18,7 @@ from textual.worker import Worker, WorkerState
 import slygentify._explorer as explorer
 from slygentify import ComponentRelationship, Finding, ScanError, ScanResult
 from slygentify._explorer import ScanExplorer, _GlossaryScreen, _NodePayload
+from slygentify.models import DiagnosticDisposition
 from tests.scan_samples import sample_result
 
 
@@ -203,7 +204,7 @@ def test_explorer_groups_high_cardinality_diagnostics_without_merging() -> None:
             assert _find(tree, "Relationships (1)")
             group = _find(
                 tree,
-                "Problems & next steps / . / example.diagnostic (50 issues; 50 records)",
+                "Problems & next steps / . / example.diagnostic (50 problems; 50 records)",
             )
             assert len(group.children) == 0
 
@@ -219,7 +220,7 @@ def test_explorer_groups_high_cardinality_diagnostics_without_merging() -> None:
             await pilot.pause()
             filtered = _find(
                 app.query_one("#tree", Tree),
-                "example.diagnostic (1 issue; 1 record)",
+                "example.diagnostic (1 problem; 1 record)",
             )
             assert len(filtered.children) == 0
             filtered.expand()
@@ -273,7 +274,7 @@ def test_explorer_nests_related_unknown_context_and_preserves_filters() -> None:
             tree = app.query_one("#tree", Tree)
             problems = _find(
                 tree,
-                "Problems & next steps / . / example.diagnostic (2 issues; 3 records)",
+                "Problems & next steps / . / example.diagnostic (2 problems; 3 records)",
             )
             assert len(problems.children) == 2
             assert _find(tree, "Related context (1)")
@@ -285,13 +286,60 @@ def test_explorer_nests_related_unknown_context_and_preserves_filters() -> None:
             filtered = app.query_one("#tree", Tree)
             problems = _find(
                 filtered,
-                "Problems & next steps / . / example.diagnostic (1 issue; 1 record)",
+                "Problems & next steps / . / example.diagnostic (1 problem; 1 record)",
             )
             assert len(problems.children) == 1
             issue = problems.children[0]
             assert len(issue.children) == 1
             assert "Related context (1)" in _label(issue.children[0])
             assert "example.diagnostic" not in " ".join(_label(node) for node in _nodes(issue))
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.verifies("TST019", "TST033")
+def test_explorer_routes_and_searches_every_diagnostic_disposition() -> None:
+    scan = sample_result()
+    dispositions: tuple[DiagnosticDisposition, ...] = ("problem", "limitation", "notice")
+    diagnostics = tuple(
+        sorted(
+            (
+                replace(
+                    scan.diagnostics[0],
+                    id=f"diagnostic_{disposition}",
+                    code=f"example.{disposition}",
+                    disposition=disposition,
+                    message=f"A searchable {disposition} diagnostic.",
+                )
+                for disposition in dispositions
+            ),
+            key=lambda item: (item.code, item.subject_id or item.location or "", item.id),
+        )
+    )
+    result = replace(scan, diagnostics=diagnostics)
+
+    async def scenario() -> None:
+        app = ScanExplorer(result, Path("repository"))
+        async with app.run_test(size=(150, 40)) as pilot:
+            tree = app.query_one("#tree", Tree)
+            assert _find(tree, "Problems & next steps / . / example.problem (1 problem; 1 record)")
+            limitation = _find(
+                tree,
+                "Limitations & explanations / . / example.limitation (1 limitation; 1 record)",
+            )
+            assert _find(tree, "Notices / . / example.notice (1 notice; 1 record)")
+            limitation.expand()
+            await pilot.pause()
+            tree.move_cursor(limitation.children[0])
+            await pilot.press("enter")
+            await pilot.pause()
+            assert "Disposition: Limitation" in _detail_text(app)
+
+            app.query_one("#search", Input).value = "searchable notice"
+            await pilot.pause()
+            labels = [_label(node) for node in _nodes(app.query_one("#tree", Tree).root)]
+            assert any("example.notice (1 notice; 1 record)" in label for label in labels)
+            assert not any("example.problem" in label for label in labels)
 
     asyncio.run(scenario())
 

@@ -10,10 +10,21 @@ references:
 - keyword: REQ046
   path: src/slygentify/_scan/contracts.py
   type: file
+- keyword: REQ046
+  path: src/slygentify/initialization.py
+  type: file
+- keyword: REQ046
+  path: src/slygentify/models.py
+  type: file
 reviewed: clASir0dXUVWCOTfjOE_OurS_Tc7LLZ3qerIyknh6f8=
 text: |
   Every Slygentify-authored result diagnostic, operational error, refusal, and warning
-  shall identify a stable code and safe target, distinguish the observed problem from its
+  shall identify a stable code, safe target, and explicit disposition. `problem` identifies
+  a repository or operational condition requiring intervention; `limitation` identifies
+  trustworthy uncertainty imposed by a static, safety, resource, or support boundary;
+  `notice` identifies retained state or a choice worth review without implying a defect.
+  Disposition shall remain independent of claim classification, doctor severity,
+  completion, and exit status. Diagnostics shall distinguish the observed condition from its
   effect on retained, omitted, withheld, refused, or partial work, and provide recovery
   only when it is safe and concrete. A diagnostic that refuses automatic repair shall
   state the ownership or safety rationale. Diagnostics shall not recommend weaker safety
@@ -24,4 +35,5 @@ text: |
   producers additionally expose optional structured category, problem, effect, recovery,
   and safety-rationale fields; doctor retains remediation and adds category and safety
   rationale. Private diagnostic candidates shall retain explicit structure and compose
-  compatible public messages deterministically.
+  compatible public messages deterministically, and every private producer shall supply a
+  disposition explicitly rather than infer it from a code or message.

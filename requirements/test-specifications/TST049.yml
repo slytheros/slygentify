@@ -16,6 +16,7 @@ text: |
   Verify concise and verbose clean, informational, warning, error, and partial reports;
   deterministic grouping, originating scan-code or boundary-reason evidence for every
   partial cause, complete evidence and skipped-scope detail, plain and
-  no-color output, exact canonical JSON, empty result-error streams, exit statuses
+  no-color output, explicit disposition without changing severity headings, exact
+  canonical JSON, empty result-error streams, exit statuses
   0/1/2/3, usage failures, trusted Git forwarding and disclosure, non-interactive
   operation, and isolation from writes, network activity, or project-command execution.

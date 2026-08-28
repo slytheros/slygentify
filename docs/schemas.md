@@ -27,6 +27,8 @@ not a public Python result type.
   JSON Schema validator alone does not provide.
 - Treat `state-v1` as legacy readable provenance and `state-v2` as the current producer
   format. Current producers emit only canonical declared fields.
+- Scan, map, and doctor diagnostic `disposition` is an optional schema-major-1 enum for
+  compatibility. Current producers emit it; readers default its absence to `problem`.
 - Do not load a task map as a complete scan or use initialization state as cached scan
   authority.
 

@@ -16,4 +16,5 @@ text: |
   Verify strict recursive validation, translated failures, forward-compatible unknown
   fields and additive component defaults, closed producer behavior, every parser resource limit, deterministic bytes
   and ordering, checked-in packaged schema integrity, independent schema validation,
-  and schema/model/adapter drift detection.
+  schema/model/adapter drift detection, omitted-disposition compatibility, enum rejection,
+  deterministic disposition emission, and scan round trips for all dispositions.

@@ -24,4 +24,6 @@ text: |
   declared fields only, fixed field and collection order, omitted absent optional
   values, LF line endings, two-space indentation, and one final newline. Additive
   schema-major-1 component fields shall remain optional for readers and apply their
-  documented defaults when absent.
+  documented defaults when absent. Diagnostic disposition shall be an optional
+  schema-major-1 enum for compatible readers, default to `problem` when absent, and be
+  emitted by current producers.

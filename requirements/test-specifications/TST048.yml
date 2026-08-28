@@ -16,4 +16,5 @@ text: |
   Verify public exports, immutable round trips, strict recursive validation, translated
   failures, forward-compatible unknown properties, parser resource limits, deterministic
   bytes and ordering, omitted optional fields, fresh checked-in schema integrity,
-  independent schema validation, and schema/model/adapter drift detection.
+  independent schema validation, schema/model/adapter drift detection, compatible omitted
+  disposition defaults, deterministic disposition emission, and all-disposition round trips.

@@ -23,6 +23,8 @@ text: |
   diagnostic with its exact safe location, omitted effect, source code or boundary
   reason, and condition-specific remediation; a diagnostic and skipped scope from the
   same event shall remain one cause, and resource-limit advice shall appear only for an
-  actual named limit. The doctor core does
+  actual named limit. Unmanaged guidance and harmless stale provenance shall be notices;
+  statically unverifiable commands shall be limitations; other doctor findings shall be
+  problems. Each partial wrapper shall preserve the originating scan disposition. The doctor core does
   not execute discovered repository commands, contact the network, or write repository
   files.

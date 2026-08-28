@@ -14,4 +14,6 @@ reviewed: XI6klKicaVobz_uWP3AQ_IyZlomjjIOjjAZr0ALSFHk=
 text: |
   Slygentify shall expose immutable repository, component, evidence, finding,
   diagnostic, skipped-scope, and scan-result values with safe relative paths,
-  canonical ordering, and valid cross-record references.
+  canonical ordering, and valid cross-record references. Public diagnostics shall expose
+  an independent `problem`, `limitation`, or `notice` disposition and shall default an
+  omitted disposition to `problem` for compatible Python construction.

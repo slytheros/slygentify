@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from slygentify._diagnostics import DiagnosticDetail, render_diagnostic
@@ -26,8 +28,9 @@ def test_shared_diagnostic_renders_all_actionable_fields_deterministically() -> 
     )
     assert render_diagnostic(detail, "Error") == (
         "Error [state.invalid-json] .slygentify/state.json\n"
+        "Disposition: Problem\n"
         "Category: state.invalid-json\n"
-        "Problem: The generated ownership record cannot be parsed.\n"
+        "Description: The generated ownership record cannot be parsed.\n"
         "Effect: Slygentify did not change any files.\n"
         "Why no automatic repair: Automatic replacement could overwrite content whose ownership "
         "is unknown.\n"
@@ -46,7 +49,7 @@ def test_shared_diagnostic_renders_all_actionable_fields_deterministically() -> 
 def test_shared_diagnostic_rejects_empty_required_or_optional_values(
     changes: dict[str, str],
 ) -> None:
-    values = {
+    values: dict[str, Any] = {
         "code": "diagnostic.code",
         "target": "AGENTS.md",
         "problem": "A safe problem.",
@@ -56,3 +59,12 @@ def test_shared_diagnostic_rejects_empty_required_or_optional_values(
 
     with pytest.raises(ValueError, match="must not be empty"):
         DiagnosticDetail(**values)
+
+    with pytest.raises(ValueError, match="disposition"):
+        DiagnosticDetail(
+            "diagnostic.code",
+            "AGENTS.md",
+            "A safe condition.",
+            "A safe effect.",
+            disposition="other",  # type: ignore[arg-type]
+        )

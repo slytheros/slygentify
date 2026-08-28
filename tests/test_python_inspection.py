@@ -13,7 +13,8 @@ import yaml  # type: ignore[import-untyped]
 
 import slygentify._scan.detectors.python as private_scan
 import slygentify._scan.normalization as normalization
-from slygentify import Finding, ScanResult, dump_scan_json, scan_repository
+from slygentify import Diagnostic, Finding, ScanResult, dump_scan_json, scan_repository
+from slygentify._presentation import ScanPresentation
 from slygentify._scan import kernel
 from slygentify._scan.contracts import (
     DetectionContext,
@@ -124,6 +125,23 @@ addopts = "-q"
         for summary in _summaries(result, "python.framework.declaration")
     }
     assert "python.dynamic-metadata-unknown" in _codes(result, "diagnostics")
+    assert (
+        next(
+            item for item in result.diagnostics if item.code == "python.dynamic-metadata-unknown"
+        ).disposition
+        == "limitation"
+    )
+    presentation = ScanPresentation(result, root)
+    diagnostic_groups = tuple(
+        group
+        for component in result.components
+        for group in presentation.component_groups(component.id)
+        if any(
+            isinstance(record, Diagnostic) and record.code == "python.dynamic-metadata-unknown"
+            for record in group.records
+        )
+    )
+    assert [group.subsection for group in diagnostic_groups] == ["Limitations & explanations"]
     assert "python.manager-conflict" not in _codes(result, "diagnostics")
     assert "python.runtime-conflict" not in _codes(result, "diagnostics")
     assert b"root:main" not in dump_scan_json(result)
@@ -520,6 +538,7 @@ jobs:
     redaction = next(
         item for item in result.diagnostics if item.code == "python.sensitive-command-redacted"
     )
+    assert redaction.disposition == "notice"
     assert "may be sensitive" in redaction.message
     assert "non-sensitive test data" in redaction.message
     assert "if it is sensitive" in redaction.message
