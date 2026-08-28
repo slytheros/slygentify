@@ -22,6 +22,7 @@ from slygentify import (
 )
 from slygentify._doctor_presentation import render_doctor_report
 from slygentify._explorer import run_scan_explorer
+from slygentify._generation import _render_paste_snippet
 from slygentify._presentation import render_scan_report
 from slygentify.initialization import (
     InitializationError,
@@ -95,8 +96,20 @@ def _render_initialization_error(error: InitializationError) -> None:
     typer.echo(f"Next: {error.recovery}", err=True)
 
 
+def _requires_manual_paste(ownership: str, replace_requested: bool) -> bool:
+    """Return whether a safe existing artifact needs user-directed incorporation."""
+    return not replace_requested and ownership in {"unmanaged", "human-edited"}
+
+
+def _render_manual_paste(markdown: str) -> None:
+    """Print paste guidance without presenting existing user content as an error."""
+    typer.echo("Existing AGENTS.md was preserved. Paste this section into that file:")
+    typer.echo("\n--- Paste into AGENTS.md ---")
+    typer.echo(_render_paste_snippet(markdown), nl=False)
+
+
 @app.command("init")
-@implements("REQ003", "REQ004", "REQ040", "REQ044")
+@implements("REQ003", "REQ004", "REQ040", "REQ044", "REQ053")
 def init_command(
     path: Annotated[
         Path,
@@ -120,6 +133,7 @@ def init_command(
         raise typer.Exit(code=1) from None
     for warning in plan.warnings:
         typer.echo(f"Warning: {warning}", err=True)
+    manual_paste = _requires_manual_paste(plan.ownership, replace)
 
     if dry_run:
         typer.echo(f"Ownership: {plan.ownership}")
@@ -129,12 +143,17 @@ def init_command(
         typer.echo(plan.agents_markdown, nl=False)
         typer.echo("--- .slygentify/state.json ---")
         typer.echo(plan.state_json.decode("utf-8"), nl=False)
+        if manual_paste:
+            raise typer.Exit(code=4)
         if not plan.can_apply:
             for diagnostic in plan.diagnostics:
                 typer.echo(f"Error [{diagnostic.code}]: {diagnostic.message}", err=True)
                 typer.echo(f"Next: {diagnostic.recovery}", err=True)
             raise typer.Exit(code=1)
         return
+    if manual_paste:
+        _render_manual_paste(plan.agents_markdown)
+        raise typer.Exit(code=4)
     if not plan.can_apply:
         for diagnostic in plan.diagnostics:
             typer.echo(f"Error [{diagnostic.code}]: {diagnostic.message}", err=True)

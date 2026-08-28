@@ -18,13 +18,22 @@ slygentify init path/to/repository --replace
 
 Use `--dry-run` first. It prints the exact proposed artifact bytes and performs no
 writes. Without `--replace`, initialization applies only to a new target, unchanged
-managed guidance, or a recoverable missing sidecar. Unmanaged, human-edited, missing
-managed, malformed, and unsafe states fail closed with a diagnostic and recovery.
+managed guidance, or a recoverable missing sidecar. For an unmanaged or human-edited
+safe regular `AGENTS.md`, ordinary init preserves the file and prints a deterministic,
+paste-ready Slygentify section; it exits 4 to identify the required manual incorporation.
+The section does not include a document-level title or managed-artifact boilerplate, and
+this path does not create provenance state. Dry-run still prints the full exact artifact
+review and exits 4. Missing managed, malformed, and unsafe states fail closed with a
+diagnostic and recovery.
 
 `--replace` may discard an existing regular `AGENTS.md`; it does not create a backup or
 merge user text and never authorizes replacing a symbolic link, directory, or unsafe
 state. Application revalidates the plan, writes atomically, and reports exact changed
 locations if the guidance write succeeds but the sidecar write fails.
+
+Init uses these exit statuses: 0 for applied, no-change, and applicable dry-run results;
+1 for refused or operationally failed results; 2 for CLI usage errors; and 4 when safe
+existing guidance was preserved and the displayed section must be pasted manually.
 
 Configuration can bound generated guidance. See
 [`[init]`](configuration-and-provenance.md#init-guidance-bounds).
