@@ -606,6 +606,12 @@ class ScanExplorer(App[None]):
         )
 
         attention_items, attention_records = self._attention_counts(repository_groups)
+        for component in self.presentation.result.components:
+            component_items, component_records = self._attention_counts(
+                self.presentation.component_groups(component.id)
+            )
+            attention_items += component_items
+            attention_records += component_records
         attention = self._navigation_group(
             tree.root,
             "Attention & limitations",

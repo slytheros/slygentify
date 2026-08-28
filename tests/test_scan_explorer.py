@@ -272,6 +272,7 @@ def test_explorer_nests_related_unknown_context_and_preserves_filters() -> None:
             assert app.presentation is not None
             assert app._attention_counts(app.presentation.component_groups(component.id)) == (2, 3)
             tree = app.query_one("#tree", Tree)
+            assert _find(tree, "Attention & limitations (2 items; 3 records)")
             problems = _find(
                 tree,
                 "Problems & next steps / . / example.diagnostic (2 problems; 3 records)",
@@ -284,6 +285,7 @@ def test_explorer_nests_related_unknown_context_and_preserves_filters() -> None:
             assert app.presentation is not None
             assert app._attention_counts(app.presentation.component_groups(component.id)) == (1, 1)
             filtered = app.query_one("#tree", Tree)
+            assert _find(filtered, "Attention & limitations (1 item; 1 record)")
             problems = _find(
                 filtered,
                 "Problems & next steps / . / example.diagnostic (1 problem; 1 record)",
