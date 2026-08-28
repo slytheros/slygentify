@@ -54,7 +54,10 @@ slygentify scan path/to/repository --git-executable path/to/git
 ```
 
 The text report groups repository orientation, workflows, architecture, automation,
-concerns, inspection boundaries, and source provenance. `--format json` writes only
+concerns, inspection boundaries, and source provenance. Needs attention leads with
+Problems & next steps, nests source-related unknown findings under their diagnostic,
+and reports both issue and canonical-record counts. Unmatched unknowns, explicit
+cautions, and recommendations remain separate. `--format json` writes only
 canonical schema-major-1 JSON to standard output. `--interactive` requires interactive
 input and output terminals and cannot be combined with JSON format; it provides a
 keyboard-accessible tree, search, filters, evidence-first detail, raw record JSON, and a
@@ -88,7 +91,8 @@ slygentify doctor path/to/repository --git-executable path/to/git
 Default text identifies the resolved repository, complete or partial status, severity
 counts, and every diagnostic with its claim classification, stable code, target,
 problem, effect, and remediation. `--verbose` additionally prints diagnostic evidence
-references, one complete evidence appendix, and every skipped scope. Human wording and
+references, including the originating scan code or boundary reason for every distinct
+partial-inspection cause, one complete evidence appendix, and every skipped scope. Human wording and
 layout may evolve and must not be parsed by automation. `--format json` writes exactly
 one canonical `doctor-v1` document to standard output and cannot be combined with
 `--verbose`.

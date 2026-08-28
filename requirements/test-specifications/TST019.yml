@@ -4,7 +4,7 @@ header: |
   Scan command contract tests
 level: 1.19
 links:
-- REQ019: Raiur0Ula8vOf5PE4yhjd5yHkp88VOTKAMyRjrVtOHk=
+- REQ019: pKE8qqjmkHuWirHhA3XivlkdcgtD_9P4Hkk784x3eBA=
 normative: true
 ref: ''
 references:
@@ -19,7 +19,10 @@ text: |
   represents every component, relationship, finding, evidence record, diagnostic, and
   skipped scope exactly once in its canonical section, organizes component results by
   identity, working tasks, architecture, automation, and attention, separates routine
-  inspection boundaries from actionable concerns, retains literal claim
+  inspection boundaries from actionable concerns, presents Problems & next steps first,
+  nests source-related unknowns without duplicating or dropping their canonical records,
+  leaves unmatched unknowns and recommendations distinct, uses only explicit reviewed
+  caution-code routing, reports issue and record counts, retains literal claim
   classifications and source citations, keeps sources in a final provenance appendix,
   explains claim terms compactly, and groups high-cardinality records without
   merging them, and remains understandable without color or control sequences. Verify

@@ -14,6 +14,10 @@ slygentify doctor path/to/repository --verbose
 Default text includes the resolved repository, completion, severity counts, and every
 diagnostic's classification, stable code, target, problem, effect, and remediation.
 Verbose mode adds evidence references, one evidence appendix, and every skipped scope.
+If fresh inspection is partial, doctor emits one `doctor.inspection.partial` warning for
+each distinct cause instead of one umbrella warning. Each warning keeps the exact safe
+location and cause-specific action. In verbose and JSON output, synthetic provenance
+evidence identifies the originating scan code or resource-boundary reason.
 
 ```text
 Repository: .

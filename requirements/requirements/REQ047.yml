@@ -18,6 +18,11 @@ text: |
   Slygentify shall provide a deterministic, read-only doctor core that validates
   configuration and provenance, performs one fresh bounded scan when safe, compares
   managed guidance against current evidence, reports the approved static diagnostic
-  contract with evidence and remediation, preserves partial-result accounting, and does
+  contract with evidence and remediation, and preserves partial-result accounting. Each
+  distinct fresh-scan partial cause shall produce one `doctor.inspection.partial`
+  diagnostic with its exact safe location, omitted effect, source code or boundary
+  reason, and condition-specific remediation; a diagnostic and skipped scope from the
+  same event shall remain one cause, and resource-limit advice shall appear only for an
+  actual named limit. The doctor core does
   not execute discovered repository commands, contact the network, or write repository
   files.

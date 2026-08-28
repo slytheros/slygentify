@@ -4,7 +4,7 @@ header: |
   Static doctor core tests
 level: 1.48
 links:
-- REQ047: gdVCOB28vF9YiOLjwxJxyhZq7Zj0otb_J6fd3UNFjQE=
+- REQ047: VGYdzEGoSzQGQ_SeHoRFKHEcE2PNFeLHRnHEl9nkbo4=
 normative: true
 ref: ''
 references:
@@ -15,5 +15,7 @@ reviewed: n4EZQllZ90WNkzEtYc46dLNOTI8sXCplEcU9emWnbEY=
 text: |
   Verify immutable doctor models, deterministic clean and partial results, invalid
   configuration and state handling, provenance and artifact drift diagnostics,
-  unmanaged guidance, static command uncertainty, safe error isolation, and the absence
+  cause-specific and de-duplicated partial inspection diagnostics for malformed input,
+  unavailable Git tracking, unreadable or unsafe paths, unresolved references, and
+  resource limits, unmanaged guidance, static command uncertainty, safe error isolation, and the absence
   of doctor repository writes or discovered command execution.

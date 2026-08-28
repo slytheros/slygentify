@@ -78,7 +78,10 @@ for diagnostic in result.diagnostics:
 Expected outcome: completion is `partial`; valid root, web, and demo components are still
 present, while a diagnostic identifies `packages/broken/package.json`. The demo component
 is inferred to be auxiliary because it lives below `examples/`. Review diagnostics and
-skipped scopes before relying on evidence from the omitted boundary.
+skipped scopes before relying on evidence from the omitted boundary. In the human
+report, the diagnostic is the problem and the unknown JavaScript component finding is
+nested beneath it as related context. Correct the malformed JSON or intentionally
+exclude that file if it is outside the intended inspection scope.
 
 The checked-in [representative scan JSON](../examples/representative-scan.json) is the
 canonical machine-readable result for this fixture. Use `--format json` or
@@ -155,9 +158,12 @@ for diagnostic in assessment.diagnostics:
 ```
 
 Expected outcome before applying initialization: doctor reports unmanaged guidance and a
-warning that fresh inspection is partial. Its result is still trustworthy within the
-reported boundary. The [representative doctor JSON](../examples/representative-doctor.json)
-contains the exact canonical result.
+`doctor.inspection.partial` warning for `packages/broken/package.json`. The warning says
+the package boundary and declarations were omitted and recommends correcting or
+intentionally excluding that file; it does not suggest changing an unrelated resource
+limit. Its result is still trustworthy within the reported boundary. The
+[representative doctor JSON](../examples/representative-doctor.json) contains the exact
+canonical result.
 
 After applying managed guidance, rerun `slygentify doctor` after structural, tooling, or
 workflow changes. When it reports drift, review `init --dry-run` before explicit

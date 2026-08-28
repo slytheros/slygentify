@@ -21,7 +21,8 @@ text: |
   project command. Text shall identify the resolved root, completion, severity counts,
   and every diagnostic grouped by severity with claim classification, code, target,
   problem, effect, and remediation; verbose text shall additionally expose evidence
-  references, every evidence record once, and every skipped scope. JSON shall emit one
+  references, the originating scan code or boundary reason for each partial cause, every
+  evidence record once, and every skipped scope. JSON shall emit one
   canonical DoctorResult and reject verbose mode. Result output shall use stdout with
   empty stderr and exit 0 for only informational or no diagnostics and exit 1 for any
   warning or error; usage and caller-input failures shall emit no result and exit 2,

@@ -1053,8 +1053,8 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                         ),
                         path,
                         (
-                            f"{tool_name} configuration at {path} uses a YAML structure that "
-                            f"bounded inspection does not support ({error}). Next: replace aliases, "
+                            f"{tool_name} configuration at {path} uses an unsupported YAML "
+                            "structure. Next: replace aliases, "
                             "custom tags, or cyclic structures with explicit safe values if this "
                             "configuration should be inspected."
                             if unsupported

@@ -448,10 +448,9 @@ def test_presentation_index_covers_all_record_kinds_and_user_focused_groups() ->
         ("Architecture", "Tools"),
         ("Architecture", "Relationships"),
         ("Automation", "CI workflows & commands"),
-        ("Needs attention", "Conflicts & cautions"),
-        ("Needs attention", "Unknowns"),
+        ("Needs attention", "Problems & next steps"),
+        ("Needs attention", "Unknowns to confirm"),
         ("Needs attention", "Recommendations"),
-        ("Needs attention", "Diagnostics"),
     ]
     assert [record_kind(record) for record in index.iter_records()] == [
         "repository",
@@ -486,7 +485,7 @@ def test_presentation_index_covers_all_record_kinds_and_user_focused_groups() ->
         "Needs attention",
         "Setup (1)",
         "Relationships (1)",
-        "Conflicts & cautions (1)",
+        "Problems & next steps",
     ):
         assert heading in output
 
@@ -536,6 +535,68 @@ def test_repository_findings_are_organized_by_user_question() -> None:
 
 
 @pytest.mark.verifies("TST019")
+def test_attention_pairs_related_unknowns_without_losing_records() -> None:
+    scan = sample_result()
+    component = scan.components[0]
+    evidence_id = scan.evidence[1].id
+    paired = Finding(
+        id="paired_unknown",
+        code="example.related-unknown",
+        classification="unknown",
+        subject_id=component.id,
+        summary="The related package boundary could not be established.",
+        evidence_ids=(evidence_id,),
+    )
+    unmatched = Finding(
+        id="unmatched_unknown",
+        code="manager-conflict",
+        classification="unknown",
+        subject_id=component.id,
+        summary="The independent manager choice could not be established.",
+        evidence_ids=(),
+    )
+    caution = Finding(
+        id="explicit_caution",
+        code="javascript.npm-lock-precedence",
+        classification="verified",
+        subject_id=component.id,
+        summary="Both npm lock forms are present.",
+        evidence_ids=(evidence_id,),
+    )
+    diagnostic = replace(
+        scan.diagnostics[0],
+        subject_id=component.id,
+        evidence_ids=(evidence_id,),
+    )
+    findings = tuple(
+        sorted((paired, unmatched, caution), key=lambda item: (item.code, item.subject_id, item.id))
+    )
+    result = replace(scan, findings=findings, diagnostics=(diagnostic,))
+    presentation = ScanPresentation(result, Path("repository"))
+    attention = tuple(
+        group
+        for group in presentation.component_groups(component.id)
+        if group.section == "Needs attention"
+    )
+
+    assert [(group.subsection, len(group.records)) for group in attention] == [
+        ("Problems & next steps", 2),
+        ("Cautions", 1),
+        ("Unknowns to confirm", 1),
+    ]
+    problems = presentation.attention_problems(attention[0])
+    assert problems[0].diagnostic == diagnostic
+    assert problems[0].related_unknowns == (paired,)
+    assert presentation.attention_counts(attention) == (3, 4)
+    output = _render(result, width=160)
+    assert "Needs attention (3 issues; 4 records)" in output
+    assert "Related context (1)" in output
+    assert output.count(paired.summary) == 1
+    assert output.count(unmatched.summary) == 1
+    assert output.count(caution.summary) == 1
+
+
+@pytest.mark.verifies("TST019")
 def test_static_report_retains_high_cardinality_diagnostics_exactly() -> None:
     scan = sample_result()
     diagnostics = tuple(
@@ -557,7 +618,7 @@ def test_static_report_retains_high_cardinality_diagnostics_exactly() -> None:
 
     output = _render(replace(scan, diagnostics=diagnostics), width=200)
 
-    assert ". - repeated.code (50)" in output
+    assert ". - repeated.code (50 issues; 50 records)" in output
     for index in range(50):
         assert output.count(f"Unique message {index}\n") == 1
 
@@ -569,7 +630,7 @@ def test_static_report_uses_a_diagnostic_location_when_no_subject_exists() -> No
 
     output = _render(replace(scan, diagnostics=(diagnostic,)))
 
-    assert "pyproject.toml - example.diagnostic (1)" in output
+    assert "pyproject.toml - example.diagnostic (1 issue; 1 record)" in output
     assert "example.diagnostic @ pyproject.toml" in output
 
 
