@@ -11,7 +11,7 @@ references:
 - keyword: TST053
   path: tests/test_release.py
   type: file
-reviewed: 0umYl2tbhSBriJWplHk5U7xb-NSNX7MyREo25WwTb2s=
+reviewed: WGQYIhswAQgqAueD08K35CWEklb0DGpWqC47vS_-5oU=
 text: |
   Verify accepted and rejected release tags, package-version mapping, exact artifact
   inventory and metadata, deterministic checksums, immutable bundle verification, normal,
