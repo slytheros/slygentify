@@ -5,10 +5,13 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
+import sys
 import tarfile
+import tempfile
 import urllib.error
 import urllib.request
 import zipfile
@@ -31,6 +34,7 @@ TAG_PATTERN = re.compile(
     r"(?:-rc\.(?P<rc>[1-9][0-9]*))?$"
 )
 RegistryMode = Literal["publish", "recover-partial", "verify-only"]
+ToolInstaller = Literal["uv-tool", "pipx"]
 REQUIRED_SOURCE_CHECKS = frozenset(
     {
         "Code quality",
@@ -434,6 +438,118 @@ def smoke_install_bundle(bundle: Path, tag: str) -> None:
         )
 
 
+def _simple_index_url(index_root: str) -> str:
+    return f"{index_root.rstrip('/')}/simple"
+
+
+def _installed_distribution_version(tool_home: Path) -> str:
+    metadata_files = sorted(tool_home.rglob(f"{PROJECT_NAME}-*.dist-info/METADATA"))
+    if len(metadata_files) != 1:
+        _fail(
+            "tool installation must contain exactly one slygentify distribution; "
+            f"found {len(metadata_files)}"
+        )
+    try:
+        name, version = _metadata_fields(
+            metadata_files[0].read_bytes(), f"installed {PROJECT_NAME} METADATA"
+        )
+    except OSError as error:
+        raise ReleaseError(f"unable to inspect installed {PROJECT_NAME}: {error}") from error
+    if name != PROJECT_NAME:
+        _fail(f"tool installation metadata name does not match {PROJECT_NAME}")
+    return version
+
+
+@implements("REQ052")
+def smoke_install_published_tool(
+    bundle: Path,
+    tag: str,
+    installer: ToolInstaller,
+    index_root: str,
+    dependency_index: str | None = None,
+) -> None:
+    """Install and execute the exact published version with one isolated tool manager."""
+    manifest = verify_release_bundle(bundle, tag)
+    package = f"{PROJECT_NAME}=={manifest.version}"
+    index = _simple_index_url(index_root)
+    dependency = _simple_index_url(dependency_index) if dependency_index is not None else None
+
+    with tempfile.TemporaryDirectory(prefix=f"{PROJECT_NAME}-{installer}-") as temporary:
+        root = Path(temporary)
+        tool_home = root / "home"
+        bin_directory = root / "bin"
+        environment = os.environ.copy()
+        for name in (
+            "PIP_CONFIG_FILE",
+            "PIP_EXTRA_INDEX_URL",
+            "PIP_INDEX_URL",
+            "UV_DEFAULT_INDEX",
+            "UV_EXTRA_INDEX_URL",
+            "UV_INDEX",
+            "UV_INDEX_URL",
+        ):
+            environment.pop(name, None)
+        environment["PATH"] = os.pathsep.join((str(bin_directory), environment.get("PATH", "")))
+
+        if installer == "uv-tool":
+            environment["UV_TOOL_DIR"] = str(tool_home)
+            environment["UV_TOOL_BIN_DIR"] = str(bin_directory)
+            environment["UV_CACHE_DIR"] = str(root / "cache")
+            command = [
+                "uv",
+                "tool",
+                "install",
+                "--no-config",
+                "--reinstall",
+                "--refresh-package",
+                PROJECT_NAME,
+                "--python",
+                sys.executable,
+            ]
+            if dependency is None:
+                command.extend(("--default-index", index))
+            else:
+                command.extend(("--index", index, "--default-index", dependency))
+        elif installer == "pipx":
+            environment["PIPX_HOME"] = str(tool_home)
+            environment["PIPX_BIN_DIR"] = str(bin_directory)
+            environment["PIPX_MAN_DIR"] = str(root / "man")
+            environment["PIP_CACHE_DIR"] = str(root / "cache")
+            command = [
+                sys.executable,
+                "-m",
+                "pipx",
+                "install",
+                "--backend",
+                "pip",
+                "--force",
+                "--python",
+                sys.executable,
+                "--index-url",
+                index,
+            ]
+            pip_arguments = ["--isolated"]
+            if dependency is not None:
+                pip_arguments.extend(("--extra-index-url", dependency))
+            command.extend(("--pip-args", " ".join(pip_arguments)))
+        else:
+            _fail(f"unsupported tool installer {installer!r}")
+
+        command.append(package)
+        subprocess.run(command, check=True, env=environment)
+
+        installed_version = _installed_distribution_version(tool_home)
+        if installed_version != manifest.version:
+            _fail(
+                f"installed {PROJECT_NAME} version {installed_version!r} does not match "
+                f"release version {manifest.version!r}"
+            )
+        executable = shutil.which(PROJECT_NAME, path=environment["PATH"])
+        if executable is None:
+            _fail(f"{installer} did not expose the {PROJECT_NAME} executable")
+        subprocess.run([executable, "--help"], check=True, env=environment)
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -471,6 +587,13 @@ def _parser() -> argparse.ArgumentParser:
     smoke = subparsers.add_parser("smoke")
     smoke.add_argument("--tag", required=True)
     smoke.add_argument("--bundle", type=Path, required=True)
+
+    smoke_tool = subparsers.add_parser("smoke-tool")
+    smoke_tool.add_argument("--tag", required=True)
+    smoke_tool.add_argument("--bundle", type=Path, required=True)
+    smoke_tool.add_argument("--installer", choices=("uv-tool", "pipx"), required=True)
+    smoke_tool.add_argument("--index-root", required=True)
+    smoke_tool.add_argument("--dependency-index")
     return parser
 
 
@@ -513,6 +636,14 @@ def main(argv: list[str] | None = None) -> int:
         )
     elif arguments.command == "smoke":
         smoke_install_bundle(arguments.bundle, arguments.tag)
+    elif arguments.command == "smoke-tool":
+        smoke_install_published_tool(
+            arguments.bundle,
+            arguments.tag,
+            cast(ToolInstaller, arguments.installer),
+            arguments.index_root,
+            arguments.dependency_index,
+        )
     else:  # pragma: no cover - argparse guarantees one known command
         _fail(f"unsupported command {arguments.command!r}")
     return 0

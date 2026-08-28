@@ -2,16 +2,16 @@
 
 ## Current availability
 
-Slygentify is not yet published on PyPI. Begin from an existing reviewed source checkout;
+Slygentify `1.0.0rc1` is not yet published on production PyPI. Begin from an existing reviewed source checkout;
 the commands in the later [post-publication section](#after-a-genuine-pypi-publication)
 are examples of approved future installation paths, not currently available downloads.
 
 | Area | Current status |
 | --- | --- |
-| Maturity | Pre-alpha `0.1.0` |
+| Maturity | Public 1.0 release candidate `1.0.0rc1` |
 | Distribution | Reviewed source checkout only; no PyPI release |
 | Python | CPython 3.11 through 3.14 |
-| Platforms | Packaging is OS-independent, but no pre-release OS support matrix is promised yet |
+| Platforms | Ubuntu 24.04 x64, Windows 2025 x64, and macOS 15 arm64 |
 | Repository | A selected target must be inside a local Git repository |
 | Git executable | Optional; unavailable tracked-path discovery can make a result partial |
 | Maintenance | Current development version, best effort, with no service-level agreement |

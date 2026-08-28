@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import re
+import shutil
 import subprocess
+import sys
 import tarfile
 import urllib.error
 import urllib.request
@@ -285,6 +288,141 @@ def test_smoke_install_uses_separate_isolated_runs_for_each_file(
     ]
 
 
+@pytest.mark.verifies("TST053")
+@pytest.mark.parametrize("installer", ["uv-tool", "pipx"])
+def test_published_tool_install_is_exact_isolated_and_executable(
+    installer: release.ToolInstaller,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle = _bundle(tmp_path, "v1.0.0-rc.1")
+    calls: list[tuple[list[str], dict[str, str]]] = []
+
+    def run(command: list[str], *, check: bool, env: dict[str, str]) -> None:
+        assert check is True
+        calls.append((command, env))
+        if len(calls) == 1:
+            home_variable = "UV_TOOL_DIR" if installer == "uv-tool" else "PIPX_HOME"
+            metadata = (
+                Path(env[home_variable])
+                / "environment"
+                / "slygentify-1.0.0rc1.dist-info"
+                / "METADATA"
+            )
+            metadata.parent.mkdir(parents=True)
+            metadata.write_text(
+                "Metadata-Version: 2.4\nName: slygentify\nVersion: 1.0.0rc1\n",
+                encoding="utf-8",
+            )
+
+    monkeypatch.setattr(subprocess, "run", run)
+    monkeypatch.setattr(
+        shutil,
+        "which",
+        lambda name, *, path: str(Path(path.split(os.pathsep)[0]) / name),
+    )
+
+    release.smoke_install_published_tool(
+        bundle,
+        "v1.0.0-rc.1",
+        installer,
+        "https://test.pypi.org",
+        "https://pypi.org",
+    )
+
+    assert len(calls) == 2
+    install, environment = calls[0]
+    assert install[-1] == "slygentify==1.0.0rc1"
+    assert environment["PATH"].split(os.pathsep)[0]
+    for name in ("PIP_INDEX_URL", "PIP_EXTRA_INDEX_URL", "UV_INDEX_URL"):
+        assert name not in environment
+    if installer == "uv-tool":
+        assert install[:3] == ["uv", "tool", "install"]
+        assert install[install.index("--index") + 1] == "https://test.pypi.org/simple"
+        assert install[install.index("--default-index") + 1] == "https://pypi.org/simple"
+        assert environment["UV_TOOL_BIN_DIR"] == environment["PATH"].split(os.pathsep)[0]
+        assert environment["UV_CACHE_DIR"].endswith("cache")
+    else:
+        assert install[:4] == [sys.executable, "-m", "pipx", "install"]
+        assert install[install.index("--backend") + 1] == "pip"
+        assert install[install.index("--index-url") + 1] == "https://test.pypi.org/simple"
+        assert install[install.index("--pip-args") + 1] == (
+            "--isolated --extra-index-url https://pypi.org/simple"
+        )
+        assert environment["PIPX_BIN_DIR"] == environment["PATH"].split(os.pathsep)[0]
+        assert environment["PIPX_MAN_DIR"].endswith("man")
+        assert environment["PIP_CACHE_DIR"].endswith("cache")
+    assert calls[1][0][-1] == "--help"
+
+
+@pytest.mark.verifies("TST053")
+def test_published_tool_install_fails_closed_on_missing_or_wrong_install(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    bundle = _bundle(tmp_path, "v1.0.0-rc.1")
+
+    def install_wrong_version(_command: list[str], *, check: bool, env: dict[str, str]) -> None:
+        assert check is True
+        metadata = (
+            Path(env["UV_TOOL_DIR"]) / "environment" / "slygentify-1.0.0.dist-info" / "METADATA"
+        )
+        metadata.parent.mkdir(parents=True)
+        metadata.write_text(
+            "Metadata-Version: 2.4\nName: slygentify\nVersion: 1.0.0\n",
+            encoding="utf-8",
+        )
+
+    monkeypatch.setattr(subprocess, "run", install_wrong_version)
+    monkeypatch.setattr(shutil, "which", lambda *_args, **_kwargs: None)
+    with pytest.raises(release.ReleaseError, match="does not match release version"):
+        release.smoke_install_published_tool(bundle, "v1.0.0-rc.1", "uv-tool", "https://pypi.org")
+
+    def install_without_executable(
+        _command: list[str], *, check: bool, env: dict[str, str]
+    ) -> None:
+        assert check is True
+        metadata = (
+            Path(env["UV_TOOL_DIR"]) / "environment" / "slygentify-1.0.0rc1.dist-info" / "METADATA"
+        )
+        metadata.parent.mkdir(parents=True)
+        metadata.write_text(
+            "Metadata-Version: 2.4\nName: slygentify\nVersion: 1.0.0rc1\n",
+            encoding="utf-8",
+        )
+
+    monkeypatch.setattr(subprocess, "run", install_without_executable)
+    with pytest.raises(release.ReleaseError, match="did not expose"):
+        release.smoke_install_published_tool(bundle, "v1.0.0-rc.1", "uv-tool", "https://pypi.org")
+
+
+@pytest.mark.verifies("TST053")
+@pytest.mark.parametrize("failure_call", [1, 2])
+def test_published_tool_install_propagates_subprocess_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure_call: int
+) -> None:
+    bundle = _bundle(tmp_path, "v1.0.0-rc.1")
+    calls = 0
+
+    def fail(command: list[str], *, check: bool, env: dict[str, str]) -> None:
+        nonlocal calls
+        calls += 1
+        if calls == failure_call:
+            raise subprocess.CalledProcessError(1, command)
+        metadata = (
+            Path(env["PIPX_HOME"]) / "environment" / "slygentify-1.0.0rc1.dist-info" / "METADATA"
+        )
+        metadata.parent.mkdir(parents=True)
+        metadata.write_text(
+            "Metadata-Version: 2.4\nName: slygentify\nVersion: 1.0.0rc1\n",
+            encoding="utf-8",
+        )
+
+    monkeypatch.setattr(subprocess, "run", fail)
+    monkeypatch.setattr(shutil, "which", lambda *_args, **_kwargs: "slygentify")
+    with pytest.raises(subprocess.CalledProcessError):
+        release.smoke_install_published_tool(bundle, "v1.0.0-rc.1", "pipx", "https://pypi.org")
+
+
 def _workflow(name: str) -> tuple[str, dict[str, Any]]:
     text = (WORKFLOWS / name).read_text(encoding="utf-8")
     return text, yaml.load(text, Loader=yaml.BaseLoader)
@@ -326,9 +464,22 @@ def test_release_workflows_are_distinct_human_gated_and_least_privilege() -> Non
             "os": ["ubuntu-24.04", "windows-2025", "macos-15"],
             "python-version": ["3.11", "3.12", "3.13", "3.14"],
         }
+        published_job = "install-pypi" if environment == "pypi" else "install-testpypi"
+        published_matrix = document["jobs"][published_job]["strategy"]["matrix"]
+        assert published_matrix == {
+            "os": ["ubuntu-24.04", "windows-2025", "macos-15"],
+            "python-version": ["3.11", "3.12", "3.13", "3.14"],
+            "installer": ["uv-tool", "pipx"],
+        }
+        assert document["jobs"][published_job]["needs"] == [
+            "build",
+            "verify-pypi" if environment == "pypi" else "verify-testpypi",
+        ]
 
     for text in (production_text, test_text):
         assert "verify-source-checks check-runs.json" in text
+        assert "python -m tools.release smoke-tool" in text
+        assert '--installer "${{ matrix.installer }}"' in text
         assert "pull_request_target" not in text
         assert "secrets." not in text
         assert "gh release" not in text
