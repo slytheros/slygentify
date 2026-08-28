@@ -21,12 +21,15 @@ from slygentify import (
     map_repository,
     scan_repository,
 )
+from slygentify._diagnostics import DiagnosticDetail, render_diagnostic
 from slygentify._doctor_presentation import render_doctor_report
 from slygentify._explorer import run_scan_explorer
 from slygentify._generation import _render_paste_snippet
 from slygentify._presentation import render_scan_report
 from slygentify._provenance import load_state_json
+from slygentify._repository import AGENTS_FILENAME
 from slygentify.initialization import (
+    InitializationDiagnostic,
     InitializationError,
     apply_initialization,
     find_git_root,
@@ -68,15 +71,6 @@ def _is_interactive_terminal() -> bool:
     return sys.stdin.isatty() and sys.stdout.isatty()
 
 
-def _configuration_warning(result: object) -> None:
-    diagnostics = getattr(result, "diagnostics", ())
-    if any(getattr(item, "code", None) == "configuration.relaxed-limits" for item in diagnostics):
-        typer.echo(
-            "Warning: slygentify.toml raises or disables one or more inspection limits.",
-            err=True,
-        )
-
-
 def _map_limit(value: str) -> int | Literal["unlimited"]:
     if value == "unlimited":
         return "unlimited"
@@ -92,10 +86,26 @@ def _map_limit(value: str) -> int | Literal["unlimited"]:
 def _render_initialization_error(error: InitializationError) -> None:
     """Render every initialization failure with one recovery and exact changed paths."""
 
-    typer.echo(f"Error [{error.code}]: {error}", err=True)
+    typer.echo(render_diagnostic(error.diagnostic, "Error"), err=True)
     if error.changed_locations:
         typer.echo(f"Changed: {', '.join(error.changed_locations)}", err=True)
-    typer.echo(f"Next: {error.recovery}", err=True)
+
+
+def _render_initialization_diagnostic(
+    diagnostic: InitializationDiagnostic, severity: str = "Error"
+) -> None:
+    """Render a structured initialization refusal without duplicating recovery text."""
+
+    detail = DiagnosticDetail(
+        diagnostic.code,
+        diagnostic.target,
+        diagnostic.problem or diagnostic.message,
+        diagnostic.effect or "Initialization did not apply the requested repository change.",
+        diagnostic.category,
+        diagnostic.recovery,
+        diagnostic.safety_rationale,
+    )
+    typer.echo(render_diagnostic(detail, severity), err=True)
 
 
 def _requires_manual_paste(ownership: str, replace_requested: bool) -> bool:
@@ -171,7 +181,20 @@ def init_command(
         _render_initialization_error(error)
         raise typer.Exit(code=1) from None
     for warning in plan.warnings:
-        typer.echo(f"Warning: {warning}", err=True)
+        typer.echo(
+            render_diagnostic(
+                DiagnosticDetail(
+                    "initialization.relaxed-limits",
+                    "slygentify.toml",
+                    warning,
+                    "Initialization used explicitly expanded generated-guidance limits.",
+                    recovery="Review the expanded limits and restore the defaults if they were unintended.",
+                    safety_rationale="Slygentify does not silently change an explicit repository configuration.",
+                ),
+                "Warning",
+            ),
+            err=True,
+        )
     manual_paste = not adopt and _requires_manual_paste(plan.ownership, replace)
 
     if dry_run:
@@ -184,28 +207,39 @@ def init_command(
         else:
             typer.echo("\n--- Slygentify bootstrap guidance ---")
             typer.echo(plan.managed_section, nl=False)
+        if not plan.can_apply and not manual_paste:
+            for diagnostic in plan.diagnostics:
+                _render_initialization_diagnostic(diagnostic)
+            raise typer.Exit(code=1)
         _render_state_summary(plan.state_json)
         if show_state:
             typer.echo("--- .slygentify/state.json ---")
             typer.echo(plan.state_json.decode("utf-8"), nl=False)
         if manual_paste:
             raise typer.Exit(code=4)
-        if not plan.can_apply:
-            for diagnostic in plan.diagnostics:
-                typer.echo(f"Error [{diagnostic.code}]: {diagnostic.message}", err=True)
-                typer.echo(f"Next: {diagnostic.recovery}", err=True)
-            raise typer.Exit(code=1)
         return
     if manual_paste:
         _render_manual_paste(plan.agents_markdown)
         raise typer.Exit(code=4)
     if not plan.can_apply:
         for diagnostic in plan.diagnostics:
-            typer.echo(f"Error [{diagnostic.code}]: {diagnostic.message}", err=True)
-            typer.echo(f"Next: {diagnostic.recovery}", err=True)
+            _render_initialization_diagnostic(diagnostic)
         raise typer.Exit(code=1)
     if replace and plan.agents_action == "replace":
-        typer.echo("Warning: --replace discards the existing AGENTS.md without a backup.", err=True)
+        typer.echo(
+            render_diagnostic(
+                DiagnosticDetail(
+                    "initialization.replace-without-backup",
+                    AGENTS_FILENAME,
+                    "The explicit replacement will discard the existing regular AGENTS.md.",
+                    "Slygentify will not create a backup or merge the existing guidance.",
+                    recovery=None,
+                    safety_rationale="The caller explicitly authorized replacement, but Slygentify cannot decide which human guidance should be retained.",
+                ),
+                "Warning",
+            ),
+            err=True,
+        )
     try:
         result = apply_initialization(plan)
     except InitializationError as error:
@@ -262,7 +296,6 @@ def scan_command(
 
             def scan() -> ScanResult:
                 result = scan_repository(path, git_executable=git_executable)
-                _configuration_warning(result)
                 return result
 
             run_scan_explorer(
@@ -271,14 +304,24 @@ def scan_command(
             )
             return
         result = scan_repository(path, git_executable=git_executable)
-        _configuration_warning(result)
         if output_format is _ScanFormat.json:
             sys.stdout.buffer.write(dump_scan_json(result))
             sys.stdout.buffer.flush()
             return
         root = find_git_root(path).resolve(strict=True)
     except (ScanError, InitializationError, OSError) as error:
-        typer.echo(f"Error: {error}", err=True)
+        detail = (
+            error.diagnostic
+            if hasattr(error, "diagnostic")
+            else DiagnosticDetail(
+                "scan.operation-failed",
+                ".",
+                "Slygentify could not safely inspect the selected repository.",
+                "Slygentify did not emit a scan result and did not modify repository files.",
+                recovery="Correct the selected input or environment condition, then rerun scan.",
+            )
+        )
+        typer.echo(render_diagnostic(detail, "Error"), err=True)
         raise typer.Exit(code=1) from None
     render_scan_report(
         result,
@@ -318,12 +361,10 @@ def doctor_command(
     try:
         result = doctor_repository(path, git_executable=git_executable)
     except DoctorInputError as error:
-        typer.echo(f"Error: doctor could not assess the selected input: {error}", err=True)
-        typer.echo("Next: correct PATH or --git-executable, then rerun doctor.", err=True)
+        typer.echo(render_diagnostic(error.diagnostic, "Error"), err=True)
         raise typer.Exit(code=2) from None
     except DoctorOperationalError as error:
-        typer.echo(f"Error: doctor could not produce a trustworthy result: {error}", err=True)
-        typer.echo("Next: correct the reported environment or tool failure, then retry.", err=True)
+        typer.echo(render_diagnostic(error.diagnostic, "Error"), err=True)
         raise typer.Exit(code=3) from None
 
     has_actionable_diagnostic = any(
@@ -393,5 +434,15 @@ def map_command(
         sys.stdout.buffer.write(dump_scan_projection_json(projection))
         sys.stdout.buffer.flush()
     except ScanError as error:
-        typer.echo(f"Error: {error}", err=True)
+        detail = error.diagnostic
+        if detail.code == "scan.operation-failed":
+            detail = DiagnosticDetail(
+                "map.operation-failed",
+                detail.target,
+                "Slygentify could not produce bounded context for the selected scope.",
+                "Slygentify did not emit a map result and did not modify repository files.",
+                recovery="Correct the selected repository or scope, then rerun map.",
+                safety_rationale="Map is read-only and cannot safely change repository content to resolve an invalid scope.",
+            )
+        typer.echo(render_diagnostic(detail, "Error"), err=True)
         raise typer.Exit(code=1) from None

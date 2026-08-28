@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import fields
+from dataclasses import fields, replace
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -46,6 +46,26 @@ def test_validate_scan_accepts_public_values_and_ignores_same_major_unknown_prop
     assert loaded == result
     assert "future_top_level" not in json.loads(dump_scan_json(loaded))
     assert "future_repository_field" not in json.loads(dump_scan_json(loaded))["repository"]
+
+
+@pytest.mark.verifies("TST018", "TST046")
+def test_scan_diagnostic_structure_round_trips_additively() -> None:
+    result = sample_result()
+    diagnostic = replace(
+        result.diagnostics[0],
+        category="inspection.invalid-input",
+        problem="A manifest could not be validated",
+        effect="Its package declarations were omitted",
+        recovery="correct the manifest and rerun scan",
+        safety_rationale="Scan is read-only and does not rewrite repository declarations",
+    )
+    structured = replace(result, diagnostics=(diagnostic,))
+
+    document = json.loads(dump_scan_json(structured))
+
+    assert document["diagnostics"][0]["category"] == "inspection.invalid-input"
+    assert document["diagnostics"][0]["problem"] == "A manifest could not be validated"
+    assert load_scan_json(json.dumps(document)) == structured
 
 
 @pytest.mark.verifies("TST018")
@@ -295,7 +315,15 @@ def test_schema_public_model_and_private_adapter_fields_do_not_drift() -> None:
         "componentRelationship": set(),
         "evidence": {"locator", "verification_method"},
         "finding": set(),
-        "diagnostic": {"subject_id", "location"},
+        "diagnostic": {
+            "subject_id",
+            "location",
+            "category",
+            "problem",
+            "effect",
+            "recovery",
+            "safety_rationale",
+        },
         "skippedScope": {"effective_limit", "consumed"},
     }
     for name, value_type in supporting.items():

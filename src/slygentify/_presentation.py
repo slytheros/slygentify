@@ -534,15 +534,19 @@ class ScanPresentation:
                 else "repository"
             )
             location = record.location or "repository-wide"
-            return "\n".join(
-                (
-                    f"Diagnostic: {record.message}",
-                    f"Code: {record.code}",
-                    f"Applies to: {target} @ {location}",
-                    "",
-                    *self._evidence_detail(record.evidence_ids, "Related sources:"),
-                )
-            )
+            lines = [
+                f"Diagnostic: {record.code}",
+                f"Applies to: {target} @ {location}",
+                f"Problem: {record.problem or record.message}",
+            ]
+            if record.effect is not None:
+                lines.append(f"Effect: {record.effect}")
+            if record.safety_rationale is not None:
+                lines.append(f"Why no automatic repair: {record.safety_rationale}")
+            if record.recovery is not None:
+                lines.append(f"Next: {record.recovery}")
+            lines.extend(("", *self._evidence_detail(record.evidence_ids, "Related sources:")))
+            return "\n".join(lines)
         limit = ""
         if record.effective_limit is not None:
             limit = f"\nLimit: {record.effective_limit}; consumed: {record.consumed}"

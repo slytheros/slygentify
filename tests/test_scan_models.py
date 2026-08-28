@@ -223,6 +223,22 @@ def test_public_models_reject_invalid_local_values(
         factory()
 
 
+@pytest.mark.verifies("TST046")
+def test_diagnostic_requires_problem_and_effect_together() -> None:
+    _, component, evidence, _, _, _ = _values()
+
+    with pytest.raises(ValueError, match="problem and effect"):
+        Diagnostic(
+            id="diagnostic_1",
+            code="test.diagnostic",
+            subject_id=component.id,
+            location=None,
+            message="A diagnostic.",
+            problem="A structured problem.",
+            evidence_ids=(evidence.id,),
+        )
+
+
 def _result(**changes: Any) -> ScanResult:
     repository, component, evidence, finding, diagnostic, skipped = _values()
     values: dict[str, Any] = {

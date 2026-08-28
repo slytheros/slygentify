@@ -173,6 +173,12 @@
         "remediation": {
           "$ref": "#/$defs/nonEmptyString"
         },
+        "category": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "safety_rationale": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
         "evidence_ids": {
           "$ref": "#/$defs/stringList"
         }

@@ -106,6 +106,8 @@ def test_doctor_text_handles_clean_error_and_location_only_results() -> None:
         location=".slygentify/state.json",
         problem="State is invalid.",
         effect="Ownership cannot be trusted.",
+        category="state.invalid-json",
+        safety_rationale="Automatic replacement could overwrite content whose ownership is unknown.",
         remediation="Regenerate through a reviewed flow.",
         evidence_ids=("evidence-1",),
     )
@@ -113,6 +115,8 @@ def test_doctor_text_handles_clean_error_and_location_only_results() -> None:
     output = _render(errored)
     assert "Errors (1)" in output
     assert "ERROR VERIFIED [doctor.state.invalid] .slygentify/state.json" in output
+    assert "Category: state.invalid-json" in output
+    assert "Why no automatic repair: Automatic replacement could overwrite content" in output
 
 
 @pytest.mark.verifies("TST049")

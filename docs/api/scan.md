@@ -31,6 +31,11 @@ skipped scopes identify omissions. Operational failures raise `ScanError`.
 for trusted typed values only. Component identifiers derive from paths and relationship
 identifiers derive from their kind and endpoints.
 
+New producers also include optional diagnostic `category`, `problem`, `effect`,
+`recovery`, and `safety_rationale` fields. The required `message` remains the compatible
+single-line summary. Readers accept older schema-major-1 documents that omit the added
+fields.
+
 ## Read and write scan JSON
 
 `dump_scan_json(result)` returns deterministic UTF-8 `scan-v1` bytes. Use

@@ -66,7 +66,8 @@ def test_init_cli_refusal_replacement_and_no_change(tmp_path: Path) -> None:
 
     replaced = runner.invoke(app, ["init", str(root), "--replace"])
     assert replaced.exit_code == 0
-    assert "Warning: --replace" in replaced.stderr
+    assert "Warning [initialization.replace-without-backup] AGENTS.md" in replaced.stderr
+    assert "Slygentify will not create a backup" in replaced.stderr
     assert "Regenerated" in replaced.stdout
 
     unchanged = runner.invoke(app, ["init", str(root)])
@@ -115,9 +116,11 @@ def test_init_cli_reports_planning_and_apply_errors(
     monkeypatch.setattr("slygentify.cli.plan_initialization", fail_plan)
     planning_error = runner.invoke(app, ["init", str(root)])
     assert planning_error.exit_code == 1
-    assert planning_error.stderr == (
-        "Error [initialization.path]: bad path\n"
-        "Next: Run slygentify init --dry-run to review the current state.\n"
+    assert "Error [initialization.path] ." in planning_error.stderr
+    assert "Problem: bad path." in planning_error.stderr
+    assert "Effect: Initialization did not complete" in planning_error.stderr
+    assert (
+        "Next: Run slygentify init --dry-run to review the current state." in planning_error.stderr
     )
     monkeypatch.undo()
 
@@ -194,8 +197,31 @@ def test_init_cli_retains_diagnostics_for_invalid_state(tmp_path: Path) -> None:
 
     assert dry_run.exit_code == 1
     assert "initialization.invalid-state" in dry_run.stderr
+    assert ".slygentify/state.json" in dry_run.stderr
+    assert "Category: state.unsupported-schema" in dry_run.stderr
+    assert "Effect: Initialization did not trust, replace, or write" in dry_run.stderr
+    assert "Why no automatic repair:" in dry_run.stderr
+    assert "Upgrade to the latest reviewed Slygentify build" in dry_run.stderr
     assert ordinary.exit_code == 1
     assert "initialization.invalid-state" in ordinary.stderr
+
+
+@pytest.mark.verifies("TST040", "TST046")
+def test_init_cli_classifies_oversized_state_without_disclosure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _repository(tmp_path)
+    state = root / ".slygentify" / "state.json"
+    state.parent.mkdir()
+    state.write_bytes(b"sentinel-secret-state")
+    monkeypatch.setattr("slygentify._provenance._MAX_BYTES", 8)
+
+    result = CliRunner().invoke(app, ["init", str(root), "--dry-run"])
+
+    assert result.exit_code == 1
+    assert "Category: state.too-large" in result.stderr
+    assert "sentinel-secret-state" not in result.stderr
+    assert state.read_bytes() == b"sentinel-secret-state"
 
 
 @pytest.mark.verifies("TST004", "TST040")
@@ -217,5 +243,6 @@ max_component_entries = "unlimited"
     result = CliRunner().invoke(app, ["init", str(root), "--dry-run"])
 
     assert result.exit_code == 0
+    assert "Warning [initialization.relaxed-limits] slygentify.toml" in result.stderr
     assert "raises or disables an AGENTS.md byte or component-entry limit" in result.stderr
     assert "--- AGENTS.md ---" in result.stdout

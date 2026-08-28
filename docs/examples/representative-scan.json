@@ -344,7 +344,11 @@
       "message": "JavaScript manifest packages/broken/package.json is not a unique-key UTF-8 JSON object. The package boundary and declarations from packages/broken/package.json were omitted. Next: correct its JSON syntax, encoding, duplicate keys, or top-level shape, or intentionally exclude the file if it is outside the intended scan scope.",
       "evidence_ids": [
         "javascript-inspect-v1_31e49b927e3d7d4f3ff116325f47b4da0aeb998292ebc404b8d16291b2247124"
-      ]
+      ],
+      "problem": "JavaScript manifest packages/broken/package.json is not a unique-key UTF-8 JSON object",
+      "effect": "The package boundary and declarations from packages/broken/package.json were omitted",
+      "recovery": "correct its JSON syntax, encoding, duplicate keys, or top-level shape, or intentionally exclude the file if it is outside the intended scan scope",
+      "safety_rationale": "Slygentify inspection is read-only and does not rewrite repository content."
     }
   ],
   "skipped_scopes": []

@@ -16,9 +16,9 @@ references:
   type: file
 reviewed: EVE40UGIUjJP1P0EgshSamMojvpmaYqJYrPj636hOYs=
 text: |
-  Verify explicit and deterministic problem/effect/recovery composition, recovery and
-  intentional no-recovery cases across diagnostic subsystems, condition-specific actions
-  for malformed, missing, unreadable, conflict, dynamic, unsupported, and exact
-  resource-limit conditions, actionable mixed-boundary guidance, consistent map and
-  initialization failures, and absence of duplicated recovery, raw exception text, or
-  secret disclosure.
+  Verify explicit and deterministic problem/effect/recovery composition across init,
+  scan, map, and doctor result diagnostics, operational failures, refusals, and warnings;
+  condition-specific actions for malformed, missing, unreadable, conflict, dynamic,
+  unsupported, and exact resource-limit conditions; machine-readable state categories;
+  compatible scan/map JSON fields; backup-first invalid-state recovery; and absence of
+  duplicated recovery, raw exception text, host paths, or secret disclosure.

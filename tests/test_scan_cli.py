@@ -75,7 +75,8 @@ def test_invalid_explicit_git_executable_is_an_operational_cli_error(
 
     assert result.exit_code == 1
     assert result.stdout == ""
-    assert "Error: git_executable must identify" in result.stderr
+    assert "Error [scan.operation-failed] ." in result.stderr
+    assert "Effect: Slygentify did not emit a scan result" in result.stderr
 
 
 @pytest.mark.verifies("TST019", "TST033")
@@ -165,7 +166,7 @@ def test_relaxed_configuration_warns_once_without_affecting_json_stdout(
     result = CliRunner().invoke(app, ["scan", str(repository), "--format", "json"])
 
     assert result.exit_code == 0
-    assert result.stderr.count("Warning:") == 1
+    assert result.stderr == ""
     assert json.loads(result.stdout)["diagnostics"][0]["code"] == "configuration.relaxed-limits"
 
 
@@ -475,6 +476,21 @@ def test_presentation_index_covers_all_record_kinds_and_user_focused_groups() ->
     assert "Checked by: non-following metadata inspection" in index.record_detail(
         relationship_with_method
     )
+    structured = replace(
+        next(record for record in scan.diagnostics if isinstance(record, Diagnostic)),
+        problem="A structured problem.",
+        effect="A structured effect.",
+        safety_rationale="Automatic repair is outside scan's read-only boundary.",
+        recovery="Review the repository input.",
+    )
+    structured_detail = index.record_detail(structured)
+    assert "Problem: A structured problem." in structured_detail
+    assert "Effect: A structured effect." in structured_detail
+    assert (
+        "Why no automatic repair: Automatic repair is outside scan's read-only boundary."
+        in structured_detail
+    )
+    assert "Next: Review the repository input." in structured_detail
 
     output = _render(result, width=46)
     for heading in (
@@ -682,7 +698,8 @@ def test_scan_interactive_surfaces_worker_failures_as_cli_errors(
 
     assert result.exit_code == 1
     assert result.stdout == ""
-    assert "Error: scan failed" in result.stderr
+    assert "Error [scan.operation-failed] ." in result.stderr
+    assert "scan failed" not in result.stderr
 
 
 @pytest.mark.verifies("TST033")
@@ -770,7 +787,8 @@ def test_scan_operational_failure_uses_stderr_and_exit_one(
 
     assert result.exit_code == 1
     assert result.stdout == ""
-    assert "Error: cannot inspect repository" in result.stderr
+    assert "Error [scan.operation-failed] ." in result.stderr
+    assert "cannot inspect repository" not in result.stderr
 
 
 @pytest.mark.verifies("TST019", "TST033")

@@ -284,6 +284,21 @@
         "message": {
           "$ref": "#/$defs/nonEmptyString"
         },
+        "category": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "problem": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "effect": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "recovery": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "safety_rationale": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
         "evidence_ids": {
           "$ref": "#/$defs/stringList"
         }
