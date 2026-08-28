@@ -4,14 +4,14 @@ header: |
   Scan projection contract tests
 level: 1.43
 links:
-- REQ042: z-1Q_LcZXPp1MzUrO7YBPtwd-eK98vB-DRDWnIOu9Kg=
+- REQ042: elu9YGz9U7N5gulR9DKs6StAtcR7xJjbMiPTBMEtN80=
 normative: true
 ref: ''
 references:
 - keyword: TST042
   path: tests/test_projection.py
   type: file
-reviewed: nPKP-pGAki-mz8WY69D_3AmQvQi7fvsW67he4qXo_wY=
+reviewed: AWvYp0HGUOCxwYEPnIX55ENJ1Vnim343hsihUKG99GI=
 text: |
   Verify scoped selection, explicit canonical ancestor, owner, and direct-child
   navigation references, iterative and unmatched navigation, section routing, boundary

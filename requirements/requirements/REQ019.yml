@@ -16,7 +16,7 @@ references:
 - keyword: REQ019
   path: src/slygentify/_glossary.py
   type: file
-reviewed: pKE8qqjmkHuWirHhA3XivlkdcgtD_9P4Hkk784x3eBA=
+reviewed: 59l93KGq3FrTXYomWeU_BU86XUwyuvhB6sARrCRL5ww=
 text: |
   `slygentify scan [PATH] --format text|json [--git-executable PATH]` shall use
   `scan_repository` as its scan operation, forward the optional executable path without

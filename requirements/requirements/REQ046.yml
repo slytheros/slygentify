@@ -16,7 +16,7 @@ references:
 - keyword: REQ046
   path: src/slygentify/models.py
   type: file
-reviewed: clASir0dXUVWCOTfjOE_OurS_Tc7LLZ3qerIyknh6f8=
+reviewed: MU4XsKzfPjHV75_51w4RWH-t0ynDLEeTyxPBSC4hRiQ=
 text: |
   Every Slygentify-authored result diagnostic, operational error, refusal, and warning
   shall identify a stable code, safe target, and explicit disposition. `problem` identifies

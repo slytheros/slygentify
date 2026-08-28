@@ -4,7 +4,7 @@ header: |
   Public scan model tests
 level: '1.10'
 links:
-- REQ010: XI6klKicaVobz_uWP3AQ_IyZlomjjIOjjAZr0ALSFHk=
+- REQ010: myBbCwZcZUFxjlSBmjckr14PlHQUFCOAPsaDPzOHlTA=
 - REQ015: bAXeePOSXqEyhkWSx23VQMnergp3_qMaHuUDz2r6CTM=
 normative: true
 ref: ''
@@ -12,7 +12,7 @@ references:
 - keyword: TST010
   path: tests/test_scan_models.py
   type: file
-reviewed: 7lu1mPnn68mBO-EVKxt5ImBd-euauk2ptYxH11fPbZo=
+reviewed: vqNNZW-oCyMvuK54hgMq8bpk8vuQNGQoU0Db93H0UOY=
 text: |
   Verify immutable keyword-only public values, path and scalar invariants, canonical
   ordering, unique identities, component paths, subject and evidence references, and

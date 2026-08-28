@@ -16,7 +16,7 @@ references:
 - keyword: REQ048
   path: src/slygentify/models.py
   type: file
-reviewed: rgK0ldgn_ETs1sjHFMjymVSqGAROgkxVkaCIVMIErGo=
+reviewed: _LO5ktPc2_7PBwOh6R4z3ICam4aXE0PvOgBDgV4qFZs=
 text: |
   Slygentify shall export immutable DoctorResult and DoctorDiagnostic values, stable
   DoctorInputError and DoctorOperationalError failures, doctor_repository, and named

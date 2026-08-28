@@ -13,7 +13,7 @@ references:
 - keyword: REQ040
   path: src/slygentify/initialization.py
   type: file
-reviewed: XaJeoIGGLUHMhcuygjtA18fGZgxBxkIiMhCAEi_Ymv0=
+reviewed: KghQmNdauhqd4N7f9UU73JKH8ijllbxBrVA65dYPBP8=
 text: |
   Slygentify shall provide a reviewable initialization CLI dry-run, explicit replacement
   control, and actionable stdout, stderr, and exit-status behavior for successful, refused,

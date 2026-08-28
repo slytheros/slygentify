@@ -11,7 +11,7 @@ references:
 - keyword: TST051
   path: tests/test_public_documentation.py
   type: file
-reviewed: 9bO8kwa_tI4kXB4wmf4JEWWl40fqU3RcO7-RJE3fYTo=
+reviewed: PmmoNTqBafHUqquDy_0NVvm7sgIa0geZIQQKZ52Oczg=
 text: |
   Verify exact public package metadata and documentation dependency bounds; strict local
   site generation without private-history content; file-portable generated page URLs and

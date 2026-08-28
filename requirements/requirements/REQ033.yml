@@ -19,7 +19,7 @@ references:
 - keyword: REQ033
   path: src/slygentify/_presentation.py
   type: file
-reviewed: s8BvJmGGVchlcMjCCcwE0LW-12qR-MGz53k8DaAwlpQ=
+reviewed: Qx0tctNLiXLCVkwb13hKecGM5AVNvLYoPlSsW84Z9hE=
 text: |
   `slygentify scan --interactive` shall open an opt-in Textual explorer before the one
   bounded scan completes and show an indeterminate scanning status without changing the

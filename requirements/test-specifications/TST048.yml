@@ -4,14 +4,14 @@ header: |
   Doctor Python, JSON, and schema contract tests
 level: 1.49
 links:
-- REQ048: rgK0ldgn_ETs1sjHFMjymVSqGAROgkxVkaCIVMIErGo=
+- REQ048: _LO5ktPc2_7PBwOh6R4z3ICam4aXE0PvOgBDgV4qFZs=
 normative: true
 ref: ''
 references:
 - keyword: TST048
   path: tests/test_doctor_json.py
   type: file
-reviewed: ccfNpCfO9IwLd633cokxoJchAwwn7wviHzV6splekks=
+reviewed: SZYDU874z9HNEMoivhimVHxWCFqN4QJ-nqKx-9UC4kU=
 text: |
   Verify public exports, immutable round trips, strict recursive validation, translated
   failures, forward-compatible unknown properties, parser resource limits, deterministic

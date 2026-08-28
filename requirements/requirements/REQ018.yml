@@ -13,7 +13,7 @@ references:
 - keyword: REQ018
   path: src/slygentify/_errors.py
   type: file
-reviewed: bjXoODQnftEtRu5-saCRCtB0EITHTbXId5F12Ozv7W4=
+reviewed: lDPuCwvyWyk5FeGRsvXLhaQ0EeaEZLeaE3exyh5P5jU=
 text: |
   Slygentify shall validate untrusted scan objects and JSON through private strict
   adapters, expose a fresh packaged Draft 2020-12 schema for schema major 1, ignore

@@ -16,7 +16,7 @@ references:
 - keyword: REQ042
   path: src/slygentify/models.py
   type: file
-reviewed: z-1Q_LcZXPp1MzUrO7YBPtwd-eK98vB-DRDWnIOu9Kg=
+reviewed: elu9YGz9U7N5gulR9DKs6StAtcR7xJjbMiPTBMEtN80=
 text: |
   Slygentify shall expose immutable scan-projection-v1 values and named validation,
   projection, canonical JSON, and packaged JSON Schema interfaces. A projection shall

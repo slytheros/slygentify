@@ -4,14 +4,14 @@ header: |
   Scan command contract tests
 level: 1.19
 links:
-- REQ019: pKE8qqjmkHuWirHhA3XivlkdcgtD_9P4Hkk784x3eBA=
+- REQ019: 59l93KGq3FrTXYomWeU_BU86XUwyuvhB6sARrCRL5ww=
 normative: true
 ref: ''
 references:
 - keyword: TST019
   path: tests/test_scan_cli.py
   type: file
-reviewed: rdLFTRiaaTS_V35Exc1fyIUcmqyE0HaoahP2bRocBoM=
+reviewed: noyub9Mwo1SjPlkj5NWUr5KR-x2pH3di0S8kr378pso=
 text: |
   Verify the complete component-first default text consumes the same scan result,
   distinguishes primary from auxiliary component navigation without suppressing records,
