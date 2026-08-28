@@ -16,7 +16,7 @@ references:
 - keyword: REQ019
   path: src/slygentify/_glossary.py
   type: file
-reviewed: Raiur0Ula8vOf5PE4yhjd5yHkp88VOTKAMyRjrVtOHk=
+reviewed: pKE8qqjmkHuWirHhA3XivlkdcgtD_9P4Hkk784x3eBA=
 text: |
   `slygentify scan [PATH] --format text|json [--git-executable PATH]` shall use
   `scan_repository` as its scan operation, forward the optional executable path without
@@ -30,7 +30,12 @@ text: |
   primary component navigation and secondary auxiliary-component navigation shall remain
   distinct without omitting canonical component records,
   actionable attention, and routine inspection boundaries shall remain separately
-  visible; and every evidence record shall appear
+  visible. Needs attention shall present diagnostics first as Problems & next steps,
+  nest an unknown finding under a diagnostic when their subject and source evidence
+  identify the same repository condition, present remaining unknowns as Unknowns to
+  confirm, and route recommendations and explicitly reviewed caution finding codes
+  without keyword inference. It shall show both issue and canonical-record counts so
+  grouping cannot imply data loss. Every evidence record shall appear
   in a final Sources & provenance appendix. Findings shall retain literal claim
   classifications and inspectable source citations. Repeated diagnostics and skipped
   scopes may be grouped for navigation but no canonical record may be omitted or merged.

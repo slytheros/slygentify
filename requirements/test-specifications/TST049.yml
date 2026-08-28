@@ -4,17 +4,18 @@ header: |
   Doctor CLI and human presentation contract tests
 level: 1.491
 links:
-- REQ049: eYHBVa9LGtMI0ECO3ZltttOjqVdWlWtxU7LW6ZwY890=
+- REQ049: p_t5Ni61246e_aXiaXfdtOKpnKPtBYu9PY0Caw6ideo=
 normative: true
 ref: ''
 references:
 - keyword: TST049
   path: tests/test_doctor_cli.py
   type: file
-reviewed: 9mU0f9BsZQA6DPzkiwfRdircfiTPktPyiE0auMX65Wg=
+reviewed: q-ciQoSrsnP8p6fHjgyQM-AaGC745F4JFTPALkmqHns=
 text: |
   Verify concise and verbose clean, informational, warning, error, and partial reports;
-  deterministic grouping, complete evidence and skipped-scope detail, plain and
+  deterministic grouping, originating scan-code or boundary-reason evidence for every
+  partial cause, complete evidence and skipped-scope detail, plain and
   no-color output, exact canonical JSON, empty result-error streams, exit statuses
   0/1/2/3, usage failures, trusted Git forwarding and disclosure, non-interactive
   operation, and isolation from writes, network activity, or project-command execution.

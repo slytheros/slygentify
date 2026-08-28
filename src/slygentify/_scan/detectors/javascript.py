@@ -329,13 +329,31 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
     def add_diagnostic(
         code: str,
         location: str,
-        message: str,
+        message: str | None,
         *,
         partial: bool,
         root: str | None = None,
         keys: tuple[EvidenceKey, ...] = (),
+        problem: str | None = None,
+        effect: str | None = None,
+        recovery: str | None = None,
     ) -> None:
-        diagnostics.append(DiagnosticCandidate(code, location, message, partial, root, keys))
+        if problem is None:
+            assert message is not None
+            candidate = DiagnosticCandidate(code, location, message, partial, root, keys)
+        else:
+            assert message is None and effect is not None
+            candidate = DiagnosticCandidate(
+                code,
+                location,
+                partial=partial,
+                subject_path=root,
+                evidence_keys=keys,
+                problem=problem,
+                effect=effect,
+                recovery=recovery,
+            )
+        diagnostics.append(candidate)
 
     def record_tool(root: str, name: str, path: str, locator: str | None, strength: str) -> None:
         item = _evidence(
@@ -436,10 +454,15 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
             add_diagnostic(
                 "javascript.invalid-manifest",
                 path,
-                f"JavaScript manifest {path} is not a unique-key UTF-8 JSON object. "
-                "Next: correct its JSON syntax, encoding, duplicate keys, or top-level shape.",
+                None,
                 partial=True,
                 keys=(key,),
+                problem=f"JavaScript manifest {path} is not a unique-key UTF-8 JSON object",
+                effect=f"The package boundary and declarations from {path} were omitted",
+                recovery=(
+                    "correct its JSON syntax, encoding, duplicate keys, or top-level shape, or "
+                    "intentionally exclude the file if it is outside the intended scan scope"
+                ),
             )
             continue
         package = cast(dict[str, object], document)
@@ -842,11 +865,11 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                     isinstance(value, str) for value in raw_patterns
                 ):
                     raise _StaticStructureError("packages must be a list of strings")
-            except (UnicodeError, yaml.YAMLError, _StaticStructureError) as error:
+            except (UnicodeError, yaml.YAMLError, _StaticStructureError):
                 add_diagnostic(
                     "javascript.invalid-workspace",
                     path,
-                    f"pnpm workspace configuration could not be parsed safely ({error}). "
+                    "pnpm workspace configuration is not supported static YAML. "
                     "Next: use a UTF-8 YAML packages list without aliases or custom tags.",
                     partial=True,
                     root=root,
@@ -1256,11 +1279,11 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
             workflow = _yaml_document(data)
             if not isinstance(workflow, dict):
                 raise _StaticStructureError("workflow is not a mapping")
-        except (UnicodeError, yaml.YAMLError, _StaticStructureError) as error:
+        except (UnicodeError, yaml.YAMLError, _StaticStructureError):
             add_diagnostic(
                 "javascript.invalid-ci-workflow",
                 path,
-                f"CI workflow YAML could not be parsed safely ({error}). "
+                "CI workflow content is not supported static YAML. "
                 "Next: correct its syntax or unsupported structure.",
                 partial=True,
             )
@@ -1414,11 +1437,11 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                 document = _yaml_document(data)
                 if not isinstance(document, dict):
                     raise _StaticStructureError("GitLab document is not a mapping")
-            except (UnicodeError, yaml.YAMLError, _StaticStructureError) as error:
+            except (UnicodeError, yaml.YAMLError, _StaticStructureError):
                 add_diagnostic(
                     "javascript.invalid-ci-workflow",
                     path,
-                    f"GitLab CI YAML could not be parsed safely ({error}). "
+                    "GitLab CI content is not supported static YAML. "
                     "Next: correct its syntax or unsupported structure.",
                     partial=True,
                     root=".",

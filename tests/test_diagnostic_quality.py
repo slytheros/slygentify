@@ -96,5 +96,58 @@ def test_one_sentence_candidates_gain_an_explicit_observable_effect() -> None:
     partial = DiagnosticCandidate("inspection.invalid-file", "bad", "A file is invalid.", True)
     retained = DiagnosticCandidate("generic.unsupported", "tool", "Tooling is unsupported.", False)
 
-    assert partial.message.endswith("The affected evidence was omitted, so the scan is partial.")
+    assert "The affected evidence was omitted, so the scan is partial." in partial.message
+    assert partial.message.endswith(
+        "Next: correct the declaration at bad, or intentionally exclude it when it is outside "
+        "the intended inspection scope."
+    )
     assert "without treating this item as verified" in retained.message
+
+
+@pytest.mark.verifies("TST046")
+@pytest.mark.parametrize(
+    ("code", "expected"),
+    [
+        ("inspection.missing-workspace-member", "restore the referenced in-repository target"),
+        ("inspection.unsafe-file", "safely readable in-repository path"),
+        ("python.dynamic-ci-command-unknown", "supported literal declaration"),
+        ("python.manager-conflict", "intentionally compatible"),
+        ("configuration.relaxed-limits", "restore the default limits"),
+        ("inspection.max-memory-bytes", "scan.limits.max_memory_bytes"),
+    ],
+)
+def test_condition_families_gain_safe_specific_recovery(code: str, expected: str) -> None:
+    candidate = DiagnosticCandidate(code, "target", "The condition was observed.", True)
+
+    assert expected in (candidate.recovery or "")
+
+
+@pytest.mark.verifies("TST046")
+def test_candidate_contract_preserves_explicit_problem_effect_and_recovery() -> None:
+    candidate = DiagnosticCandidate(
+        "javascript.invalid-manifest",
+        "package.json",
+        partial=True,
+        problem="The manifest is malformed",
+        effect="Its package declarations were omitted",
+        recovery="correct the JSON or intentionally exclude the file",
+    )
+
+    assert candidate.problem == "The manifest is malformed"
+    assert candidate.effect == "Its package declarations were omitted"
+    assert candidate.recovery == "correct the JSON or intentionally exclude the file"
+    assert candidate.message == (
+        "The manifest is malformed. Its package declarations were omitted. "
+        "Next: correct the JSON or intentionally exclude the file."
+    )
+    with pytest.raises(TypeError, match="problem, effect, and recovery"):
+        DiagnosticCandidate(
+            "invalid",
+            ".",
+            "A legacy message.",
+            problem="A problem",
+            effect="An effect",
+            recovery="recover",
+        )
+    with pytest.raises(TypeError, match="message or explicit structure"):
+        DiagnosticCandidate("invalid", ".")

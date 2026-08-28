@@ -6,7 +6,14 @@ major versions are independent compatibility surfaces.
 
 ## Unreleased
 
-No changes yet.
+- Preserve distinct structured partial-scan causes through doctor so each malformed
+  input, unavailable Git lookup, unsafe path, unresolved reference, or resource boundary
+  receives an exact effect and safe next step.
+- Rework scan and explorer attention output around Problems & next steps, related unknown
+  context, explicit caution routing, and separate issue/record counts while retaining
+  every canonical record.
+- Remove raw parser detail from diagnostics and make supported recovery guidance
+  condition-specific, including intentional exclusion where appropriate.
 
 ## [1.0.0rc1] - 2026-08-27
 

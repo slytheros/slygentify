@@ -14,6 +14,10 @@ trusted-code boundary match `scan_repository`; see [safety boundaries](../safety
 repository and evidence records, diagnostics, and skipped scopes. Each
 `DoctorDiagnostic` has a stable opaque code, severity, independent claim classification,
 target, problem, effect, optional remediation, and evidence references.
+`doctor.inspection.partial` remains the compatible warning code and may occur once per
+distinct fresh-scan cause. Its evidence identifies the originating scan diagnostic code
+or skipped-scope boundary; its remediation names a resource limit only when that exact
+limit caused the omission.
 
 Human presentation is not a machine compatibility surface. `info`, `warning`, and
 `error` severities are independent of a diagnostic's claim classification.

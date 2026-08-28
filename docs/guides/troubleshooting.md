@@ -11,9 +11,20 @@ Read `diagnostics` and `skipped_scopes` before treating missing evidence as abse
 partial result can reflect an unreadable file, configured resource limit, environmental
 exhaustion, or unavailable tracked-path discovery. Keep the result for the inspected
 boundary, then correct the reported repository condition or use a tighter task scope.
+Doctor reports each distinct partial cause separately. Follow the action attached to
+that cause; do not raise a resource limit unless the diagnostic names the limit that was
+actually reached.
 
 See the [scan guide](scan.md#investigate-a-partial-result) and
 [inspection accounting](../inspection-accounting.md) for the exact boundary semantics.
+
+## A supported manifest is malformed
+
+The diagnostic identifies the exact manifest and the declarations that could not be
+established. Correct its syntax, encoding, duplicate keys, or required top-level shape,
+then rerun the command. If the file is intentionally outside the repository knowledge
+you want Slygentify to inspect, exclude that exact scope in root `slygentify.toml` and
+rerun. This is not a resource-limit condition, so increasing a scan limit is irrelevant.
 
 ## Git tracked-path discovery is unavailable
 

@@ -27,7 +27,9 @@ Variable and expression references remain static source text.
 Malformed, unreadable, protected, or budget-exhausted supported evidence makes the result
 partial. Conflicting declarations remain a complete result when Slygentify can preserve
 all of them without guessing. Source-backed diagnostics retain the evidence location and
-give a corrective or review action.
+give a corrective or review action. Malformed supported content is described without raw
+parser exception text and recommends correcting or intentionally excluding the exact
+file where exclusion is appropriate.
 
 Public 1.0 intentionally excludes Bun, Deno, Bower, Meteor, Rush, Nx, Turborepo, Lerna,
 dynamic package generation, JavaScript or TypeScript configuration execution, lifecycle

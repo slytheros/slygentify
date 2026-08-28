@@ -9,12 +9,13 @@ import pytest
 
 import slygentify._git_tracking as git_tracking
 import slygentify._scan.orchestration as orchestration
-from slygentify import ScanResult, scan_repository
+from slygentify import ScanResult, SkippedScope, scan_repository
 from slygentify._git_tracking import _TrackedPaths
 from slygentify._scan import _scan_foundation, _ScanFoundationError
-from slygentify._scan.contracts import DetectionContext
+from slygentify._scan.contracts import DetectionContext, DiagnosticCandidate, PartialCause
 from slygentify._scan.detectors.generic import detect_generic
-from slygentify._scan.kernel import _Entry, _inspect, _Limits, _RepositoryView
+from slygentify._scan.kernel import _Entry, _inspect, _Inspection, _Limits, _RepositoryView
+from slygentify._scan.normalization import _boundary_cause, _matching_boundary, _normalize
 
 
 def _repository(tmp_path: Path) -> Path:
@@ -313,10 +314,19 @@ def test_deterministic_resource_limits_return_partial_results(
     (repository / "child" / "grandchild").mkdir(parents=True)
     (repository / "Cargo.toml").write_text("[package]\n", encoding="utf-8")
 
-    _, result = _scan_foundation(repository, limits=limits)
+    execution = _scan_foundation(repository, limits=limits)
+    result = execution.result
 
     assert result.completion == "partial"
     assert reason in {item.reason for item in result.skipped_scopes}
+    cause = next(
+        item
+        for item in execution.partial_causes
+        if item.source_code == f"inspection.boundary.{reason}"
+    )
+    assert f"scan.limits.{reason}" in (cause.recovery or "")
+    assert cause.boundary is not None
+    assert cause.boundary.effective_limit is not None
 
 
 @pytest.mark.verifies("TST013")
@@ -343,12 +353,82 @@ def test_elapsed_limit_returns_an_explicit_partial_result(tmp_path: Path) -> Non
     repository = _repository(tmp_path)
     ticks: Iterator[float] = iter((0.0, 61.0))
 
-    _, result = _scan_foundation(
+    execution = _scan_foundation(
         repository, limits=_Limits(max_elapsed_seconds=60), clock=lambda: next(ticks)
     )
+    result = execution.result
 
     assert result.completion == "partial"
     assert result.skipped_scopes[0].reason == "max_elapsed_seconds"
+    assert execution.partial_causes[0].source_code == "inspection.boundary.max_elapsed_seconds"
+    assert "scan.limits.max_elapsed_seconds" in (execution.partial_causes[0].recovery or "")
+
+
+@pytest.mark.verifies("TST013", "TST047")
+def test_private_partial_cause_normalization_deduplicates_one_boundary_event(
+    tmp_path: Path,
+) -> None:
+    repository = _repository(tmp_path)
+    boundary = SkippedScope(
+        scope="bad",
+        reason="unsafe_file",
+        effective_limit=None,
+        consumed=None,
+        omitted_scope="bad",
+    )
+    candidate = DiagnosticCandidate(
+        "inspection.unsafe-file",
+        "bad",
+        "File could not be read safely.",
+        True,
+    )
+    inspection = _Inspection(
+        files={},
+        skipped=(boundary,),
+        diagnostics=(candidate, candidate),
+        partial=True,
+        root=repository,
+        limits=_Limits(max_elapsed_seconds=None),
+        partial_skipped=(boundary,),
+    )
+    causes: list[PartialCause] = []
+
+    _normalize(repository, inspection, memory_limit=None, partial_causes=causes)
+
+    assert len(causes) == 1
+    assert causes[0].source_code == "inspection.unsafe-file"
+
+    limit_problem, limit_effect, limit_recovery = _boundary_cause(
+        SkippedScope(
+            scope="large",
+            reason="max_entries",
+            effective_limit=10,
+            consumed=None,
+            omitted_scope="large/**",
+        )
+    )
+    assert "max_entries" in limit_problem
+    assert "consumed" not in limit_effect
+    assert "scan.limits.max_entries" in limit_recovery
+    assert (
+        "fixture boundary"
+        in _boundary_cause(
+            SkippedScope(
+                scope="unknown",
+                reason="fixture",
+                effective_limit=None,
+                consumed=None,
+                omitted_scope="unknown/**",
+            )
+        )[0]
+    )
+    assert (
+        _matching_boundary(
+            DiagnosticCandidate("other.code", "bad", "Another condition.", False),
+            (boundary,),
+        )
+        is None
+    )
 
 
 @pytest.mark.verifies("TST012", "TST013")

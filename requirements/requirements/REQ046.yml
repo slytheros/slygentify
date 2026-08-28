@@ -10,10 +10,15 @@ references:
 - keyword: REQ046
   path: src/slygentify/_scan/contracts.py
   type: file
-reviewed: 1w3QuJWM3IFmN0kY_1xSO-P81GWLud62IFo4QqvQzqE=
+reviewed: MdJQv_89Gao0JlvI7fWwakeg5TUSZN9uRkpPPILl13I=
 text: |
   User-visible diagnostics shall distinguish the observed problem from its effect on
   retained, omitted, withheld, or partial evidence. A diagnostic shall include recovery
   text only when a safe, concrete review or correction is available, shall not recommend
-  weaker safety boundaries or unapproved effects, and shall compose the public message
-  deterministically without changing the public diagnostic data model.
+  weaker safety boundaries or unapproved effects, expose raw parser, Git, or operating
+  system exception text, or disclose secret-shaped content. Resolvable malformed,
+  missing, unreadable, conflict, dynamic, unsupported, and resource-limit conditions
+  shall name a condition-specific safe next step, including intentional exclusion where
+  appropriate. Private scan candidates shall retain explicit problem, effect, recovery,
+  and partial-cause structure and compose the public message deterministically without
+  changing the public diagnostic data model.

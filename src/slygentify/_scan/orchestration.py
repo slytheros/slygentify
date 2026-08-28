@@ -11,6 +11,7 @@ from pathlib import Path
 from slygentify._configuration import EffectiveConfiguration, load_configuration
 from slygentify._git_tracking import _discover_tracked_paths, _InvalidGitExecutableError
 from slygentify._repository import RepositoryPathError, find_git_root
+from slygentify._scan.contracts import PartialCause
 from slygentify._scan.kernel import (
     _inspect,
     _is_reparse,
@@ -77,16 +78,19 @@ def _scan_foundation(
         configured_ignore=configuration.ignore,
     )
     content_fingerprints: dict[str, str] = {}
+    partial_causes: list[PartialCause] = []
     result = _normalize(
         root,
         inspection,
         memory_limit=effective_limits.max_memory_bytes,
         configuration=configuration,
         content_fingerprints=content_fingerprints,
+        partial_causes=partial_causes,
     )
     return _ScanExecution(
         root,
         result,
         configuration,
         content_fingerprints,
+        tuple(partial_causes),
     )

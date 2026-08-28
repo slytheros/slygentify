@@ -294,6 +294,13 @@ def _append_diagnostic(
     )
 
 
+def _doctor_sentence(value: str) -> str:
+    text = " ".join(value.split()).rstrip(".")
+    if not text:
+        return text
+    return f"{text[0].upper()}{text[1:]}."
+
+
 def _command_became_unverifiable(
     recorded: StateDocument, current: StateDocument, result: ScanResult
 ) -> tuple[StateInput, ...]:
@@ -647,24 +654,36 @@ def doctor_repository(
             )
 
     if result.completion == "partial":
-        partial_evidence = _comparison_evidence(
-            evidence,
-            kind="partial-inspection",
-            location=".",
-            observation="Fresh inspection reached a documented safety, policy, or resource boundary.",
-        )
-        _append_diagnostic(
-            diagnostics,
-            code="doctor.inspection.partial",
-            severity="warning",
-            classification="unknown",
-            subject_id=result.repository.id,
-            location=".",
-            problem="Fresh repository inspection is partial.",
-            effect="Doctor cannot claim exhaustive drift absence outside the reported inspection boundary.",
-            remediation="Inspect omitted boundaries or explicitly raise the applicable limit and rerun doctor.",
-            evidence_ids=(partial_evidence,),
-        )
+        component_ids = {item.path: item.id for item in result.components}
+        causes = execution.partial_causes
+        if not causes:
+            raise DoctorOperationalError(
+                "fresh inspection was partial without structured causal accounting"
+            )
+        for cause in causes:
+            partial_evidence = _comparison_evidence(
+                evidence,
+                kind="partial-inspection",
+                location=cause.location,
+                locator=cause.source_code,
+                observation=f"Fresh scan reported {cause.source_code} as a partial cause.",
+            )
+            _append_diagnostic(
+                diagnostics,
+                code="doctor.inspection.partial",
+                severity="warning",
+                classification="unknown",
+                subject_id=component_ids.get(cause.subject_path or "", result.repository.id),
+                location=cause.location,
+                problem=_doctor_sentence(cause.problem),
+                effect=_doctor_sentence(
+                    f"{cause.effect.rstrip('.')}. Doctor cannot claim drift absence for this boundary"
+                ),
+                remediation=(
+                    _doctor_sentence(cause.recovery) if cause.recovery is not None else None
+                ),
+                evidence_ids=(*cause.evidence_ids, partial_evidence),
+            )
         completion = "partial"
 
     return DoctorResult(

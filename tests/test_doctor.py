@@ -10,6 +10,7 @@ import pytest
 import slygentify._doctor as doctor
 from slygentify import apply_initialization, plan_initialization
 from slygentify._configuration import load_configuration
+from slygentify._git_tracking import _TrackedPaths
 from slygentify._managed_section import SECTION_END
 from slygentify._provenance import (
     StateInput,
@@ -18,6 +19,7 @@ from slygentify._provenance import (
     state_from_scan,
 )
 from slygentify._scan import _ScanFoundationError
+from slygentify._scan.contracts import PartialCause
 from slygentify.models import (
     Diagnostic,
     DoctorDiagnostic,
@@ -51,10 +53,30 @@ def _codes(result: DoctorResult) -> set[str]:
 
 
 def _sample_execution(root: Path, result: object) -> SimpleNamespace:
+    completion = getattr(result, "completion", "complete")
+    skipped = getattr(result, "skipped_scopes", ())
+    partial_causes = (
+        tuple(
+            PartialCause(
+                source_code=f"inspection.boundary.{boundary.reason}",
+                location=boundary.scope,
+                subject_path=None,
+                problem=f"Inspection reached {boundary.reason}",
+                effect=f"{boundary.omitted_scope} was omitted",
+                recovery="review the boundary and rerun doctor",
+                evidence_ids=(),
+                boundary=boundary,
+            )
+            for boundary in skipped
+        )
+        if completion == "partial"
+        else ()
+    )
     return SimpleNamespace(
         result=result,
         configuration=load_configuration(root),
         content_fingerprints={},
+        partial_causes=partial_causes,
     )
 
 
@@ -455,6 +477,56 @@ def test_path_command_and_partial_rules_are_limited_to_supported_prior_knowledge
         "doctor.inspection.partial",
     } <= _codes(result)
     assert result.completion == "partial"
+
+
+@pytest.mark.verifies("TST047", "TST050")
+def test_doctor_reports_each_scan_partial_cause_with_exact_safe_action(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _root(tmp_path)
+    (root / "package.json").write_text('{"name":', encoding="utf-8")
+    monkeypatch.setattr(
+        "slygentify._scan.orchestration._discover_tracked_paths",
+        lambda *args, **kwargs: _TrackedPaths(frozenset(), frozenset(), False),
+    )
+
+    first = doctor.doctor_repository(root)
+    second = doctor.doctor_repository(root)
+    partials = tuple(item for item in first.diagnostics if item.code == "doctor.inspection.partial")
+
+    assert len(partials) == 2
+    assert [item.id for item in partials] == [
+        item.id for item in second.diagnostics if item.code == "doctor.inspection.partial"
+    ]
+    by_location = {item.location: item for item in partials}
+    manifest = by_location["package.json"]
+    assert "package boundary and declarations" in manifest.effect
+    assert "intentionally exclude" in (manifest.remediation or "")
+    assert "scan.limits" not in (manifest.remediation or "")
+    git = by_location["."]
+    assert "Gitignore" in git.effect
+    assert "Git executable" in (git.remediation or "")
+    evidence = {item.id: item for item in first.evidence}
+    assert {
+        evidence[evidence_id].locator
+        for item in partials
+        for evidence_id in item.evidence_ids
+        if evidence[evidence_id].source_kind == "doctor-provenance"
+    } == {"javascript.invalid-manifest", "inspection.git-tracked-paths-unavailable"}
+
+
+@pytest.mark.verifies("TST047")
+def test_doctor_rejects_partial_results_without_private_cause_accounting(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _root(tmp_path)
+    execution = _sample_execution(root, sample_result())
+    execution.partial_causes = ()
+    monkeypatch.setattr(doctor, "_scan_foundation", lambda *args, **kwargs: execution)
+
+    assert doctor._doctor_sentence("  ") == ""
+    with pytest.raises(doctor.DoctorOperationalError, match="structured causal accounting"):
+        doctor.doctor_repository(root)
 
 
 @pytest.mark.verifies("TST047")

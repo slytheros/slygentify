@@ -4,15 +4,16 @@ header: |
   Static doctor lifecycle and effect-boundary acceptance tests
 level: 1.492
 links:
-- REQ047: gdVCOB28vF9YiOLjwxJxyhZq7Zj0otb_J6fd3UNFjQE=
+- REQ047: VGYdzEGoSzQGQ_SeHoRFKHEcE2PNFeLHRnHEl9nkbo4=
 - REQ048: rgK0ldgn_ETs1sjHFMjymVSqGAROgkxVkaCIVMIErGo=
-- REQ049: eYHBVa9LGtMI0ECO3ZltttOjqVdWlWtxU7LW6ZwY890=
+- REQ049: p_t5Ni61246e_aXiaXfdtOKpnKPtBYu9PY0Caw6ideo=
 normative: true
 ref: ''
-reviewed: Jpx70Nbb1MKNQT4y13n0X6L75DlJmNPK1LPxujy1n-s=
+reviewed: bU8WQ_Mc0uMXgxjxb_7d2OG0XU4_qCTA_m0qdH6LpfM=
 text: |
   Verify realistic managed Python and JavaScript repository lifecycles across clean,
-  stale, malformed, unmanaged, ambiguous, partial, and recovered states; every static
+  stale, malformed, unmanaged, ambiguous, simultaneous cause-specific partial, and
+  recovered states; every static
   doctor diagnostic's positive and clean-control behavior; deterministic Python, JSON,
   human, CLI, stream, and exit contracts; portable repository-relative locations; and
   the absence of repository writes, project-command execution, network access, ambient

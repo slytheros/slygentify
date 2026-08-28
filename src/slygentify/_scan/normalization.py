@@ -22,6 +22,7 @@ from slygentify._scan.contracts import (
 from slygentify._scan.contracts import (
     EvidenceCandidate as _EvidenceCandidate,
 )
+from slygentify._scan.contracts import PartialCause as _PartialCause
 from slygentify._scan.detectors import BUILTIN_DETECTORS
 from slygentify._scan.detectors._support import evidence_key as _evidence_key
 from slygentify._scan.kernel import _Inspection, _MemoryLedger, _RepositoryView
@@ -36,12 +37,82 @@ from slygentify.models import (
     Finding,
     Repository,
     ScanResult,
+    SkippedScope,
 )
 from slygentify.traceability import implements
 
 _AUXILIARY_COMPONENT_PATH_PARTS = frozenset(
     {"test", "tests", "example", "examples", "docs", "template", "templates"}
 )
+_RESOURCE_REASONS = frozenset(
+    {
+        "max_depth",
+        "max_entries",
+        "max_file_bytes",
+        "max_total_bytes",
+        "max_elapsed_seconds",
+        "max_open_files",
+        "max_memory_bytes",
+    }
+)
+
+
+def _boundary_cause(boundary: SkippedScope) -> tuple[str, str, str]:
+    """Describe one partial boundary without treating routine exclusions as failures."""
+
+    if boundary.reason in _RESOURCE_REASONS:
+        accounting = f"limit {boundary.effective_limit}"
+        if boundary.consumed is not None:
+            accounting = f"{accounting}; consumed {boundary.consumed}"
+        return (
+            f"Fresh inspection reached the {boundary.reason} resource boundary at {boundary.scope}",
+            f"{boundary.omitted_scope} was omitted after {accounting}",
+            "exclude irrelevant repository content or raise "
+            f"scan.limits.{boundary.reason} in the root slygentify.toml, then rerun doctor",
+        )
+    if boundary.reason == "git_tracking_unavailable":
+        return (
+            "Tracked Git paths were unavailable during fresh inspection",
+            "Tracked files hidden by checked-out Gitignore rules may have been omitted",
+            "restore the standard trusted Git executable on PATH, or explicitly select a reviewed "
+            "Git executable, then rerun doctor",
+        )
+    if boundary.reason in {"unsafe_file", "unsafe_directory", "invalid_gitignore"}:
+        return (
+            f"Fresh inspection could not safely read {boundary.scope}",
+            f"{boundary.omitted_scope} was omitted from the fresh repository evidence",
+            f"make {boundary.scope} safely readable, or intentionally exclude it in the root "
+            "slygentify.toml, then rerun doctor",
+        )
+    return (
+        f"Fresh inspection reached the {boundary.reason} boundary at {boundary.scope}",
+        f"{boundary.omitted_scope} was omitted from the fresh repository evidence",
+        "correct the reported repository condition or intentionally exclude the affected scope, "
+        "then rerun doctor",
+    )
+
+
+def _matching_boundary(
+    candidate: _DiagnosticCandidate,
+    boundaries: tuple[SkippedScope, ...],
+) -> SkippedScope | None:
+    for boundary in boundaries:
+        if boundary.scope != candidate.location:
+            continue
+        if boundary.reason in _RESOURCE_REASONS and candidate.code in {
+            "inspection.max-memory-bytes",
+            "inspection.unreadable-evidence",
+        }:
+            return boundary
+        expected = {
+            "git_tracking_unavailable": "inspection.git-tracked-paths-unavailable",
+            "unsafe_directory": "inspection.unsafe-directory",
+            "unsafe_file": "inspection.unsafe-file",
+            "invalid_gitignore": "inspection.invalid-gitignore",
+        }.get(boundary.reason)
+        if expected == candidate.code:
+            return boundary
+    return None
 
 
 def _id(kind: str, *values: str) -> str:
@@ -70,6 +141,7 @@ def _normalize(
     memory_limit: int | None,
     configuration: EffectiveConfiguration | None = None,
     content_fingerprints: dict[str, str] | None = None,
+    partial_causes: list[_PartialCause] | None = None,
 ) -> ScanResult:
     view = _RepositoryView(inspection)
     detector_results: list[DetectionResult] = []
@@ -467,18 +539,36 @@ def _normalize(
             partial = True
     findings = list(findings_by_id.values())
     if not components:
+        boundary_summary = (
+            "Component-specific workflows and architecture could not be established because no "
+            "supported component boundary was found."
+        )
         findings.append(
             Finding(
                 id=_id("finding", "core.component-boundary-unknown", repository_id),
                 code="core.component-boundary-unknown",
                 classification="unknown",
                 subject_id=repository_id,
-                summary="No supported component boundary was found.",
+                summary=boundary_summary,
                 evidence_ids=(),
+            )
+        )
+        diagnostics_candidates.append(
+            _DiagnosticCandidate(
+                "core.component-boundary-unknown",
+                ".",
+                problem="No supported component boundary was found",
+                effect="Component-specific workflows and architecture remain unknown",
+                recovery=(
+                    "add a supported manifest, declare the component in [[scan.components]] in "
+                    "the root slygentify.toml, or retain this unknown when the repository "
+                    "intentionally has no supported component"
+                ),
             )
         )
 
     diagnostics_by_id: dict[str, Diagnostic] = {}
+    cause_candidates: list[tuple[_DiagnosticCandidate, tuple[str, ...]]] = []
     for diagnostic_candidate in diagnostics_candidates:
         if view.checkpoint():
             break
@@ -506,6 +596,8 @@ def _normalize(
             message=diagnostic_candidate.message,
             evidence_ids=diagnostic_evidence_ids,
         )
+        if diagnostic_candidate.partial:
+            cause_candidates.append((diagnostic_candidate, diagnostic_evidence_ids))
     diagnostics = list(diagnostics_by_id.values())
     partial = partial or view.partial
     result = ScanResult(
@@ -539,4 +631,81 @@ def _normalize(
     )
     if content_fingerprints is not None:
         content_fingerprints.update(view.content_fingerprints())
+    if partial_causes is not None:
+        boundaries = tuple(
+            sorted(
+                set((*inspection.partial_skipped, *view.partial_skipped)),
+                key=lambda item: (item.scope, item.reason),
+            )
+        )
+        consumed_boundaries: set[SkippedScope] = set()
+        causes: list[_PartialCause] = []
+        for diagnostic_candidate, diagnostic_evidence_ids in cause_candidates:
+            recovery: str | None
+            boundary = _matching_boundary(diagnostic_candidate, boundaries)
+            if boundary is not None:
+                if boundary in consumed_boundaries:
+                    continue
+                consumed_boundaries.add(boundary)
+                boundary_problem, boundary_effect, boundary_recovery = _boundary_cause(boundary)
+                problem = (
+                    boundary_problem
+                    if boundary.reason in _RESOURCE_REASONS
+                    else diagnostic_candidate.problem
+                )
+                effect = boundary_effect
+                recovery = (
+                    boundary_recovery
+                    if boundary.reason in _RESOURCE_REASONS
+                    else diagnostic_candidate.recovery or boundary_recovery
+                )
+                source_code = (
+                    f"inspection.boundary.{boundary.reason}"
+                    if boundary.reason in _RESOURCE_REASONS
+                    else diagnostic_candidate.code
+                )
+            else:
+                problem = diagnostic_candidate.problem
+                effect = diagnostic_candidate.effect
+                recovery = diagnostic_candidate.recovery
+                source_code = diagnostic_candidate.code
+            causes.append(
+                _PartialCause(
+                    source_code=source_code,
+                    location=diagnostic_candidate.location,
+                    subject_path=diagnostic_candidate.subject_path,
+                    problem=problem,
+                    effect=effect,
+                    recovery=recovery,
+                    evidence_ids=diagnostic_evidence_ids,
+                    boundary=boundary,
+                )
+            )
+        for boundary in boundaries:
+            if boundary in consumed_boundaries:
+                continue
+            problem, effect, recovery = _boundary_cause(boundary)
+            causes.append(
+                _PartialCause(
+                    source_code=f"inspection.boundary.{boundary.reason}",
+                    location=boundary.scope,
+                    subject_path=None,
+                    problem=problem,
+                    effect=effect,
+                    recovery=recovery,
+                    evidence_ids=(),
+                    boundary=boundary,
+                )
+            )
+        partial_causes.extend(
+            sorted(
+                set(causes),
+                key=lambda item: (
+                    item.source_code,
+                    item.subject_path or "",
+                    item.location,
+                    item.boundary.reason if item.boundary is not None else "",
+                ),
+            )
+        )
     return result
