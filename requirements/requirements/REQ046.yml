@@ -10,7 +10,7 @@ references:
 - keyword: REQ046
   path: src/slygentify/_scan/contracts.py
   type: file
-reviewed: 1w3QuJWM3IFmN0kY_1xSO-P81GWLud62IFo4QqvQzqE=
+reviewed: MdJQv_89Gao0JlvI7fWwakeg5TUSZN9uRkpPPILl13I=
 text: |
   User-visible diagnostics shall distinguish the observed problem from its effect on
   retained, omitted, withheld, or partial evidence. A diagnostic shall include recovery

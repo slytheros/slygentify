@@ -13,7 +13,7 @@ references:
 - keyword: REQ049
   path: src/slygentify/cli.py
   type: file
-reviewed: eYHBVa9LGtMI0ECO3ZltttOjqVdWlWtxU7LW6ZwY890=
+reviewed: p_t5Ni61246e_aXiaXfdtOKpnKPtBYu9PY0Caw6ideo=
 text: |
   `slygentify doctor [PATH] --format text|json [--verbose]
   [--git-executable PATH]` shall call the static doctor core without prompting,

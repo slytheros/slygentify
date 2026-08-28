@@ -13,7 +13,7 @@ references:
 - keyword: REQ047
   path: src/slygentify/models.py
   type: file
-reviewed: gdVCOB28vF9YiOLjwxJxyhZq7Zj0otb_J6fd3UNFjQE=
+reviewed: VGYdzEGoSzQGQ_SeHoRFKHEcE2PNFeLHRnHEl9nkbo4=
 text: |
   Slygentify shall provide a deterministic, read-only doctor core that validates
   configuration and provenance, performs one fresh bounded scan when safe, compares

@@ -11,7 +11,7 @@ references:
 - keyword: TST019
   path: tests/test_scan_cli.py
   type: file
-reviewed: PQJELtGlbkeuvia5ge0PWw4W2jUyoLJ23O6xzv8T60g=
+reviewed: rdLFTRiaaTS_V35Exc1fyIUcmqyE0HaoahP2bRocBoM=
 text: |
   Verify the complete component-first default text consumes the same scan result,
   distinguishes primary from auxiliary component navigation without suppressing records,

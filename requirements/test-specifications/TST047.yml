@@ -11,7 +11,7 @@ references:
 - keyword: TST047
   path: tests/test_doctor.py
   type: file
-reviewed: n4EZQllZ90WNkzEtYc46dLNOTI8sXCplEcU9emWnbEY=
+reviewed: 7sosnpDn25nfSnK_BlIH-j2rmLWdwIBMb3e0F_9Zz_8=
 text: |
   Verify immutable doctor models, deterministic clean and partial results, invalid
   configuration and state handling, provenance and artifact drift diagnostics,
