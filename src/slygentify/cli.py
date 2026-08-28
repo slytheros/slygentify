@@ -1,5 +1,6 @@
 """Command-line interface for Slygentify."""
 
+import hashlib
 import sys
 from enum import StrEnum
 from pathlib import Path
@@ -24,6 +25,7 @@ from slygentify._doctor_presentation import render_doctor_report
 from slygentify._explorer import run_scan_explorer
 from slygentify._generation import _render_paste_snippet
 from slygentify._presentation import render_scan_report
+from slygentify._provenance import load_state_json
 from slygentify.initialization import (
     InitializationError,
     apply_initialization,
@@ -108,6 +110,27 @@ def _render_manual_paste(markdown: str) -> None:
     typer.echo(_render_paste_snippet(markdown), nl=False)
 
 
+def _render_state_summary(data: bytes) -> None:
+    """Render stable provenance-review facts without dumping all evidence by default."""
+    state = load_state_json(data)
+    typer.echo("--- provenance summary ---")
+    typer.echo(
+        f"state-v{state.schema_version}: {len(data)} bytes; sha256: "
+        f"{hashlib.sha256(data).hexdigest()}"
+    )
+    typer.echo(
+        f"inputs: {len(state.inputs)}; completion: {state.completion}; "
+        f"skipped scopes: {len(state.skipped_scopes)}"
+    )
+
+
+def _render_lifecycle_next() -> None:
+    typer.echo(
+        "Next: run read-only 'slygentify doctor .' after structural, tooling, or workflow "
+        "changes, or in existing CI."
+    )
+
+
 @app.command("init")
 @implements("REQ003", "REQ004", "REQ040", "REQ044", "REQ053")
 def init_command(
@@ -124,25 +147,47 @@ def init_command(
         bool,
         typer.Option("--replace", help="Explicitly replace an existing regular AGENTS.md."),
     ] = False,
+    adopt: Annotated[
+        bool,
+        typer.Option(
+            "--adopt", help="Append and manage a visible Slygentify section in unmanaged AGENTS.md."
+        ),
+    ] = False,
+    show_state: Annotated[
+        bool,
+        typer.Option(
+            "--show-state", help="With --dry-run, print the exact proposed provenance JSON."
+        ),
+    ] = False,
 ) -> None:
     """Create or safely regenerate evidence-backed AGENTS.md guidance."""
     try:
-        plan = plan_initialization(path, replace=replace)
+        if show_state and not dry_run:
+            raise typer.BadParameter("--show-state requires --dry-run")
+        if adopt and replace:
+            raise typer.BadParameter("--adopt cannot be combined with --replace")
+        plan = plan_initialization(path, replace=replace, adopt=adopt)
     except InitializationError as error:
         _render_initialization_error(error)
         raise typer.Exit(code=1) from None
     for warning in plan.warnings:
         typer.echo(f"Warning: {warning}", err=True)
-    manual_paste = _requires_manual_paste(plan.ownership, replace)
+    manual_paste = not adopt and _requires_manual_paste(plan.ownership, replace)
 
     if dry_run:
         typer.echo(f"Ownership: {plan.ownership}")
         typer.echo(f"AGENTS.md: {plan.agents_action}")
         typer.echo(f".slygentify/state.json: {plan.state_action}")
-        typer.echo("\n--- AGENTS.md ---")
-        typer.echo(plan.agents_markdown, nl=False)
-        typer.echo("--- .slygentify/state.json ---")
-        typer.echo(plan.state_json.decode("utf-8"), nl=False)
+        if plan.managed_section is None:
+            typer.echo("\n--- AGENTS.md ---")
+            typer.echo(plan.agents_markdown, nl=False)
+        else:
+            typer.echo("\n--- Slygentify bootstrap guidance ---")
+            typer.echo(plan.managed_section, nl=False)
+        _render_state_summary(plan.state_json)
+        if show_state:
+            typer.echo("--- .slygentify/state.json ---")
+            typer.echo(plan.state_json.decode("utf-8"), nl=False)
         if manual_paste:
             raise typer.Exit(code=4)
         if not plan.can_apply:
@@ -172,8 +217,11 @@ def init_command(
         typer.echo("Repaired .slygentify/state.json")
     elif result.agents_action == "create":
         typer.echo("Created AGENTS.md and .slygentify/state.json")
+    elif adopt:
+        typer.echo("Adopted Slygentify bootstrap guidance and .slygentify/state.json")
     else:
         typer.echo("Regenerated AGENTS.md and .slygentify/state.json")
+    _render_lifecycle_next()
 
 
 @app.command("scan")

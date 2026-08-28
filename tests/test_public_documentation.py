@@ -115,6 +115,7 @@ def test_packaged_schemas_and_documented_examples_are_valid() -> None:
         "scan-projection-v1.schema.json",
         "scan-v1.schema.json",
         "state-v1.schema.json",
+        "state-v2.schema.json",
     }
     assert {path.name for path in schema_paths} == expected
 
@@ -131,7 +132,7 @@ def test_packaged_schemas_and_documented_examples_are_valid() -> None:
     assert load_scan_projection_json((examples / "map.json").read_bytes()).schema_version == 1
     assert load_doctor_json((examples / "doctor.json").read_bytes()).schema_version == 1
     state = json.loads((examples / "state.json").read_text(encoding="utf-8"))
-    Draft202012Validator(schemas["state-v1.schema.json"]).validate(state)
+    Draft202012Validator(schemas["state-v2.schema.json"]).validate(state)
 
     representative_scan = load_scan_json((examples / "representative-scan.json").read_bytes())
     representative_map = load_scan_projection_json(

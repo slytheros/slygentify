@@ -11,7 +11,7 @@ references:
 - keyword: TST039
   path: tests/test_initialization.py
   type: file
-reviewed: dc1gIlEc9DPPUFKkHnqQ5odr2dGR1t8Y5cFWSnApmeE=
+reviewed: JvigMHHzIXiRgfQkyA4iRJfA5m-IsAhElbAWNE3gThw=
 text: |
-  Verify new, managed, stale, unmanaged, edited, missing, invalid, unsafe, replacement,
-  race, and partial-write initialization behavior.
+  Verify new, full-document and section-managed, stale, unmanaged, edited, missing,
+  invalid, unsafe, adoption, replacement, race, and partial-write initialization behavior.

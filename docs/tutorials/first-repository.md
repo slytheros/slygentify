@@ -116,7 +116,8 @@ canonical document.
 
 ### 3. Review initialization without writing
 
-Dry-run prints the exact proposed `AGENTS.md` and ownership state without creating them:
+Dry-run prints proposed `AGENTS.md`, ownership state, and a concise provenance summary
+without creating files; add `--show-state` to inspect exact state JSON:
 
 ```console
 slygentify init path/to/tutorial-repository --dry-run
@@ -157,6 +158,11 @@ Expected outcome before applying initialization: doctor reports unmanaged guidan
 warning that fresh inspection is partial. Its result is still trustworthy within the
 reported boundary. The [representative doctor JSON](../examples/representative-doctor.json)
 contains the exact canonical result.
+
+After applying managed guidance, rerun `slygentify doctor` after structural, tooling, or
+workflow changes. When it reports drift, review `init --dry-run` before explicit
+regeneration. For an existing human-owned `AGENTS.md`, preview visible-section adoption
+with `slygentify init PATH --adopt --dry-run`.
 
 ## What to do next
 

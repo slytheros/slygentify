@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "producer_version": "1.0.0rc1",
   "effective_limits": [
     {"name": "max_depth", "default": 256, "requested": 256, "effective": 256, "source": "default"},

@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 from typing import cast
 
@@ -59,7 +60,7 @@ def _state() -> StateDocument:
         ),
     )
     return StateDocument(
-        1,
+        2,
         "0.1.0",
         StateConfiguration("slygentify.toml", _digest("configuration")),
         tuple(StateLimit(name, 1, 1, 1, "default") for name in names),
@@ -81,8 +82,29 @@ def test_state_round_trip_is_canonical_and_schema_is_packaged() -> None:
     assert load_state_json(data) == state
     assert dump_state_json(load_state_json(data)) == data
     schema = state_json_schema()
-    assert schema["$id"] == "schemas/state-v1.schema.json"
+    assert schema["$id"] == "schemas/state-v2.schema.json"
     assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
+
+
+@pytest.mark.verifies("TST036")
+def test_legacy_v1_state_remains_readable() -> None:
+    state = _state()
+    legacy = StateDocument(
+        1,
+        state.producer_version,
+        state.configuration,
+        state.effective_limits,
+        state.inputs,
+        state.derivations,
+        state.artifacts,
+        state.completion,
+        state.skipped_scopes,
+    )
+
+    loaded = load_state_json(dump_state_json(legacy))
+
+    assert loaded.schema_version == 1
+    assert loaded.artifacts[0].ownership == "document"
 
 
 @pytest.mark.verifies("TST036")
@@ -114,9 +136,31 @@ def test_state_reader_ignores_unknown_same_major_fields_and_rejects_bad_referenc
 
 
 @pytest.mark.verifies("TST036")
+def test_state_v2_artifact_ownership_is_validated() -> None:
+    document = json.loads(dump_state_json(_state()))
+    document["artifacts"][0].pop("location")
+    with pytest.raises(StateError):
+        load_state_json(json.dumps(document))
+
+    document = json.loads(dump_state_json(_state()))
+    document["artifacts"][0]["ownership"] = "unsupported"
+    with pytest.raises(StateError):
+        load_state_json(json.dumps(document))
+
+    with pytest.raises(StateError, match="schema version"):
+        dump_state_json(
+            replace(
+                _state(),
+                schema_version=1,
+                artifacts=(replace(_state().artifacts[0], ownership="section"),),
+            )
+        )
+
+
+@pytest.mark.verifies("TST036")
 def test_state_loader_rejects_version_order_digest_and_path_violations() -> None:
     document = json.loads(dump_state_json(_state()))
-    document["schema_version"] = 2
+    document["schema_version"] = 3
     with pytest.raises(StateError, match="schema version"):
         load_state_json(json.dumps(document))
 

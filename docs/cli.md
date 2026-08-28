@@ -12,19 +12,22 @@ root. Command discovery and help are available with `slygentify --help` and
 
 ```console
 slygentify init path/to/repository --dry-run
+slygentify init path/to/repository --adopt --dry-run
 slygentify init path/to/repository
 slygentify init path/to/repository --replace
 ```
 
-Use `--dry-run` first. It prints the exact proposed artifact bytes and performs no
-writes. Without `--replace`, initialization applies only to a new target, unchanged
+Use `--dry-run` first. It prints the complete guidance or visible managed section plus a
+provenance summary and performs no writes; add `--show-state` to print exact state JSON.
+Without `--replace`, initialization applies only to a new target, unchanged
 managed guidance, or a recoverable missing sidecar. For an unmanaged or human-edited
 safe regular `AGENTS.md`, ordinary init preserves the file and prints a deterministic,
 paste-ready Slygentify section; it exits 4 to identify the required manual incorporation.
 The section does not include a document-level title or managed-artifact boilerplate, and
 this path does not create provenance state. Dry-run still prints the full exact artifact
-review and exits 4. Missing managed, malformed, and unsafe states fail closed with a
-diagnostic and recovery.
+review and exits 4. `--adopt` is the explicit alternative for an unmanaged regular file:
+it appends a visible marked Slygentify section, preserves surrounding text, and records
+section ownership. Missing managed, malformed, and unsafe states fail closed.
 
 `--replace` may discard an existing regular `AGENTS.md`; it does not create a backup or
 merge user text and never authorizes replacing a symbolic link, directory, or unsafe

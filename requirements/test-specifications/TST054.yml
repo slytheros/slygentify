@@ -11,10 +11,11 @@ references:
 - keyword: TST054
   path: tests/test_cli.py
   type: file
-reviewed: 538VdDGVX2QgE7OM6HTVoBKyxVinnazrQyQy8azhdEg=
+reviewed: UDvwv7IqWXDeF2AnjwC0sUc3eGBw-SBhoaVrbDHfq0Y=
 text: |
   Verify that unmanaged and human-edited safe regular AGENTS.md files remain unchanged,
   ordinary init emits deterministic paste-ready guidance to standard output without an
-  error diagnostic and exits 4, and dry-run retains exact proposed artifact review with
-  exit 4. Verify replacement and protected unsafe or malformed states retain their
-  existing behavior.
+  error diagnostic and exits 4. Verify explicit adoption appends and tracks only a visible
+  section, preserves surrounding edits, never echoes surrounding content during review,
+  and refuses edited or malformed sections. Verify replacement and protected unsafe or
+  malformed states retain their existing behavior.

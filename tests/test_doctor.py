@@ -10,6 +10,7 @@ import pytest
 import slygentify._doctor as doctor
 from slygentify import apply_initialization, plan_initialization
 from slygentify._configuration import load_configuration
+from slygentify._managed_section import SECTION_END
 from slygentify._provenance import (
     StateInput,
     dump_state_json,
@@ -167,6 +168,54 @@ def test_unmanaged_guidance_is_informational_without_writes(tmp_path: Path) -> N
     assert result.diagnostics[0].classification == "unknown"
     assert (root / "AGENTS.md").read_bytes() == before
     assert not (root / ".slygentify").exists()
+
+
+@pytest.mark.verifies("TST047")
+def test_doctor_checks_managed_section_without_penalizing_surrounding_edits(tmp_path: Path) -> None:
+    root = _root(tmp_path)
+    agents = root / "AGENTS.md"
+    agents.write_text("human guidance\n", encoding="utf-8")
+    apply_initialization(plan_initialization(root, adopt=True))
+
+    agents.write_bytes(agents.read_bytes() + b"\nMore human guidance.\n")
+    assert doctor.doctor_repository(root).diagnostics == ()
+
+    agents.write_bytes(agents.read_bytes().replace(SECTION_END, b""))
+    assert _codes(doctor.doctor_repository(root)) == {"doctor.artifact.missing"}
+
+
+@pytest.mark.verifies("TST047")
+def test_doctor_reports_section_staleness_divergence_and_state_staleness(tmp_path: Path) -> None:
+    root = _root(tmp_path)
+    agents = root / "AGENTS.md"
+    agents.write_text("human guidance\n", encoding="utf-8")
+    apply_initialization(plan_initialization(root, adopt=True))
+
+    (root / "package.json").write_text('{"name": "changed"}\n', encoding="utf-8")
+    assert "doctor.artifact.stale" in _codes(doctor.doctor_repository(root))
+    apply_initialization(plan_initialization(root))
+
+    agents.write_bytes(agents.read_bytes().replace(b"## Safety", b"## Edited safety", 1))
+    assert _codes(doctor.doctor_repository(root)) == {"doctor.artifact.diverged"}
+
+    agents.write_bytes(agents.read_bytes().replace(b"## Edited safety", b"## Safety", 1))
+    state_target = root / ".slygentify" / "state.json"
+    state = load_state_json(state_target.read_bytes())
+    stale = replace(
+        state,
+        artifacts=(replace(state.artifacts[0], sha256="0" * 64),),
+    )
+    state_target.write_bytes(dump_state_json(stale))
+    assert _codes(doctor.doctor_repository(root)) == {"doctor.state.stale"}
+
+
+@pytest.mark.verifies("TST047")
+def test_doctor_rejects_oversized_managed_section_input(tmp_path: Path) -> None:
+    root = _root(tmp_path)
+    target = root / "AGENTS.md"
+    target.write_bytes(b"x" * (doctor._MAX_STATE_BYTES + 1))
+
+    assert doctor._safe_managed_section(root) is None
 
 
 @pytest.mark.verifies("TST047")

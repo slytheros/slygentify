@@ -14,6 +14,14 @@ import pytest
 import slygentify.initialization as initialization
 from slygentify import InitializationError, apply_initialization, plan_initialization
 from slygentify._generation import _render_paste_snippet, generate_agents_document
+from slygentify._managed_section import (
+    SECTION_BEGIN,
+    SECTION_END,
+    ManagedSectionError,
+    append_managed_section,
+    extract_managed_section,
+    replace_managed_section,
+)
 from slygentify._provenance import (
     Artifact,
     StateDocument,
@@ -46,6 +54,8 @@ def test_generator_is_deterministic_safe_and_explicit_about_partial_results() ->
     assert first == second
     assert "## How to use Slygentify" in first.markdown
     assert "## Bootstrap component index" in first.markdown
+    assert "## Maintenance" in first.markdown
+    assert "slygentify doctor ." in first.markdown
     assert "## Safety" in first.markdown
     assert "partial scan" in first.markdown
     assert "Cargo.toml" in first.markdown
@@ -71,6 +81,19 @@ def test_paste_snippet_is_deterministic_and_removes_document_only_content() -> N
     assert "managed-artifact lifecycle" not in snippet
     with pytest.raises(ValueError, match="unexpected document preamble"):
         _render_paste_snippet("not generated guidance\n")
+
+
+@pytest.mark.verifies("TST039")
+def test_managed_section_helpers_reject_malformed_or_changed_content() -> None:
+    section = SECTION_BEGIN + b"managed\n" + SECTION_END
+
+    assert append_managed_section(b"", section) == section
+    with pytest.raises(ManagedSectionError, match="missing or duplicated"):
+        extract_managed_section(SECTION_BEGIN + SECTION_BEGIN + SECTION_END)
+    with pytest.raises(ManagedSectionError, match="malformed"):
+        extract_managed_section(SECTION_END + SECTION_BEGIN)
+    with pytest.raises(ManagedSectionError, match="changed"):
+        replace_managed_section(section, "0" * 64, section)
 
 
 @pytest.mark.verifies("TST038", "TST044")
@@ -194,6 +217,24 @@ def test_plan_and_apply_create_clean_and_invalid_state(tmp_path: Path) -> None:
     assert clean.state_action == "no_change"
     assert apply_initialization(clean).changed_locations == ()
 
+    legacy_state = StateDocument(
+        1,
+        state.producer_version,
+        state.configuration,
+        state.effective_limits,
+        state.inputs,
+        state.derivations,
+        state.artifacts,
+        state.completion,
+        state.skipped_scopes,
+    )
+    (root / ".slygentify" / "state.json").write_bytes(dump_state_json(legacy_state))
+    upgraded = plan_initialization(root)
+    assert upgraded.ownership == "clean-managed"
+    assert upgraded.agents_action == "no_change"
+    assert upgraded.state_action == "replace"
+    assert apply_initialization(upgraded).changed_locations == (".slygentify/state.json",)
+
     (root / ".slygentify" / "state.json").write_text("{}", encoding="utf-8")
     invalid = plan_initialization(root)
     assert invalid.ownership == "invalid-state"
@@ -232,7 +273,79 @@ def test_unmanaged_edited_missing_and_replace_lifecycle(tmp_path: Path) -> None:
     assert not edited.can_apply
     assert plan_initialization(root, replace=True).can_apply
 
+
+@pytest.mark.verifies("TST039")
+def test_adopt_and_replace_are_mutually_exclusive_in_planning(tmp_path: Path) -> None:
+    with pytest.raises(InitializationError, match="cannot be combined"):
+        plan_initialization(_repository(tmp_path), adopt=True, replace=True)
+
+
+@pytest.mark.verifies("TST039", "TST054")
+def test_adopted_section_preserves_surrounding_guidance_and_rejects_section_edits(
+    tmp_path: Path,
+) -> None:
+    root = _repository(tmp_path)
+    agents = root / "AGENTS.md"
+    agents.write_bytes(b"# Team guidance\n\nKeep this human-owned text.\n")
+
+    plan = plan_initialization(root, adopt=True)
+    assert plan.ownership == "unmanaged"
+    assert plan.can_apply
+    assert plan.managed_section is not None
+    assert "human-owned" not in plan.managed_section
+    assert plan.agents_markdown.encode("utf-8").startswith(agents.read_bytes())
+    assert apply_initialization(plan).changed_locations == ("AGENTS.md", ".slygentify/state.json")
+
+    state = load_state_json((root / ".slygentify" / "state.json").read_bytes())
+    assert state.schema_version == 2
+    assert state.artifacts[0].ownership == "section"
+    original = agents.read_bytes()
+    agents.write_bytes(original + b"\nHuman note after adoption.\n")
+    unchanged = plan_initialization(root)
+    assert unchanged.ownership == "clean-managed"
+    assert unchanged.agents_action == "no_change"
+
+    (root / "package.json").write_text('{"name":"web"}\n', encoding="utf-8")
+    refreshed = plan_initialization(root)
+    assert refreshed.can_apply
+    assert refreshed.agents_action == "replace"
+    apply_initialization(refreshed)
+    assert agents.read_bytes().endswith(b"\nHuman note after adoption.\n")
+
+    edited = agents.read_bytes().replace(b"## Safety", b"## Human safety", 1)
+    agents.write_bytes(edited)
+    assert plan_initialization(root).ownership == "human-edited"
+    agents.write_bytes(edited.replace(SECTION_END, b""))
+    assert plan_initialization(root).ownership == "missing-managed-artifact"
+
     state_document = load_state_json((root / ".slygentify" / "state.json").read_bytes())
+    section_stale = StateDocument(
+        state_document.schema_version,
+        state_document.producer_version,
+        state_document.configuration,
+        state_document.effective_limits,
+        state_document.inputs,
+        state_document.derivations,
+        (
+            Artifact(
+                "AGENTS.md",
+                "0" * 64,
+                state_document.artifacts[0].evidence_ids,
+                "section",
+            ),
+        ),
+        state_document.completion,
+        state_document.skipped_scopes,
+    )
+    assert refreshed.managed_section is not None
+    (root / "AGENTS.md").write_bytes(
+        b"# Team guidance\n\n"
+        + refreshed.managed_section.encode("utf-8")
+        + b"\nHuman note after adoption.\n"
+    )
+    (root / ".slygentify" / "state.json").write_bytes(dump_state_json(section_stale))
+    assert plan_initialization(root).ownership == "recoverable-state"
+
     stale = StateDocument(
         state_document.schema_version,
         state_document.producer_version,
@@ -244,10 +357,11 @@ def test_unmanaged_edited_missing_and_replace_lifecycle(tmp_path: Path) -> None:
         state_document.completion,
         state_document.skipped_scopes,
     )
-    (root / "AGENTS.md").write_bytes(
-        plan_initialization(root, replace=True).agents_markdown.encode("utf-8")
-    )
-    (root / ".slygentify" / "state.json").write_bytes(dump_state_json(stale))
+    state_target = root / ".slygentify" / "state.json"
+    state_target.unlink()
+    replacement = plan_initialization(root, replace=True)
+    (root / "AGENTS.md").write_bytes(replacement.agents_markdown.encode("utf-8"))
+    state_target.write_bytes(dump_state_json(stale))
     recoverable = plan_initialization(root)
     assert recoverable.ownership == "recoverable-state"
 

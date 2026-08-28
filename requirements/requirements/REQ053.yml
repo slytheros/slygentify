@@ -10,11 +10,13 @@ references:
 - keyword: REQ053
   path: src/slygentify/cli.py
   type: file
-reviewed: BNynkLUA17k9T74nw9-y5SbFnl7YYP7tHjP_jMQMhzc=
+reviewed: ex6gxxVc_iov-AshPJcyWVejCE6FuvHysFeU_nEECPQ=
 text: |
   For an unmanaged or human-edited safe regular root AGENTS.md without --replace,
   Slygentify init shall preserve the file, write deterministic paste-ready Slygentify
   guidance to standard output without an error diagnostic, and exit 4 to identify manual
   incorporation as required. The paste guidance shall not contain the generated document
-  title or managed-artifact boilerplate. A dry-run shall retain its exact-artifact review
-  output and exit 4 for the same ownership states.
+  title or managed-artifact boilerplate. A dry-run shall retain its review output and exit
+  4 for the same ownership states. For an unmanaged file without provenance, --adopt shall
+  append and later manage only one visible marked section without reproducing surrounding
+  human content during review.
