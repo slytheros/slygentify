@@ -4,7 +4,7 @@ header: |
   Diagnostic quality and presentation tests
 level: 1.47
 links:
-- REQ046: MdJQv_89Gao0JlvI7fWwakeg5TUSZN9uRkpPPILl13I=
+- REQ046: clASir0dXUVWCOTfjOE_OurS_Tc7LLZ3qerIyknh6f8=
 normative: true
 ref: ''
 references:
@@ -14,7 +14,7 @@ references:
 - keyword: TST046
   path: tests/test_mixed_composition.py
   type: file
-reviewed: EVE40UGIUjJP1P0EgshSamMojvpmaYqJYrPj636hOYs=
+reviewed: WyUEaiO9sfEY2Oqk9MAh9QJtaVc6xR5LBXeViJQKV5o=
 text: |
   Verify explicit and deterministic problem/effect/recovery composition across init,
   scan, map, and doctor result diagnostics, operational failures, refusals, and warnings;

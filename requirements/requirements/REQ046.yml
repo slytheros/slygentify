@@ -10,7 +10,7 @@ references:
 - keyword: REQ046
   path: src/slygentify/_scan/contracts.py
   type: file
-reviewed: MdJQv_89Gao0JlvI7fWwakeg5TUSZN9uRkpPPILl13I=
+reviewed: clASir0dXUVWCOTfjOE_OurS_Tc7LLZ3qerIyknh6f8=
 text: |
   Every Slygentify-authored result diagnostic, operational error, refusal, and warning
   shall identify a stable code and safe target, distinguish the observed problem from its
