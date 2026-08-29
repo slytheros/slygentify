@@ -6,6 +6,8 @@ major versions are independent compatibility surfaces.
 
 ## Unreleased
 
+## [1.0.0rc1] - 2026-08-29
+
 - Add first-class state-v1 upgrades and bounded invalid-state rebuilds to `init`, using
   visible markers as a section-only recovery boundary while preserving surrounding text.
 - Add explicit initialization recovery classifications, adoption and replacement
@@ -22,9 +24,8 @@ major versions are independent compatibility surfaces.
   every canonical record.
 - Remove raw parser detail from diagnostics and make supported recovery guidance
   condition-specific, including intentional exclusion where appropriate.
-
-## [1.0.0rc1] - 2026-08-27
-
+- Make acceptance evidence deterministic across repeated facts and platform newlines,
+  and emit unambiguous locators for TOML keys containing syntax-significant characters.
 - Add reproducible, human-gated PyPI and TestPyPI release workflows with provenance,
   twelve-context installation verification, fail-closed partial recovery, and a public
   maintainer runbook.
