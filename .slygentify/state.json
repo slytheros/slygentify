@@ -1739,6 +1739,12 @@
       "ownership": "section"
     }
   ],
-  "completion": "partial",
-  "skipped_scopes": []
+  "completion": "complete",
+  "skipped_scopes": [
+    {
+      "scope": "docs/examples/tutorial-repository/packages/broken/package.json",
+      "reason": "configuration",
+      "omitted_scope": "docs/examples/tutorial-repository/packages/broken/package.json"
+    }
+  ]
 }
