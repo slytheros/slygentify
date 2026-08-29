@@ -121,13 +121,18 @@ readable. Scan and map do not read or write it; a fresh scan remains authoritati
 
 When a whole-document digest matches a regular `AGENTS.md`, init may regenerate it. An
 adopted visible section records its own digest, so later updates preserve human changes
-outside the fixed markers and refuse a changed or malformed section. Missing, unmatched,
-malformed, or unsafe state is protected by default. `--dry-run` displays generated
-guidance plus a provenance summary; `--show-state` displays exact state JSON. `--replace`
-may discard an existing regular `AGENTS.md` but never a symbolic link, directory, or
-malformed state. Writes are atomic, guidance first and state second.
+outside the fixed markers and refuse a changed or malformed section while state is valid.
+If bounded readable state is invalid, exactly one well-formed marker pair independently
+owns only its section; init may refresh it and rebuild v2 state without changing
+surrounding bytes. Exact fresh whole-document content and an absent artifact are also
+recoverable. `--dry-run` displays generated guidance, artifact actions, the state-recovery
+classification, and a provenance summary; `--show-state` displays exact state JSON.
+`--replace` may discard ambiguous regular `AGENTS.md` content but never a symbolic link,
+directory, unbounded state, or newer schema. Writes are atomic, guidance first and state
+second, and invalid state is replaced without a backup or content disclosure.
 
 For an unmanaged or human-edited safe regular `AGENTS.md`, ordinary init instead prints
 a deterministic paste-ready section and exits 4. `init --adopt` is an explicit, safe
-alternative only for unmanaged guidance without provenance: it appends a marked visible
-section and writes v2 state, without echoing surrounding user content during review.
+alternative for unmanaged guidance without valid provenance: it appends a marked visible
+section and writes or rebuilds v2 state, without echoing surrounding user content during
+review.

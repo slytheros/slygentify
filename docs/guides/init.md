@@ -19,28 +19,38 @@ to print exact state JSON. Init has no JSON output mode.
 slygentify init path/to/repository
 ```
 
-Ordinary application creates new guidance, regenerates unchanged managed guidance, or
-repairs a recoverable missing sidecar. When an unmanaged or human-edited safe regular
+Ordinary application creates new guidance, regenerates unchanged managed guidance,
+repairs a recoverable missing sidecar, or rebuilds bounded invalid state when ownership
+is independently safe. When an unmanaged or human-edited safe regular
 `AGENTS.md` exists, ordinary init preserves it and prints a paste-ready Slygentify
 section for manual incorporation instead of replacing it. This result exits 4 and does
 not create `.slygentify/state.json`. To retain existing human guidance while enabling
 maintenance, review and apply `slygentify init PATH --adopt --dry-run` then
 `slygentify init PATH --adopt`; it appends one visible marked section and manages only
-that section. Dry-run never echoes surrounding human text. Missing managed, malformed,
-and unsafe targets fail closed.
+that section. With bounded invalid state, `--adopt` can perform the same append and state
+rebuild when no markers exist. Dry-run never echoes surrounding human text.
 
 `--replace` may discard an existing regular `AGENTS.md`. It creates no backup and does
-not merge text. It never authorizes replacing a symbolic link, directory, or malformed
-state.
+not merge text. It never authorizes replacing a symbolic link, directory, oversized or
+unreadable state, or a newer state schema.
 
 ## Invalid provenance state
 
 `.slygentify/state.json` is Slygentify's generated ownership and provenance record for
-`AGENTS.md`. If init reports that it is invalid, it leaves both artifacts unchanged and
-does not let `--replace` bypass that protection. First upgrade to the latest reviewed
-build and rerun `slygentify init PATH --dry-run`. If it still fails, retain the sidecar
-by renaming it to a new, non-existing backup name, then rerun the dry-run and apply only
-an expected safe ownership state.
+`AGENTS.md`. Ordinary init automatically rebuilds bounded readable invalid state when
+there is exactly one well-formed managed section, no artifact, or whole-document bytes
+that equal fresh generation. Section recovery replaces everything inside the markers and
+preserves every surrounding byte. Keep durable human edits outside the markers.
+
+For unmanaged guidance, use `--adopt --dry-run` to append a managed section and rebuild
+state, or use `--replace --dry-run` only when the whole document may be discarded.
+Malformed or duplicate markers require explicit whole-document replacement. A newer
+state schema is never downgraded, even under `--replace`; install a compatible reviewed
+build instead.
+
+Oversized or unreadable state cannot receive digest-based revalidation. Correct its
+permissions or retain it by renaming it to a new, non-existing backup name, then rerun
+the dry-run. Unsafe filesystem entries always require manual correction.
 
 On POSIX shells, first confirm the backup is absent, then rename:
 
@@ -68,8 +78,9 @@ if plan.can_apply:
     print(result.changed_locations)
 ```
 
-The plan contains the exact artifact bytes. Application revalidates it and reports exact
-changed locations if guidance succeeds but the sidecar write fails.
+The plan contains the exact artifact bytes, `state_recovery`, and source digests.
+Application revalidates it and reports exact changed locations if guidance succeeds but
+the sidecar write fails.
 
 ## Generated state JSON
 

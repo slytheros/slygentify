@@ -17,6 +17,7 @@ text: |
   guidance to standard output without an error diagnostic, and exit 4 to identify manual
   incorporation as required. The paste guidance shall not contain the generated document
   title or managed-artifact boilerplate. A dry-run shall retain its review output and exit
-  4 for the same ownership states. For an unmanaged file without provenance, --adopt shall
-  append and later manage only one visible marked section without reproducing surrounding
-  human content during review.
+  4 for the same ownership states. For an unmanaged file without valid provenance,
+  --adopt shall append and later manage only one visible marked section, rebuild any
+  bounded readable invalid sidecar, and never reproduce surrounding human content during
+  review.

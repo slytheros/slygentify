@@ -60,12 +60,17 @@ Missing managed, malformed, and unsafe targets still fail closed. Do not use `--
 as routine recovery: it can discard a regular `AGENTS.md`, creates no backup, and never
 permits unsafe entries.
 
-When `.slygentify/state.json` is malformed, unsupported, oversized, unreadable, or an
-unsafe filesystem entry, init cannot validate ownership of `AGENTS.md`. Upgrade and
-retry `slygentify init PATH --dry-run` first. If a current build still rejects it, rename
-the sidecar to a new non-existing backup name; do not delete or overwrite it. Review the
-next dry-run and apply only if it reports a recoverable or otherwise expected safe
-ownership state. `--replace` never overrides invalid-state protection.
+When `.slygentify/state.json` is bounded and readable but invalid, init can rebuild it
+automatically if one well-formed marker pair, absent guidance, or exact fresh generated
+bytes independently establish ownership. `--adopt` preserves unmanaged guidance while
+adding a managed section; `--replace` is the explicit fallback for ambiguous regular
+whole-document content or malformed markers. Invalid bytes are replaced without a
+backup and are never printed.
+
+A newer state schema is never downgraded, including under `--replace`; install a
+compatible reviewed build. Oversized or unreadable state must be made readable or moved
+to a new collision-safe backup name before retrying. Symbolic links, directories, and
+other unsafe entries require manual correction and are never replaced.
 
 If you intentionally want to replace a regular file, first retain the content you need,
 review the dry-run with `--replace`, then choose the explicit apply command. See the

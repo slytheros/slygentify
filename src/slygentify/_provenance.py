@@ -221,10 +221,16 @@ def _document(value: object) -> StateDocument:
         "skipped_scopes",
     }
     schema_version = item.get("schema_version")
-    if not required <= item.keys() or schema_version not in {1, 2}:
+    if (
+        isinstance(schema_version, int)
+        and not isinstance(schema_version, bool)
+        and schema_version > 2
+    ):
         raise _error(
             "provenance state schema version is unsupported", category="state.unsupported-schema"
         )
+    if not required <= item.keys() or schema_version not in {1, 2}:
+        raise _error()
     if isinstance(schema_version, bool):  # pragma: no cover - equality check above rejects bool
         raise _error()
     configuration: StateConfiguration | None = None
@@ -631,8 +637,27 @@ def _identity(path: Path) -> tuple[int, int, int]:
     return metadata.st_dev, metadata.st_ino, metadata.st_size
 
 
-@implements("REQ037")
-def plan_state_write(root: Path, state: StateDocument) -> StateWritePlan:
+def read_state_bytes(path: Path) -> bytes:
+    """Read one bounded safe regular state entry without following links."""
+
+    try:
+        metadata = path.lstat()
+    except OSError as error:
+        raise _error("provenance state is unreadable", category="state.unreadable") from error
+    if not stat.S_ISREG(metadata.st_mode) or stat.S_ISLNK(metadata.st_mode):
+        raise _error("provenance state target is unsafe", category="state.unsafe-entry")
+    if metadata.st_size > _MAX_BYTES:
+        raise _error("provenance state exceeds the supported bound", category="state.too-large")
+    try:
+        return path.read_bytes()
+    except OSError as error:
+        raise _error("provenance state is unreadable", category="state.unreadable") from error
+
+
+@implements("REQ037", "REQ054")
+def plan_state_write(
+    root: Path, state: StateDocument, *, replace_invalid: bool = False
+) -> StateWritePlan:
     """Plan a state create, replacement, or exact no-op without writing."""
     data = dump_state_json(state)
     target = _target(root)
@@ -640,13 +665,20 @@ def plan_state_write(root: Path, state: StateDocument) -> StateWritePlan:
         return StateWritePlan(root, "create", data, None, None)
     identity = _identity(target)
     try:
-        current = target.read_bytes()
+        current = read_state_bytes(target)
         load_state_json(current)
-    except (OSError, StateError) as error:
-        raise _error(
-            "existing provenance state is malformed or unsafe",
-            category=error.category if isinstance(error, StateError) else "state.unreadable",
-        ) from error
+    except StateError as error:
+        protected = {
+            "state.too-large",
+            "state.unreadable",
+            "state.unsafe-entry",
+            "state.unsupported-schema",
+        }
+        if not replace_invalid or error.category in protected:
+            raise _error(
+                "existing provenance state is malformed or unsafe",
+                category=error.category,
+            ) from error
     digest = hashlib.sha256(current).hexdigest()
     return StateWritePlan(
         root, "no_change" if current == data else "replace", data, identity, digest

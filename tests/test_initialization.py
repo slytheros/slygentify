@@ -37,7 +37,7 @@ from tests.scan_samples import sample_result
 
 def _repository(tmp_path: Path) -> Path:
     root = tmp_path / "repository"
-    root.mkdir()
+    root.mkdir(parents=True)
     (root / ".git").mkdir()
     (root / "pyproject.toml").write_text(
         "[project]\nname = 'example'\nrequires-python = '>=3.11'\ndependencies = ['pytest']\n",
@@ -197,7 +197,7 @@ def test_generator_handles_no_primary_components_and_too_small_output() -> None:
         generate_agents_document(no_primary, max_bytes=1)
 
 
-@pytest.mark.verifies("TST002", "TST039")
+@pytest.mark.verifies("TST002", "TST039", "TST055")
 def test_plan_and_apply_create_clean_and_invalid_state(tmp_path: Path) -> None:
     root = _repository(tmp_path)
     created = plan_initialization(root)
@@ -231,14 +231,135 @@ def test_plan_and_apply_create_clean_and_invalid_state(tmp_path: Path) -> None:
     (root / ".slygentify" / "state.json").write_bytes(dump_state_json(legacy_state))
     upgraded = plan_initialization(root)
     assert upgraded.ownership == "clean-managed"
+    assert upgraded.state_recovery == "schema-upgrade"
     assert upgraded.agents_action == "no_change"
     assert upgraded.state_action == "replace"
     assert apply_initialization(upgraded).changed_locations == (".slygentify/state.json",)
 
     (root / ".slygentify" / "state.json").write_text("{}", encoding="utf-8")
     invalid = plan_initialization(root)
-    assert invalid.ownership == "invalid-state"
-    assert not invalid.can_apply
+    assert invalid.ownership == "recoverable-state"
+    assert invalid.state_recovery == "state-rebuild"
+    assert invalid.can_apply
+    assert invalid.agents_action == "no_change"
+    assert apply_initialization(invalid).changed_locations == (".slygentify/state.json",)
+
+
+@pytest.mark.verifies("TST039", "TST055")
+def test_bounded_invalid_state_recovers_marked_section_and_preserves_surrounding_bytes(
+    tmp_path: Path,
+) -> None:
+    root = _repository(tmp_path)
+    agents = root / "AGENTS.md"
+    agents.write_bytes(b"# Human\n\nKeep before.\n")
+    apply_initialization(plan_initialization(root, adopt=True))
+    agents.write_bytes(
+        agents.read_bytes().replace(b"## Safety", b"## Edited managed safety", 1)
+        + b"\nKeep after.\n"
+    )
+    state_target = root / ".slygentify" / "state.json"
+    state_target.write_bytes(b"\xffinvalid-state-sentinel")
+
+    plan = plan_initialization(root)
+
+    assert plan.ownership == "recoverable-state"
+    assert plan.state_recovery == "state-rebuild"
+    assert plan.managed_section is not None
+    assert plan.agents_action == "replace"
+    assert plan.state_action == "replace"
+    assert b"Edited managed safety" not in plan.agents_markdown.encode()
+    result = apply_initialization(plan)
+    assert result.state_recovery == "state-rebuild"
+    assert result.changed_locations == ("AGENTS.md", ".slygentify/state.json")
+    recovered = agents.read_bytes()
+    assert recovered.startswith(b"# Human\n\nKeep before.\n")
+    assert recovered.endswith(b"\nKeep after.\n")
+    assert load_state_json(state_target.read_bytes()).artifacts[0].ownership == "section"
+
+
+@pytest.mark.verifies("TST039", "TST055")
+def test_invalid_state_recovery_creation_adoption_replacement_and_forward_refusal(
+    tmp_path: Path,
+) -> None:
+    absent_root = _repository(tmp_path / "absent")
+    state_target = absent_root / ".slygentify" / "state.json"
+    state_target.parent.mkdir()
+    state_target.write_text("{}", encoding="utf-8")
+    absent = plan_initialization(absent_root)
+    assert absent.can_apply
+    assert absent.agents_action == "create"
+    assert absent.state_recovery == "state-rebuild"
+
+    adopt_root = _repository(tmp_path / "adopt")
+    human = adopt_root / "AGENTS.md"
+    human.write_bytes(b"human-owned\n")
+    adopt_state = adopt_root / ".slygentify" / "state.json"
+    adopt_state.parent.mkdir()
+    adopt_state.write_text("not json", encoding="utf-8")
+    refused = plan_initialization(adopt_root)
+    assert refused.ownership == "invalid-state"
+    assert not refused.can_apply
+    assert "--adopt --dry-run" in refused.diagnostics[0].recovery
+    adopted = plan_initialization(adopt_root, adopt=True)
+    assert adopted.can_apply
+    assert adopted.state_recovery == "state-rebuild"
+    apply_initialization(adopted)
+    assert human.read_bytes().startswith(b"human-owned\n")
+
+    replace_root = _repository(tmp_path / "replace")
+    malformed = replace_root / "AGENTS.md"
+    malformed.write_bytes(b"human\n" + SECTION_BEGIN + b"broken\n")
+    replace_state = replace_root / ".slygentify" / "state.json"
+    replace_state.parent.mkdir()
+    replace_state.write_text("{}", encoding="utf-8")
+    assert not plan_initialization(replace_root).can_apply
+    replacement = plan_initialization(replace_root, replace=True)
+    assert replacement.can_apply
+    assert replacement.managed_section is None
+    assert replacement.state_recovery == "state-rebuild"
+
+    future_root = _repository(tmp_path / "future")
+    future_state = future_root / ".slygentify" / "state.json"
+    future_state.parent.mkdir()
+    future_state.write_text('{"schema_version": 3}', encoding="utf-8")
+    for future in (
+        plan_initialization(future_root),
+        plan_initialization(future_root, replace=True),
+    ):
+        assert not future.can_apply
+        assert future.state_recovery == "none"
+        assert future.diagnostics[0].category == "state.unsupported-schema"
+        assert "does not authorize a downgrade" in future.diagnostics[0].recovery
+
+
+@pytest.mark.verifies("TST039", "TST055")
+def test_unbounded_unreadable_and_changed_invalid_state_are_protected(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _repository(tmp_path)
+    state = root / ".slygentify" / "state.json"
+    state.parent.mkdir()
+    state.write_bytes(b"oversized")
+    monkeypatch.setattr("slygentify._provenance._MAX_BYTES", 4)
+    oversized = plan_initialization(root)
+    assert not oversized.can_apply
+    assert oversized.diagnostics[0].category == "state.too-large"
+    monkeypatch.undo()
+
+    def unreadable(_path: Path) -> bytes:
+        raise StateError(category="state.unreadable")
+
+    monkeypatch.setattr(initialization, "read_state_bytes", unreadable)
+    unreadable_plan = plan_initialization(root)
+    assert not unreadable_plan.can_apply
+    assert unreadable_plan.diagnostics[0].category == "state.unreadable"
+    monkeypatch.undo()
+
+    state.write_text("{}", encoding="utf-8")
+    recovery = plan_initialization(root)
+    state.write_text('{"changed": true}', encoding="utf-8")
+    with pytest.raises(InitializationError, match="changed after planning"):
+        apply_initialization(recovery)
 
 
 @pytest.mark.verifies("TST039")
@@ -511,7 +632,9 @@ def test_remaining_ownership_and_apply_failure_paths(
     )
     calls = 0
 
-    def failing_second_plan(root_arg: Path, state_arg: StateDocument) -> StateWritePlan:
+    def failing_second_plan(
+        root_arg: Path, state_arg: StateDocument, **_kwargs: object
+    ) -> StateWritePlan:
         nonlocal calls
         calls += 1
         if calls == 1:
@@ -526,7 +649,9 @@ def test_remaining_ownership_and_apply_failure_paths(
     clean = plan_initialization(root, replace=True)
     calls = 0
 
-    def mismatched_second_plan(root_arg: Path, state_arg: StateDocument) -> StateWritePlan:
+    def mismatched_second_plan(
+        root_arg: Path, state_arg: StateDocument, **_kwargs: object
+    ) -> StateWritePlan:
         nonlocal calls
         calls += 1
         if calls == 1:

@@ -17,5 +17,5 @@ text: |
   ordinary init emits deterministic paste-ready guidance to standard output without an
   error diagnostic and exits 4. Verify explicit adoption appends and tracks only a visible
   section, preserves surrounding edits, never echoes surrounding content during review,
-  and refuses edited or malformed sections. Verify replacement and protected unsafe or
-  malformed states retain their existing behavior.
+  and refuses edited or malformed sections while valid provenance exists. Verify bounded
+  invalid-state adoption and replacement, and retain protection for unsafe entries.

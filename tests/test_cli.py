@@ -1,5 +1,6 @@
 """Tests for the public command-line interface."""
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,7 @@ from slygentify import (
     scan_repository,
 )
 from slygentify._generation import _render_paste_snippet, generate_agents_document
+from slygentify._provenance import dump_state_json, load_state_json
 from slygentify.cli import app
 
 
@@ -23,7 +25,7 @@ def _repository(tmp_path: Path) -> Path:
     return root
 
 
-@pytest.mark.verifies("TST002", "TST040")
+@pytest.mark.verifies("TST002", "TST040", "TST055")
 def test_init_cli_dry_run_and_creation(tmp_path: Path) -> None:
     root = _repository(tmp_path)
     runner = CliRunner()
@@ -31,6 +33,7 @@ def test_init_cli_dry_run_and_creation(tmp_path: Path) -> None:
     dry_run = runner.invoke(app, ["init", str(root), "--dry-run"])
     assert dry_run.exit_code == 0
     assert "Ownership: new" in dry_run.stdout
+    assert "State recovery: none" in dry_run.stdout
     assert "--- AGENTS.md ---" in dry_run.stdout
     assert "--- provenance summary ---" in dry_run.stdout
     assert '"inputs"' not in dry_run.stdout
@@ -189,8 +192,8 @@ def test_init_cli_prints_deterministic_paste_guidance_for_human_edits(tmp_path: 
     assert agents.read_bytes() == before
 
 
-@pytest.mark.verifies("TST040", "TST054")
-def test_init_cli_retains_diagnostics_for_invalid_state(tmp_path: Path) -> None:
+@pytest.mark.verifies("TST040", "TST054", "TST055")
+def test_init_cli_automatically_rebuilds_bounded_invalid_state(tmp_path: Path) -> None:
     root = _repository(tmp_path)
     state = root / ".slygentify" / "state.json"
     state.parent.mkdir()
@@ -198,17 +201,63 @@ def test_init_cli_retains_diagnostics_for_invalid_state(tmp_path: Path) -> None:
     runner = CliRunner()
 
     dry_run = runner.invoke(app, ["init", str(root), "--dry-run"])
-    ordinary = runner.invoke(app, ["init", str(root)])
 
-    assert dry_run.exit_code == 1
-    assert "initialization.invalid-state" in dry_run.stderr
-    assert ".slygentify/state.json" in dry_run.stderr
-    assert "Category: state.unsupported-schema" in dry_run.stderr
-    assert "Effect: Initialization did not trust, replace, or write" in dry_run.stderr
-    assert "Why no automatic repair:" in dry_run.stderr
-    assert "Upgrade to the latest reviewed Slygentify build" in dry_run.stderr
-    assert ordinary.exit_code == 1
-    assert "initialization.invalid-state" in ordinary.stderr
+    assert dry_run.exit_code == 0
+    assert "Ownership: recoverable-state" in dry_run.stdout
+    assert "State recovery: state-rebuild" in dry_run.stdout
+    assert state.read_text(encoding="utf-8") == '{"schema_version": 2}'
+    ordinary = runner.invoke(app, ["init", str(root)])
+    assert ordinary.exit_code == 0
+    assert "Created AGENTS.md and rebuilt .slygentify/state.json" in ordinary.stdout
+    assert '"artifacts"' in state.read_text(encoding="utf-8")
+
+    state.write_text("{}", encoding="utf-8")
+    rebuilt = runner.invoke(app, ["init", str(root)])
+    assert "Rebuilt .slygentify/state.json from current generated guidance" in rebuilt.stdout
+
+    current = load_state_json(state.read_bytes())
+    state.write_bytes(dump_state_json(replace(current, schema_version=1)))
+    upgraded = runner.invoke(app, ["init", str(root)])
+    assert "Upgraded .slygentify/state.json to state-v2" in upgraded.stdout
+
+
+@pytest.mark.verifies("TST040", "TST054", "TST055")
+def test_init_cli_recovers_section_without_full_document_warning(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    agents = root / "AGENTS.md"
+    agents.write_text("private-human-guidance\n", encoding="utf-8")
+    runner = CliRunner()
+    assert runner.invoke(app, ["init", str(root), "--adopt"]).exit_code == 0
+    state = root / ".slygentify" / "state.json"
+    agents.write_bytes(agents.read_bytes().replace(b"## Safety", b"## Edited safety", 1))
+    state.write_bytes(b"\xffinvalid")
+
+    dry_run = runner.invoke(app, ["init", str(root), "--dry-run"])
+    applied = runner.invoke(app, ["init", str(root), "--replace"])
+
+    assert dry_run.exit_code == 0
+    assert "State recovery: state-rebuild" in dry_run.stdout
+    assert "--- Slygentify bootstrap guidance ---" in dry_run.stdout
+    assert "private-human-guidance" not in dry_run.stdout
+    assert applied.exit_code == 0
+    assert "Recovered Slygentify bootstrap guidance" in applied.stdout
+    assert "replace-without-backup" not in applied.stderr
+    assert agents.read_text(encoding="utf-8").startswith("private-human-guidance\n")
+
+
+@pytest.mark.verifies("TST040", "TST055")
+def test_init_cli_refuses_future_state_with_exact_upgrade_action(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    state = root / ".slygentify" / "state.json"
+    state.parent.mkdir()
+    state.write_text('{"schema_version": 3}', encoding="utf-8")
+
+    result = CliRunner().invoke(app, ["init", str(root), "--replace"])
+
+    assert result.exit_code == 1
+    assert "Category: state.unsupported-schema" in result.stderr
+    assert "does not authorize a downgrade" in result.stderr
+    assert state.read_text(encoding="utf-8") == '{"schema_version": 3}'
 
 
 @pytest.mark.verifies("TST040", "TST046")

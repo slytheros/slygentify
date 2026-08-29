@@ -6,6 +6,10 @@ major versions are independent compatibility surfaces.
 
 ## Unreleased
 
+- Add first-class state-v1 upgrades and bounded invalid-state rebuilds to `init`, using
+  visible markers as a section-only recovery boundary while preserving surrounding text.
+- Add explicit initialization recovery classifications, adoption and replacement
+  fallbacks, forward-schema refusal, and condition-specific doctor remediation.
 - Add explicit `problem`, `limitation`, and `notice` dispositions across scan, map,
   doctor, and initialization diagnostics while keeping schema-major-1 readers compatible.
 - Route scan and explorer diagnostics into Problems & next steps, Limitations &

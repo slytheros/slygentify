@@ -26,8 +26,10 @@ do not advance together automatically.
 
 Deprecated JSON fields remain accepted throughout their schema major. Removal requires
 the next applicable schema major, an explicit reader or migration path, and updated
-guidance. Never edit a canonical document in place without preserving the original for
-recovery and comparison.
+guidance. Never edit a canonical user-owned document in place without preserving the
+original for recovery and comparison. Bounded invalid `.slygentify/state.json` is the
+narrow exception: mutating init may rebuild this deterministic derived artifact without
+a backup after independently establishing the managed-artifact boundary.
 
 ## Upgrade procedure
 
@@ -37,6 +39,10 @@ recovery and comparison.
 4. Validate stored JSON with the new reader and rerun scan or doctor for fresh evidence.
 5. Review an init dry-run before regenerating managed guidance.
 6. Roll forward with a new version if a published release is defective.
+
+Supported legacy state upgrades and safe invalid-state rebuilds occur during `init`; no
+separate migration command is required. An older binary refuses a newer state schema
+rather than downgrading it.
 
 Published versions and filenames are immutable. A defective but intact release is
 normally yanked with a reason, then replaced by a corrected version. Exact pins may still
