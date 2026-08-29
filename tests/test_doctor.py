@@ -327,7 +327,19 @@ def test_invalid_state_remediation_covers_protected_and_malformed_entries(
         root, "state.invalid-structure", "fresh"
     )
 
-    monkeypatch.setattr(doctor, "_safe_digest", lambda *_args: None)
+    unsafe_root = _root(tmp_path / "unsafe-guidance")
+    (unsafe_root / "AGENTS.md").mkdir()
+    unsafe_state = unsafe_root / ".slygentify" / "state.json"
+    unsafe_state.parent.mkdir()
+    unsafe_state.write_text("{}", encoding="utf-8")
+    unsafe_result = doctor.doctor_repository(unsafe_root)
+    unsafe_diagnostic = next(
+        item for item in unsafe_result.diagnostics if item.code == "doctor.state.invalid"
+    )
+    unsafe_recovery = unsafe_diagnostic.remediation or ""
+    assert "unsafe AGENTS.md entry" in unsafe_recovery
+    assert "--adopt" not in unsafe_recovery
+
     original_lstat = Path.lstat
 
     def failing_lstat(path: Path) -> object:
@@ -335,10 +347,36 @@ def test_invalid_state_remediation_covers_protected_and_malformed_entries(
             raise OSError("unreadable")
         return original_lstat(path)
 
-    monkeypatch.setattr(Path, "lstat", failing_lstat)
-    assert "--adopt --dry-run" in doctor._invalid_state_remediation(
-        root, "state.invalid-structure", "fresh"
-    )
+    with monkeypatch.context() as context:
+        context.setattr(Path, "lstat", failing_lstat)
+        unreadable_metadata = doctor._invalid_state_remediation(
+            root, "state.invalid-structure", "fresh"
+        )
+    assert "Make AGENTS.md readable" in unreadable_metadata
+    assert "--adopt" not in unreadable_metadata
+
+    with monkeypatch.context() as context:
+        context.setattr(doctor, "_MAX_STATE_BYTES", 1)
+        oversized_recovery = doctor._invalid_state_remediation(
+            root, "state.invalid-structure", "fresh"
+        )
+    assert "oversized AGENTS.md" in oversized_recovery
+
+    original_read_bytes = Path.read_bytes
+
+    def failing_read_bytes(path: Path) -> bytes:
+        if path == agents:
+            raise OSError("unreadable")
+        return original_read_bytes(path)
+
+    with monkeypatch.context() as context:
+        context.setattr(doctor, "_safe_digest", lambda *_args: None)
+        context.setattr(Path, "read_bytes", failing_read_bytes)
+        unreadable_content = doctor._invalid_state_remediation(
+            root, "state.invalid-structure", "fresh"
+        )
+    assert "Make AGENTS.md readable" in unreadable_content
+    assert "--adopt" not in unreadable_content
 
 
 @pytest.mark.verifies("TST047", "TST046")

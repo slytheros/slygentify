@@ -241,6 +241,23 @@ def _invalid_state_remediation(root: Path, category: str, fresh_guidance: str) -
             "Run slygentify init . --dry-run; ordinary init can create guidance and rebuild "
             "canonical state."
         )
+    try:
+        metadata = target.lstat()
+    except OSError:
+        return (
+            "Make AGENTS.md readable or move it to a new collision-safe backup name, then "
+            "rerun slygentify init . --dry-run."
+        )
+    if not stat.S_ISREG(metadata.st_mode) or stat.S_ISLNK(metadata.st_mode):
+        return (
+            "Replace the unsafe AGENTS.md entry manually with a safe regular file or move it "
+            "to a new collision-safe backup name, then rerun slygentify init . --dry-run."
+        )
+    if metadata.st_size > _MAX_STATE_BYTES:
+        return (
+            "Move the oversized AGENTS.md to a new collision-safe backup name, then rerun "
+            "slygentify init . --dry-run."
+        )
     fresh_digest = hashlib.sha256(fresh_guidance.encode("utf-8")).hexdigest()
     if _safe_digest(root, AGENTS_FILENAME) == fresh_digest:
         return (
@@ -248,16 +265,12 @@ def _invalid_state_remediation(root: Path, category: str, fresh_guidance: str) -
             "and rebuild canonical state."
         )
     try:
-        metadata = target.lstat()
-        current = (
-            target.read_bytes()
-            if stat.S_ISREG(metadata.st_mode)
-            and not stat.S_ISLNK(metadata.st_mode)
-            and metadata.st_size <= _MAX_STATE_BYTES
-            else b""
-        )
+        current = target.read_bytes()
     except OSError:
-        current = b""
+        return (
+            "Make AGENTS.md readable or move it to a new collision-safe backup name, then "
+            "rerun slygentify init . --dry-run."
+        )
     if SECTION_BEGIN in current or SECTION_END in current:
         return (
             "Review slygentify init . --replace --dry-run, then use --replace to authorize "

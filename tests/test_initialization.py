@@ -278,6 +278,32 @@ def test_bounded_invalid_state_recovers_marked_section_and_preserves_surrounding
 
 
 @pytest.mark.verifies("TST039", "TST055")
+def test_invalid_state_section_recovery_preserves_non_utf8_surrounding_bytes(
+    tmp_path: Path,
+) -> None:
+    root = _repository(tmp_path)
+    agents = root / "AGENTS.md"
+    agents.write_bytes(b"\xffhuman-before\n")
+    apply_initialization(plan_initialization(root, adopt=True))
+    current = agents.read_bytes().replace(b"## Safety", b"## Edited managed safety", 1)
+    agents.write_bytes(current + b"\n\x80human-after")
+    state_target = root / ".slygentify" / "state.json"
+    state_target.write_text("{}", encoding="utf-8")
+
+    plan = plan_initialization(root)
+
+    assert plan.can_apply
+    assert plan.agents_bytes.startswith(b"\xffhuman-before\n")
+    assert plan.agents_bytes.endswith(b"\n\x80human-after")
+    assert b"Edited managed safety" not in plan.agents_bytes
+    assert apply_initialization(plan).changed_locations == (
+        "AGENTS.md",
+        ".slygentify/state.json",
+    )
+    assert agents.read_bytes() == plan.agents_bytes
+
+
+@pytest.mark.verifies("TST039", "TST055")
 def test_invalid_state_recovery_creation_adoption_replacement_and_forward_refusal(
     tmp_path: Path,
 ) -> None:

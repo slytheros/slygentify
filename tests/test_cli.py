@@ -233,7 +233,7 @@ def test_init_cli_recovers_section_without_full_document_warning(tmp_path: Path)
     state.write_bytes(b"\xffinvalid")
 
     dry_run = runner.invoke(app, ["init", str(root), "--dry-run"])
-    applied = runner.invoke(app, ["init", str(root), "--replace"])
+    applied = runner.invoke(app, ["init", str(root), "--adopt"])
 
     assert dry_run.exit_code == 0
     assert "State recovery: state-rebuild" in dry_run.stdout

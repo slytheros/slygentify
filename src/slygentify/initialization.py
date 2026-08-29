@@ -127,6 +127,11 @@ class InitializationPlan:
     agents_source_sha256: str | None = None
     state_source_sha256: str | None = None
 
+    @property
+    def agents_bytes(self) -> bytes:
+        """Return the exact planned AGENTS.md bytes, including opaque surroundings."""
+        return self.agents_markdown.encode("utf-8", errors="surrogateescape")
+
 
 @dataclass(frozen=True, slots=True)
 class InitializationResult:
@@ -503,7 +508,7 @@ def plan_initialization(
         adopt,
         agents_action,
         state_action,
-        agents_data.decode("utf-8"),
+        agents_data.decode("utf-8", errors="surrogateescape"),
         output_section,
         state_data,
         tuple(diagnostics),
@@ -593,7 +598,7 @@ def apply_initialization(plan: InitializationPlan) -> InitializationResult:
         )
     if _write_agents(
         current.repository_root,
-        current.agents_markdown.encode("utf-8"),
+        current.agents_bytes,
         current.agents_action,
         expected_agents,
     ):

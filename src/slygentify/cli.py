@@ -260,9 +260,7 @@ def init_command(
         typer.echo("Rebuilt .slygentify/state.json from current generated guidance")
     elif result.state_recovery == "state-rebuild" and result.agents_action == "create":
         typer.echo("Created AGENTS.md and rebuilt .slygentify/state.json")
-    elif (
-        result.state_recovery == "state-rebuild" and plan.managed_section is not None and not adopt
-    ):
+    elif result.state_recovery == "state-rebuild" and plan.managed_section is not None:
         typer.echo("Recovered Slygentify bootstrap guidance and rebuilt .slygentify/state.json")
     elif result.ownership == "recoverable-state":
         typer.echo("Repaired .slygentify/state.json")

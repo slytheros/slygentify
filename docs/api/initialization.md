@@ -9,6 +9,8 @@ root `AGENTS.md` guidance with its deterministic ownership sidecar.
 `InitializationPlan` without writing. It includes ownership classification,
 applicability, separate actions and exact bytes for `AGENTS.md` and
 `.slygentify/state.json`, and actionable diagnostics.
+Use `agents_bytes` for the exact planned `AGENTS.md` payload; this preserves opaque
+human-owned bytes surrounding a managed section even when they are not valid UTF-8.
 `state_recovery` is `none`, `schema-upgrade`, or `state-rebuild`; the result repeats the
 applied classification. Source digests in the plan ensure that artifact or invalid-state
 changes between planning and application are rejected.
