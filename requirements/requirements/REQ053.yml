@@ -10,7 +10,7 @@ references:
 - keyword: REQ053
   path: src/slygentify/cli.py
   type: file
-reviewed: ex6gxxVc_iov-AshPJcyWVejCE6FuvHysFeU_nEECPQ=
+reviewed: i0oqJcpE1Kd6VZffCdpD-KN5wlgYZgm4Jthxfr_q9L0=
 text: |
   For an unmanaged or human-edited safe regular root AGENTS.md without --replace,
   Slygentify init shall preserve the file, write deterministic paste-ready Slygentify

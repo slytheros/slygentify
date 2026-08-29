@@ -4,14 +4,14 @@ header: |
   Existing guidance paste assistance tests
 level: 1.54
 links:
-- REQ053: ex6gxxVc_iov-AshPJcyWVejCE6FuvHysFeU_nEECPQ=
+- REQ053: i0oqJcpE1Kd6VZffCdpD-KN5wlgYZgm4Jthxfr_q9L0=
 normative: true
 ref: ''
 references:
 - keyword: TST054
   path: tests/test_cli.py
   type: file
-reviewed: UDvwv7IqWXDeF2AnjwC0sUc3eGBw-SBhoaVrbDHfq0Y=
+reviewed: 8LOUx_Z-PstIebnrmC5kSuhphDhpcRX3yjdlr75MYZU=
 text: |
   Verify that unmanaged and human-edited safe regular AGENTS.md files remain unchanged,
   ordinary init emits deterministic paste-ready guidance to standard output without an

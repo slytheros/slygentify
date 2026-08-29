@@ -10,7 +10,7 @@ references:
 - keyword: REQ039
   path: src/slygentify/initialization.py
   type: file
-reviewed: ovSWoYGF7TWyjND1eQmoUO_6ilyrToAYnfz6-dNmBYE=
+reviewed: uMBHFoQgpTJ1qwy7OI--B6wifkSxvpgR0cEWANoOPUc=
 text: |
   Slygentify shall plan and apply root AGENTS.md and provenance-state changes through
   digest-guarded ownership classification, explicit replacement, explicit visible-section
