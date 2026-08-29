@@ -529,8 +529,6 @@ def _write_agents(
     root: Path, data: bytes, action: ArtifactAction, expected_sha256: str | None
 ) -> bool:
     target = root / AGENTS_FILENAME
-    if action == "no_change":
-        return False
     if os.path.lexists(target):
         if not _regular(target):
             raise InitializationError("initialization.concurrent-change", "AGENTS.md became unsafe")
@@ -538,8 +536,10 @@ def _write_agents(
             raise InitializationError(
                 "initialization.concurrent-change", "AGENTS.md changed concurrently"
             )
-    elif action == "replace":
+    elif expected_sha256 is not None or action in {"replace", "no_change"}:
         raise InitializationError("initialization.concurrent-change", "AGENTS.md was removed")
+    if action == "no_change":
+        return False
     descriptor, temporary_name = tempfile.mkstemp(prefix=".agents-", dir=root)
     temporary = Path(temporary_name)
     try:
@@ -580,12 +580,6 @@ def apply_initialization(plan: InitializationPlan) -> InitializationResult:
         )
     changed: list[str] = []
     try:
-        agents_target = current.repository_root / AGENTS_FILENAME
-        expected_agents = (
-            None
-            if not os.path.lexists(agents_target)
-            else hashlib.sha256(agents_target.read_bytes()).hexdigest()
-        )
         state = load_state_json(current.state_json)
         state_plan = plan_state_write(
             current.repository_root,
@@ -604,7 +598,7 @@ def apply_initialization(plan: InitializationPlan) -> InitializationResult:
         current.repository_root,
         current.agents_bytes,
         current.agents_action,
-        expected_agents,
+        current.agents_source_sha256,
     ):
         changed.append(AGENTS_FILENAME)
     try:

@@ -12,7 +12,12 @@ from typing import cast
 import pytest
 
 import slygentify.initialization as initialization
-from slygentify import InitializationError, apply_initialization, plan_initialization
+from slygentify import (
+    InitializationError,
+    InitializationPlan,
+    apply_initialization,
+    plan_initialization,
+)
 from slygentify._generation import _render_paste_snippet, generate_agents_document
 from slygentify._managed_section import (
     SECTION_BEGIN,
@@ -566,6 +571,63 @@ def test_planner_contains_agents_removal_during_source_digest_capture(
     assert plan.ownership == "unsafe-entry"
     assert plan.agents_source_sha256 is None
     assert plan.diagnostics[0].code == "initialization.unsafe-entry"
+
+
+@pytest.mark.verifies("TST039", "TST055")
+def test_apply_rejects_agents_creation_after_replanning(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _repository(tmp_path)
+    state = root / ".slygentify" / "state.json"
+    state.parent.mkdir()
+    state.write_text("{}", encoding="utf-8")
+    plan = plan_initialization(root)
+    agents = root / "AGENTS.md"
+    original_plan_initialization = initialization.plan_initialization
+
+    def create_after_replanning(
+        path: str | os.PathLike[str] = ".", *, replace: bool = False, adopt: bool = False
+    ) -> InitializationPlan:
+        current = original_plan_initialization(path, replace=replace, adopt=adopt)
+        agents.write_bytes(b"concurrent human guidance\n")
+        return current
+
+    monkeypatch.setattr(initialization, "plan_initialization", create_after_replanning)
+
+    with pytest.raises(InitializationError, match="changed concurrently"):
+        apply_initialization(plan)
+
+    assert agents.read_bytes() == b"concurrent human guidance\n"
+    assert state.read_text(encoding="utf-8") == "{}"
+
+
+@pytest.mark.verifies("TST039", "TST055")
+def test_apply_revalidates_agents_digest_for_state_only_recovery(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _repository(tmp_path)
+    apply_initialization(plan_initialization(root))
+    state = root / ".slygentify" / "state.json"
+    state.write_text("{}", encoding="utf-8")
+    plan = plan_initialization(root)
+    assert plan.agents_action == "no_change"
+    agents = root / "AGENTS.md"
+    original_plan_initialization = initialization.plan_initialization
+
+    def edit_after_replanning(
+        path: str | os.PathLike[str] = ".", *, replace: bool = False, adopt: bool = False
+    ) -> InitializationPlan:
+        current = original_plan_initialization(path, replace=replace, adopt=adopt)
+        agents.write_bytes(agents.read_bytes() + b"\nconcurrent human guidance\n")
+        return current
+
+    monkeypatch.setattr(initialization, "plan_initialization", edit_after_replanning)
+
+    with pytest.raises(InitializationError, match="changed concurrently"):
+        apply_initialization(plan)
+
+    assert agents.read_bytes().endswith(b"concurrent human guidance\n")
+    assert state.read_text(encoding="utf-8") == "{}"
 
 
 @pytest.mark.verifies("TST044")
