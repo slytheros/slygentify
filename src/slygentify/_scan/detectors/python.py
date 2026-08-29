@@ -112,7 +112,7 @@ def _toml_key(value: str) -> str:
 
     if _TOML_BARE_KEY.fullmatch(value):
         return value
-    return json.dumps(value, ensure_ascii=False)
+    return json.dumps(value, ensure_ascii=False).replace("\x7f", r"\u007F")
 
 
 def _toml_locator(*segments: str, index: int | None = None) -> str:

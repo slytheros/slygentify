@@ -63,6 +63,7 @@ def _summaries(result: ScanResult, code: str) -> set[str]:
         ("[brackets]", 'project.scripts."[brackets]"'),
         ("back\\slash", 'project.scripts."back\\\\slash"'),
         ("space key", 'project.scripts."space key"'),
+        ("delete\x7fkey", 'project.scripts."delete\\u007Fkey"'),
     ],
 )
 def test_toml_locator_uses_independently_resolvable_dotted_key_syntax(
