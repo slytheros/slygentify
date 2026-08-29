@@ -15,6 +15,9 @@ text: |
   Slygentify shall provide deterministic developer tooling to compare every factual
   component, Verified finding, and Verified relationship emitted for an approved public
   acceptance repository with a human-reviewed expected-fact matrix and its cited source
-  locations. The tooling shall fail closed until the matrix is explicitly reviewed, report
-  unexpected claims, missing facts, and missing cited evidence separately, and calculate
-  the ADR 0002 precision and recall measurements without changing scan runtime behavior.
+  locations. Identical factual claim keys shall be deterministically coalesced with the
+  union of every supporting evidence locator before candidate generation and formal
+  measurement. The tooling shall fail closed until the matrix is explicitly reviewed,
+  report unexpected claims, missing facts, and missing cited evidence separately, and
+  calculate the ADR 0002 precision and recall measurements without changing scan runtime
+  behavior.

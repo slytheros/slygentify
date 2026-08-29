@@ -10,6 +10,8 @@ The companion expected-fact matrix records every factual component, `verified`
 finding, and `verified` relationship. A fact identifies its repository-relative
 subject and the source locations and locators that a human reviewed. It deliberately
 does not store cloned source trees, raw scan documents, local paths, or secret values.
+When multiple scan records express the same factual claim, candidate generation retains
+one claim key with the deterministic union of every supporting evidence locator.
 
 ## Workflow
 
@@ -109,8 +111,10 @@ uv run python -m tools.review_initialization \
 
 Candidate mode fails unless all 20 repositories are present, every `AGENTS.md` is at
 most 4 KiB, their median is at most 2 KiB, and every default root projection is at most
-8 KiB. The matrix records component-index and projection omission counts so capped
-outputs remain visible.
+8 KiB. Generated `AGENTS.md` review artifacts are written as canonical UTF-8/LF bytes;
+the matrix byte counts and SHA-256 digests identify those exact bytes on every platform.
+The matrix records component-index and projection omission counts so capped outputs
+remain visible.
 
 An authorized human reviews every bootstrap-to-map workflow for bootstrap clarity,
 component-index accuracy, map navigation, boundary honesty, safety, and concision. They

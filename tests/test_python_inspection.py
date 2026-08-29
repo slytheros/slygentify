@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import time
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -50,6 +51,74 @@ def _codes(result: ScanResult, collection: str) -> set[str]:
 
 def _summaries(result: ScanResult, code: str) -> set[str]:
     return {item.summary for item in result.findings if item.code == code}
+
+
+@pytest.mark.verifies("TST020")
+@pytest.mark.parametrize(
+    ("key", "expected"),
+    [
+        ("bare-key", "project.scripts.bare-key"),
+        ("py.test", 'project.scripts."py.test"'),
+        ('quote"name', 'project.scripts."quote\\"name"'),
+        ("[brackets]", 'project.scripts."[brackets]"'),
+        ("back\\slash", 'project.scripts."back\\\\slash"'),
+        ("space key", 'project.scripts."space key"'),
+    ],
+)
+def test_toml_locator_uses_independently_resolvable_dotted_key_syntax(
+    key: str, expected: str
+) -> None:
+    locator = private_scan._toml_locator("project", "scripts", key)
+
+    assert locator == expected
+    assert tomllib.loads(f"{locator} = true")["project"]["scripts"][key] is True
+
+
+@pytest.mark.verifies("TST020")
+def test_dynamic_toml_keys_have_unambiguous_locators(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    _write(
+        root,
+        "pyproject.toml",
+        """
+[project]
+name = "locator-fixture"
+
+[project.optional-dependencies]
+"docs.v2" = ["Flask"]
+
+[project.scripts]
+"py.test" = "_pytest.config:_console_main"
+
+[dependency-groups]
+"dev.tools" = ["pytest"]
+
+[tool.poetry.dependencies]
+"Flask.extra" = "*"
+
+[tool.poetry.group."test.group".dependencies]
+"pytest.cov" = "*"
+
+[tool.poetry.scripts]
+"poetry.script" = "package:main"
+""".strip(),
+    )
+
+    result = scan_repository(root)
+    locators = {
+        item.locator
+        for item in result.evidence
+        if item.location == "pyproject.toml" and item.locator is not None
+    }
+
+    assert {
+        'project.optional-dependencies."docs.v2"[0]',
+        'project.scripts."py.test"',
+        'dependency-groups."dev.tools"[0]',
+        'tool.poetry.dependencies."Flask.extra"',
+        'tool.poetry.group."test.group".dependencies."pytest.cov"',
+        'tool.poetry.scripts."poetry.script"',
+    } <= locators
 
 
 @pytest.mark.verifies("TST020", "TST021", "TST022", "TST024")

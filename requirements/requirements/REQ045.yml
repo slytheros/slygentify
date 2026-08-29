@@ -18,10 +18,12 @@ text: |
   Slygentify shall provide deterministic local tooling to regenerate root AGENTS.md and
   default root-map artifacts for all 20 pinned acceptance repositories in disposable
   copies. Candidate evidence shall retain only artifact digests and sanitized metrics in
-  the committed matrix, enforce 4 KiB per AGENTS.md, 2 KiB median AGENTS.md, and 8 KiB
-  per root projection, and require human pass decisions for bootstrap clarity, component-
-  index accuracy, map navigation, boundary honesty, safety, and concision. Formal mode
-  shall reproduce both artifact digests and every metric exactly without mutating the
-  corpus or repository. Corpus snapshots shall require contained standalone Git
+  the committed matrix, bind AGENTS.md hashes and byte counts to the exact canonical
+  UTF-8/LF bytes written for human review on every platform, enforce 4 KiB per AGENTS.md,
+  2 KiB median AGENTS.md, and 8 KiB per root projection, and require human pass decisions
+  for bootstrap clarity, component-index accuracy, map navigation, boundary honesty,
+  safety, and concision. Formal mode shall reproduce both artifact digests and every
+  metric exactly without mutating the corpus or repository. Corpus snapshots shall require
+  contained standalone Git
   checkouts, preserve descendant links without reading their targets, disable Git hooks
   and filesystem monitors, and clean only disposable copies.

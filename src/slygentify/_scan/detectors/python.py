@@ -65,6 +65,7 @@ _PYTHON_TOOLS = {
     "pre-commit": "pre-commit",
 }
 _PYTHON_FRAMEWORKS = frozenset({"fastapi", "flask", "django", "sqlalchemy", "alembic"})
+_TOML_BARE_KEY = re.compile(r"[A-Za-z0-9_-]+")
 _CREDENTIAL_ASSIGNMENT = re.compile(
     r"(?i)(?<![A-Za-z0-9_])"
     r"[A-Za-z0-9_]*(?:token|password|passwd|secret|api[_-]?key)[A-Za-z0-9_]*"
@@ -104,6 +105,21 @@ def _python_evidence(
         "python.inspect.v1",
         semantic_key,
     )
+
+
+def _toml_key(value: str) -> str:
+    """Return one key segment in deterministic TOML dotted-key syntax."""
+
+    if _TOML_BARE_KEY.fullmatch(value):
+        return value
+    return json.dumps(value, ensure_ascii=False)
+
+
+def _toml_locator(*segments: str, index: int | None = None) -> str:
+    """Return an unambiguous TOML dotted-key locator with an optional array index."""
+
+    locator = ".".join(_toml_key(segment) for segment in segments)
+    return f"{locator}[{index}]" if index is not None else locator
 
 
 def _template_path(path: str) -> bool:
@@ -706,7 +722,9 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                                     root,
                                     raw,
                                     path,
-                                    f"project.optional-dependencies.{group}[{index}]",
+                                    _toml_locator(
+                                        "project", "optional-dependencies", group, index=index
+                                    ),
                                     f"extra:{group}",
                                 )
             for table_name in ("scripts", "gui-scripts"):
@@ -717,7 +735,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                             _python_evidence(
                                 "entry-point",
                                 path,
-                                f"project.{table_name}.{name}",
+                                _toml_locator("project", table_name, name),
                                 f"Install-time entry point {name} is declared.",
                                 f"entry-point:{root}:{table_name}:{name}",
                             )
@@ -740,7 +758,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                                 root,
                                 raw,
                                 path,
-                                f"dependency-groups.{group}[{index}]",
+                                _toml_locator("dependency-groups", group, index=index),
                                 f"group:{group}",
                             )
 
@@ -765,7 +783,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                         root,
                         name,
                         path,
-                        f"tool.poetry.dependencies.{name}",
+                        _toml_locator("tool", "poetry", "dependencies", name),
                         "poetry:main",
                     )
             poetry_groups = poetry.get("group")
@@ -780,7 +798,9 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                                 root,
                                 name,
                                 path,
-                                f"tool.poetry.group.{group}.dependencies.{name}",
+                                _toml_locator(
+                                    "tool", "poetry", "group", group, "dependencies", name
+                                ),
                                 f"poetry:{group}",
                             )
             scripts = poetry.get("scripts")
@@ -790,7 +810,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                         _python_evidence(
                             "entry-point",
                             path,
-                            f"tool.poetry.scripts.{name}",
+                            _toml_locator("tool", "poetry", "scripts", name),
                             f"Legacy Poetry entry point {name} is declared.",
                             f"entry-point:{root}:poetry:{name}",
                         )
