@@ -788,6 +788,16 @@ def test_internal_write_and_apply_defensive_paths(
     root = _repository(tmp_path)
     target = root / "AGENTS.md"
     target.write_text("first", encoding="utf-8")
+    with monkeypatch.context() as context:
+        context.setattr(
+            Path,
+            "read_bytes",
+            lambda _path: (_ for _ in ()).throw(OSError("concurrent read failure")),
+        )
+        with pytest.raises(InitializationError, match="became unreadable concurrently"):
+            initialization._write_agents(
+                root, b"first", "no_change", hashlib.sha256(b"first").hexdigest()
+            )
     with pytest.raises(OSError):
         initialization._action(target.parent, b"x")
     with pytest.raises(InitializationError, match="changed concurrently"):

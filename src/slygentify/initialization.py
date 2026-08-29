@@ -565,15 +565,23 @@ def _write_agents(
     root: Path, data: bytes, action: ArtifactAction, expected_sha256: str | None
 ) -> bool:
     target = root / AGENTS_FILENAME
-    if os.path.lexists(target):
-        if not _regular(target):
-            raise InitializationError("initialization.concurrent-change", "AGENTS.md became unsafe")
-        if expected_sha256 != hashlib.sha256(target.read_bytes()).hexdigest():
-            raise InitializationError(
-                "initialization.concurrent-change", "AGENTS.md changed concurrently"
-            )
-    elif expected_sha256 is not None or action in {"replace", "no_change"}:
-        raise InitializationError("initialization.concurrent-change", "AGENTS.md was removed")
+    try:
+        if os.path.lexists(target):
+            if not _regular(target):
+                raise InitializationError(
+                    "initialization.concurrent-change", "AGENTS.md became unsafe"
+                )
+            if expected_sha256 != hashlib.sha256(target.read_bytes()).hexdigest():
+                raise InitializationError(
+                    "initialization.concurrent-change", "AGENTS.md changed concurrently"
+                )
+        elif expected_sha256 is not None or action in {"replace", "no_change"}:
+            raise InitializationError("initialization.concurrent-change", "AGENTS.md was removed")
+    except OSError as error:
+        raise InitializationError(
+            "initialization.concurrent-change",
+            "AGENTS.md changed or became unreadable concurrently",
+        ) from error
     if action == "no_change":
         return False
     descriptor, temporary_name = tempfile.mkstemp(prefix=".agents-", dir=root)
