@@ -3,3 +3,9 @@
 *.md text eol=lf
 *.py text eol=lf
 slygentify.toml text eol=lf
+.python-version text eol=lf
+pyproject.toml text eol=lf
+docs/examples/tutorial-repository/pyproject.toml text eol=lf
+docs/examples/tutorial-repository/examples/demo/package.json text eol=lf
+docs/examples/tutorial-repository/packages/web/package.json text eol=lf
+docs/examples/tutorial-repository/packages/web/tsconfig.json text eol=lf
