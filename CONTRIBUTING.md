@@ -57,6 +57,7 @@ uv run ruff check .
 uv run ruff format --check .
 uv run mypy
 uv run doorstop
+uv run --locked slygentify doctor .
 uv run --locked mkdocs build --strict
 uv run pre-commit run --all-files
 uv --preview-features audit-command audit --locked
