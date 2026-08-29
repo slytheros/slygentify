@@ -1762,6 +1762,11 @@
       "omitted_scope": ".venv"
     },
     {
+      "scope": "dist",
+      "reason": "gitignore",
+      "omitted_scope": "dist"
+    },
+    {
       "scope": "site",
       "reason": "gitignore",
       "omitted_scope": "site"
