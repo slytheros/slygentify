@@ -3,7 +3,7 @@
   "producer_version": "1.0.0rc1",
   "configuration": {
     "location": "slygentify.toml",
-    "sha256": "fc6452e5ad3a2ada7232cec69031bd122737afd3715100fd6be6f34b3b43b084"
+    "sha256": "018885bd6046f46135bc46f04ecc1ef2ae37515ff2f2d6d324b6bd58e5e5353b"
   },
   "effective_limits": [
     {
