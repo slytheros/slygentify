@@ -1,65 +1,144 @@
 # Slygentify
 
-Slygentify is a local-first developer tool that helps people and coding agents
-understand and operate unfamiliar software repositories safely. It builds a bounded,
-evidence-backed operating map instead of guessing from conventions or executing
-discovered project commands.
+Slygentify helps people and coding agents answer practical questions before working in
+an unfamiliar local Git repository:
 
-Slygentify is a public 1.0 release candidate (`1.0.0rc1`). The implemented commands are:
+- What applications, packages, and workspace members are present?
+- Which runtimes, package managers, tools, frameworks, and CI commands are declared?
+- Which component owns the file or path involved in a planned change?
+- Which repository facts are missing, conflicting, unsupported, or unsafe to infer?
+- Does managed coding-agent guidance still match the current repository?
 
-- `slygentify init` — plan or create concise, component-aware root guidance.
-- `slygentify scan` — inspect a repository and return a human or versioned JSON report.
-- `slygentify map` — emit fresh, task-scoped JSON context for a logical path.
-- `slygentify doctor` — assess managed repository knowledge without executing it.
+It builds a bounded, evidence-backed operating map from static repository evidence
+instead of guessing from conventions or executing discovered project commands.
+First-class ecosystem inspection covers Python and JavaScript/TypeScript repositories,
+including mixed repositories and workspaces.
 
-Sandboxed command verification, cloud services, and runtime CodeGraph or forge
-integrations are not implemented.
+Slygentify is a public 1.0 release candidate (`1.0.0rc1`). It is not yet published on
+PyPI.
+
+## What Slygentify helps with
+
+| When you need to... | What Slygentify provides | Command and interface |
+| --- | --- | --- |
+| Explore or onboard to an unfamiliar repository | A component-organized view of identity, declared working tasks, architecture, automation, concerns, and inspection boundaries | `slygentify scan PATH` for a complete human-readable report, or add `--interactive` for a full-screen terminal explorer |
+| Investigate a large or mixed repository interactively | A keyboard-accessible component tree with search, record and classification filters, evidence-first detail, raw record JSON, and a glossary | `slygentify scan PATH --interactive` |
+| Give an agent or automation a complete repository result | Deterministic, versioned JSON containing the retained evidence, findings, diagnostics, and skipped scopes | `slygentify scan PATH --format json` |
+| Prepare an agent for one planned change | Bounded JSON context for a logical path, including its owning component and selected orientation, workflow, architecture, automation, or boundary records | `slygentify map PATH --scope FILE` |
+| Establish durable repository guidance for coding agents | A reviewable plan for concise root `AGENTS.md` guidance and deterministic provenance | `slygentify init PATH --dry-run`, followed by `slygentify init PATH` only after review |
+| Detect stale or unsafe managed guidance | A fresh comparison of configuration, repository evidence, generated guidance, and managed provenance | `slygentify doctor PATH` |
+| Investigate incomplete or inconsistent repository metadata | Explicit diagnostics for malformed, conflicting, unsupported, skipped, or resource-limited evidence instead of silent guesses | `slygentify scan PATH` or `slygentify doctor PATH` |
+
+Human-readable interfaces are designed for exploration and review. Coding agents and
+automation can consume canonical versioned JSON from `scan`, `map`, and `doctor`, or use
+the corresponding Python APIs.
+
+## What Slygentify understands
+
+Slygentify statically inspects supported manifests, workspace declarations, lock and
+configuration files, and CI workflows. Depending on the ecosystem and available
+evidence, it can surface:
+
+- component and workspace boundaries and their relationships;
+- declared runtimes, package managers, direct dependencies, and entry points;
+- configured development tools and directly declared frameworks;
+- setup, run, test, lint, format, and build commands declared in project metadata or CI;
+- conflicting declarations, malformed supported files, skipped scopes, and important
+  unknowns.
+
+Every conclusion remains classified as verified, inferred, recommended, or unknown, and
+its supporting evidence remains inspectable. A declared command is evidence that the
+command appears in repository configuration; it is not proof that the command works or
+that the team prefers it.
+
+Slygentify does not analyze application business logic, build a symbol or call graph,
+decide which source files an issue requires changing, resolve dependencies, evaluate
+dynamic configuration, or execute and verify discovered commands. Sandboxed command
+verification, cloud services, and runtime CodeGraph or forge integrations are not
+implemented.
+
+## Compatibility
+
+Compatibility means that Slygentify can inspect the named static repository evidence. It
+does not imply that Slygentify installs the tool, runs its commands, resolves its
+dependencies, or connects to its hosted service.
+
+### Ecosystems and project formats
+
+| Ecosystem or format | Inspection level | Recognized evidence |
+| --- | --- | --- |
+| Python | First-class | `pyproject.toml`, supported `setup.cfg`, uv and Poetry metadata and locks, requirements and constraints files, Python runtime declarations, supported tools, direct framework declarations, entry points, workspaces, and attributable CI commands |
+| JavaScript and TypeScript | First-class | `package.json`, npm, pnpm, Yarn and Corepack declarations, Node.js and npm runtime declarations, workspaces, supported tools, direct framework declarations, scripts and bin entries, TypeScript project references, and attributable CI commands |
+| Rust and Cargo | Component boundaries | Cargo package and workspace boundaries and safe workspace-member relationships from `Cargo.toml` |
+| Go | Component boundaries | Module and workspace boundaries and safe workspace-member relationships from `go.mod` and `go.work` |
+| Java and Maven | Component boundaries | Maven project and module boundaries and safe module relationships from `pom.xml` |
+| CMake and ESP-IDF | Project boundaries | Static `project(...)` and `idf_component_register(...)` markers in `CMakeLists.txt`; ecosystem-specific metadata remains unsupported |
+| KiCad | Project boundaries | Valid `.kicad_pro` project boundaries and associated `.kicad_pcb` and `.kicad_sch` artifact evidence |
+| Other ecosystems | Explicit declaration | A maintainer can declare a component boundary in root `slygentify.toml`; unsupported ecosystem-specific metadata remains unknown |
+
+See the detailed [Python](docs/python-inspection.md) and
+[JavaScript/TypeScript](docs/javascript-inspection.md) inspection references for exact
+fields, tools, frameworks, and deliberate exclusions.
+
+### CI configuration
+
+| CI platform | Recognized static evidence | Important limits |
+| --- | --- | --- |
+| GitHub Actions | Workflow YAML under `.github/workflows/`, literal `run` commands, supported static Python and Node.js setup values, working directories, and literal checkout paths used for component attribution | Expressions are not executed; expression-only commands and ambiguous checkout scopes remain unknown |
+| Gitea Actions | Workflow YAML under `.gitea/workflows/` with the same bounded static command, runtime, working-directory, and checkout-path inspection | Expressions are not executed; unsupported or ambiguous values remain unknown |
+| GitLab CI/CD | Root `.gitlab-ci.yml`, literal script or run fields, working directories, and bounded in-repository `include:local` files | Dynamic and external includes are not fetched; expressions are not evaluated |
+| Other CI systems | No platform-specific inspection | Files may contribute only evidence supported by another detector or an explicit component declaration |
+
+CI compatibility is inspection-only. Slygentify does not connect to GitHub, Gitea,
+GitLab, or their runners, and it does not verify that a declared workflow succeeds.
 
 ## Quickstart
 
-Slygentify is not yet published on PyPI. Install it from a reviewed source checkout as
-described in the [installation guide](docs/installation.md). Every command accepts a
-directory inside a local Git repository. The Git executable is optional: without it,
-tracked-path discovery may be unavailable and an otherwise useful result can be
-`partial`.
+Install Slygentify from a reviewed source checkout as described in the
+[installation guide](docs/installation.md). Every command accepts a directory inside a
+local Git repository.
 
-Choose the command that matches your goal:
-
-| Goal | Command | Effects and result |
-| --- | --- | --- |
-| Understand an unfamiliar repository | `slygentify scan PATH` | Read-only human report or canonical JSON. |
-| Get bounded context for one task | `slygentify map PATH --scope PATH` | Read-only canonical JSON projection. |
-| Preview root agent guidance | `slygentify init PATH --dry-run` | Read-only guidance and provenance summary; add `--show-state` for exact state JSON. |
-| Check managed guidance against fresh evidence | `slygentify doctor PATH` | Read-only report; warnings can produce exit 1. |
-
-For a safe first pass, inspect the repository, narrow the context, and review guidance
-before deciding whether to create it:
+Start with the complete human-readable scan report:
 
 ```console
 slygentify scan path/to/repository
+```
+
+For a searchable full-screen view intended for people working at a terminal:
+
+```console
+slygentify scan path/to/repository --interactive
+```
+
+For a coding agent, script, or other automation, select canonical JSON or narrow the
+result to the logical path involved in a task:
+
+```console
+slygentify scan path/to/repository --format json > scan.json
 slygentify map path/to/repository --scope src/example.py
+```
+
+When you want durable coding-agent guidance, review the exact proposed artifacts before
+allowing a write. After initialization, use doctor following structural, tooling, or
+workflow changes:
+
+```console
 slygentify init path/to/repository --dry-run
+slygentify init path/to/repository
 slygentify doctor path/to/repository
 ```
 
-`doctor` can report unmanaged guidance before initialization; that is a finding to
-review, not evidence that inspection failed. If the dry-run is appropriate and you want
-Slygentify to write the two managed artifacts, apply it explicitly:
+`init` is the only implemented command above that writes repository files. It writes
+`AGENTS.md` and `.slygentify/state.json` only after planning and revalidation. Existing
+unmanaged or human-edited guidance is preserved by default; ordinary `init` prints a
+paste-ready section and exits 4 so it can be merged manually. Use `--adopt --dry-run` to
+preview management of one visible Slygentify section while preserving surrounding human
+guidance. `--replace` is an explicit destructive choice and does not create a backup or
+merge. See the [initialization guide](docs/guides/init.md) for ownership, recovery, and
+state-schema behavior.
 
-```console
-slygentify init path/to/repository
-```
-
-Initialization writes `AGENTS.md` and `.slygentify/state.json` only after planning and
-revalidation. Existing unmanaged or human-edited guidance is preserved by default;
-ordinary `init` prints a paste-ready Slygentify section and exits 4 so a user can merge it
-manually. `--replace` is an explicit destructive choice and does not create a backup or
-merge.
-
-Supported legacy state and bounded invalid generated state are upgraded during `init`
-when ownership is independently safe. Exactly one well-formed visible marker pair owns
-only its managed section for recovery, so surrounding human guidance remains unchanged.
-Newer schemas, unbounded state, and unsafe entries fail with an exact next action.
+The Git executable is optional. Without it, tracked-path discovery may be unavailable
+and an otherwise useful result can be `partial`; diagnostics explain what was omitted.
 
 See the [first-repository tutorial](docs/tutorials/first-repository.md) for a runnable
 walkthrough, the [troubleshooting guide](docs/guides/troubleshooting.md) for safe
