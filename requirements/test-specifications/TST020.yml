@@ -4,16 +4,17 @@ header: |
   Python component and metadata tests
 level: '1.20'
 links:
-- REQ020: H8fXu0Ipo82-3UtJaAnyLzpNFAsIJOJ-zmbaTK3yGMU=
+- REQ020: qTI56TwLdPT4manxzy9_mqx2yCRhEBFyZRZDj0VfCbY=
 normative: true
 ref: ''
 references:
 - keyword: TST020
   path: tests/test_python_inspection.py
   type: file
-reviewed: EGIjsbYV1KhJP287JQieeJqKmIpSaj5rxKECKqA8ha8=
+reviewed: r3AMhO6VfxQm52s4m03gPC54DpN9ii0nstzmmsRbb00=
 text: |
   Verify approved pyproject.toml and setup.cfg component evidence, metadata, dependency
-  scopes, requirements inline comments, setup.py non-execution, tool-only manifests,
-  malformed sources, unrendered template boundaries, generated requirements and constraints,
-  generic polyglot precedence, and stable component identities and evidence locators.
+  scopes, requirements inline comments, syntax-significant dynamic TOML key locators,
+  setup.py non-execution, tool-only manifests, malformed sources, unrendered template
+  boundaries, generated requirements and constraints, generic polyglot precedence, and
+  stable component identities and evidence locators.

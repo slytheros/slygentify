@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
@@ -20,6 +21,7 @@ from tools.support.initialization_acceptance import (
     InitializationAcceptanceError,
     InitializationReview,
     candidate_review_matrix,
+    canonical_agents_bytes,
     compare_initialization_reviews,
     initialization_corpus_metrics,
     initialization_review,
@@ -126,6 +128,26 @@ def test_candidate_matrix_binds_both_artifacts_and_only_safe_metrics() -> None:
     assert review.agents_component_count == 1
     assert review.projection_byte_count <= 8192
     assert review.projection_record_count > 0
+
+
+@pytest.mark.verifies("TST045")
+@pytest.mark.parametrize("line_ending", ["\n", "\r\n", "\r"])
+def test_agents_review_uses_exact_canonical_utf8_lf_bytes(tmp_path: Path, line_ending: str) -> None:
+    markdown = line_ending.join(("# AGENTS.md", "café", ""))
+    expected = "# AGENTS.md\ncafé\n".encode()
+    review = initialization_review(
+        "example",
+        "a" * 40,
+        markdown,
+        project_scan(sample_result()),
+    )
+    artifact = tmp_path / "AGENTS.md"
+    artifact.write_bytes(canonical_agents_bytes(markdown))
+
+    assert artifact.read_bytes() == expected
+    assert review.agents_byte_count == len(expected)
+    assert review.agents_sha256 == hashlib.sha256(expected).hexdigest()
+    assert review.agents_line_count == 2
 
 
 @pytest.mark.verifies("TST045")
