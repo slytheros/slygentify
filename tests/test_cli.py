@@ -220,6 +220,23 @@ def test_init_cli_automatically_rebuilds_bounded_invalid_state(tmp_path: Path) -
     upgraded = runner.invoke(app, ["init", str(root)])
     assert "Upgraded .slygentify/state.json to state-v2" in upgraded.stdout
 
+    current = load_state_json(state.read_bytes())
+    state.write_bytes(dump_state_json(replace(current, schema_version=1)))
+    (root / "package.json").write_text('{"name":"changed-example"}\n', encoding="utf-8")
+    regenerated = runner.invoke(app, ["init", str(root)])
+    assert regenerated.exit_code == 0
+    assert (
+        "Regenerated AGENTS.md and upgraded .slygentify/state.json to state-v2"
+        in regenerated.stdout
+    )
+
+    current = load_state_json(state.read_bytes())
+    state.write_bytes(dump_state_json(replace(current, schema_version=1)))
+    (root / "AGENTS.md").unlink()
+    recreated = runner.invoke(app, ["init", str(root), "--replace"])
+    assert recreated.exit_code == 0
+    assert "Created AGENTS.md and upgraded .slygentify/state.json to state-v2" in recreated.stdout
+
 
 @pytest.mark.verifies("TST040", "TST054", "TST055")
 def test_init_cli_recovers_section_without_full_document_warning(tmp_path: Path) -> None:

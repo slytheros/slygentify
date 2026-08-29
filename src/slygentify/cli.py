@@ -255,7 +255,12 @@ def init_command(
     if not result.changed_locations:
         typer.echo("No changes.")
     elif result.state_recovery == "schema-upgrade":
-        typer.echo("Upgraded .slygentify/state.json to state-v2")
+        if AGENTS_FILENAME not in result.changed_locations:
+            typer.echo("Upgraded .slygentify/state.json to state-v2")
+        elif result.agents_action == "create":
+            typer.echo("Created AGENTS.md and upgraded .slygentify/state.json to state-v2")
+        else:
+            typer.echo("Regenerated AGENTS.md and upgraded .slygentify/state.json to state-v2")
     elif result.state_recovery == "state-rebuild" and result.agents_action == "no_change":
         typer.echo("Rebuilt .slygentify/state.json from current generated guidance")
     elif result.state_recovery == "state-rebuild" and result.agents_action == "create":
