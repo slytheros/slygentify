@@ -539,6 +539,35 @@ def test_unsafe_and_concurrent_state_are_refused(tmp_path: Path) -> None:
     assert error.value.changed_locations == ()
 
 
+@pytest.mark.verifies("TST039", "TST055")
+def test_planner_contains_agents_removal_during_source_digest_capture(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _repository(tmp_path)
+    apply_initialization(plan_initialization(root))
+    agents = root / "AGENTS.md"
+    original_regular = initialization._regular
+    regular_calls = 0
+
+    def remove_before_digest(path: Path) -> bool:
+        nonlocal regular_calls
+        if path == agents:
+            regular_calls += 1
+            if regular_calls == 3:
+                agents.unlink()
+        return original_regular(path)
+
+    monkeypatch.setattr(initialization, "_regular", remove_before_digest)
+
+    plan = plan_initialization(root)
+
+    assert regular_calls == 3
+    assert not plan.can_apply
+    assert plan.ownership == "unsafe-entry"
+    assert plan.agents_source_sha256 is None
+    assert plan.diagnostics[0].code == "initialization.unsafe-entry"
+
+
 @pytest.mark.verifies("TST044")
 def test_initialization_uses_committed_init_limits_and_detects_configuration_races(
     tmp_path: Path,

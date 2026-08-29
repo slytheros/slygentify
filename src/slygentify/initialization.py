@@ -253,6 +253,8 @@ def plan_initialization(
     state_recovery: StateRecovery = "none"
     state_write_recovery = False
     blocked_state = False
+    agents_source_sha256: str | None = None
+    state_source_sha256: str | None = None
     try:
         if adopt and replace:
             raise InitializationError(
@@ -401,6 +403,14 @@ def plan_initialization(
         )
         if existing_state is not None and existing_state.schema_version == 1:
             state_recovery = "schema-upgrade"
+        agents_source_sha256 = (
+            hashlib.sha256(agents.read_bytes()).hexdigest()
+            if os.path.lexists(agents) and _regular(agents)
+            else None
+        )
+        state_source_sha256 = (
+            hashlib.sha256(raw_state).hexdigest() if raw_state is not None else None
+        )
     except InitializationError:
         raise
     except OSError:
@@ -478,12 +488,6 @@ def plan_initialization(
     ) and not blocked_state
     if not can_apply:
         state_recovery = "none"
-    agents_source_sha256 = (
-        hashlib.sha256(agents.read_bytes()).hexdigest()
-        if os.path.lexists(agents) and _regular(agents)
-        else None
-    )
-    state_source_sha256 = hashlib.sha256(raw_state).hexdigest() if raw_state is not None else None
     if not can_apply and not diagnostics:
         diagnostics.append(
             _diagnostic(
