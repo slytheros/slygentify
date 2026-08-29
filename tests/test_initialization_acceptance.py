@@ -9,7 +9,14 @@ import pytest
 from typer.testing import CliRunner
 
 import slygentify.initialization as initialization
-from slygentify import InitializationError, apply_initialization, plan_initialization
+from slygentify import (
+    InitializationError,
+    apply_initialization,
+    doctor_repository,
+    map_repository,
+    plan_initialization,
+    scan_repository,
+)
 from slygentify._provenance import Artifact, StateDocument, dump_state_json, load_state_json
 from slygentify.cli import app
 
@@ -70,6 +77,52 @@ def test_first_dry_run_create_no_change_and_regeneration_from_inputs(tmp_path: P
     assert configuration_change.state_action == "replace"
     apply_initialization(configuration_change)
     assert apply_initialization(plan_initialization(root)).changed_locations == ()
+
+
+@pytest.mark.verifies("TST056")
+def test_volatile_workspace_scopes_do_not_change_managed_state(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    (root / ".gitignore").write_text("dist/\n", encoding="utf-8")
+    initial = plan_initialization(root)
+    apply_initialization(initial)
+    state_bytes = (root / ".slygentify" / "state.json").read_bytes()
+
+    volatile_directories = (
+        root / ".pytest_cache",
+        root / ".venv",
+        root / "dist",
+        root / "src" / "__pycache__",
+    )
+    for directory in volatile_directories:
+        directory.mkdir(parents=True)
+
+    scan = scan_repository(root)
+    projection = map_repository(root, max_bytes="unlimited")
+    doctor = doctor_repository(root)
+    expected = {
+        (".pytest_cache", "built_in_exclusion"),
+        (".venv", "built_in_exclusion"),
+        ("dist", "gitignore"),
+        ("src/__pycache__", "built_in_exclusion"),
+    }
+
+    assert expected <= {(item.scope, item.reason) for item in scan.skipped_scopes}
+    assert expected <= {(item.scope, item.reason) for item in projection.skipped_scopes}
+    assert expected <= {(item.scope, item.reason) for item in doctor.skipped_scopes}
+    assert doctor.diagnostics == ()
+    unchanged = plan_initialization(root)
+    assert unchanged.agents_action == "no_change"
+    assert unchanged.state_action == "no_change"
+    assert unchanged.state_json == state_bytes
+    assert apply_initialization(unchanged).changed_locations == ()
+
+    for directory in reversed(volatile_directories):
+        directory.rmdir()
+    (root / "src").rmdir()
+
+    clean_again = plan_initialization(root)
+    assert clean_again.state_action == "no_change"
+    assert clean_again.state_json == state_bytes
 
 
 @pytest.mark.verifies("TST039", "TST055")

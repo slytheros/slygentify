@@ -29,6 +29,7 @@ _LIMIT_NAMES = (
     "max_open_files",
     "max_memory_bytes",
 )
+_VOLATILE_SKIPPED_SCOPE_REASONS = frozenset({"built_in_exclusion", "gitignore"})
 
 
 class StateError(ValueError):
@@ -113,6 +114,10 @@ def _error(
     message: str = "provenance state is invalid", *, category: str = "state.invalid-structure"
 ) -> StateError:
     return StateError(message, category=category)
+
+
+def _is_provenance_skipped_scope(value: SkippedScope) -> bool:
+    return value.reason not in _VOLATILE_SKIPPED_SCOPE_REASONS
 
 
 def _path(value: object) -> str:
@@ -553,7 +558,7 @@ def state_json_schema() -> dict[str, object]:
     return cast(dict[str, object], value)
 
 
-@implements("REQ036")
+@implements("REQ036", "REQ055")
 def state_from_scan(
     result: ScanResult,
     configuration: EffectiveConfiguration,
@@ -615,7 +620,7 @@ def state_from_scan(
         derivations,
         artifacts,
         result.completion,
-        result.skipped_scopes,
+        tuple(filter(_is_provenance_skipped_scope, result.skipped_scopes)),
     )
 
 

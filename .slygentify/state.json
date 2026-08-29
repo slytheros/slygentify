@@ -1739,32 +1739,6 @@
       "ownership": "section"
     }
   ],
-  "completion": "complete",
-  "skipped_scopes": [
-    {
-      "scope": ".venv",
-      "reason": "built_in_exclusion",
-      "omitted_scope": ".venv"
-    },
-    {
-      "scope": "docs/examples/tutorial-repository/packages/broken/package.json",
-      "reason": "configuration",
-      "omitted_scope": "docs/examples/tutorial-repository/packages/broken/package.json"
-    },
-    {
-      "scope": "src/slygentify/__pycache__",
-      "reason": "built_in_exclusion",
-      "omitted_scope": "src/slygentify/__pycache__"
-    },
-    {
-      "scope": "src/slygentify/_scan/__pycache__",
-      "reason": "built_in_exclusion",
-      "omitted_scope": "src/slygentify/_scan/__pycache__"
-    },
-    {
-      "scope": "src/slygentify/_scan/detectors/__pycache__",
-      "reason": "built_in_exclusion",
-      "omitted_scope": "src/slygentify/_scan/detectors/__pycache__"
-    }
-  ]
+  "completion": "partial",
+  "skipped_scopes": []
 }

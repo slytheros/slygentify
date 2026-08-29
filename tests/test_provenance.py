@@ -31,6 +31,7 @@ from slygentify._provenance import (
     state_from_scan,
     state_json_schema,
 )
+from slygentify.models import SkippedScope
 from tests.scan_samples import sample_result
 
 
@@ -328,6 +329,79 @@ def test_state_from_scan_uses_only_already_read_regular_file_bytes(tmp_path: Pat
     )
     with pytest.raises(StateError):
         state_from_scan(object(), load_configuration(root), {})  # type: ignore[arg-type]
+
+
+@pytest.mark.verifies("TST056")
+def test_state_from_scan_omits_only_volatile_skipped_scope_reasons(tmp_path: Path) -> None:
+    root = tmp_path / "repository"
+    root.mkdir()
+    skipped_scopes = tuple(
+        sorted(
+            (
+                SkippedScope(
+                    scope=".pytest_cache",
+                    reason="built_in_exclusion",
+                    effective_limit=None,
+                    consumed=None,
+                    omitted_scope=".pytest_cache",
+                ),
+                SkippedScope(
+                    scope="build",
+                    reason="gitignore",
+                    effective_limit=None,
+                    consumed=None,
+                    omitted_scope="build",
+                ),
+                SkippedScope(
+                    scope="configured",
+                    reason="configuration",
+                    effective_limit=None,
+                    consumed=None,
+                    omitted_scope="configured",
+                ),
+                SkippedScope(
+                    scope="credentials",
+                    reason="sensitive_content",
+                    effective_limit=None,
+                    consumed=None,
+                    omitted_scope="credentials",
+                ),
+                SkippedScope(
+                    scope="linked",
+                    reason="link_or_reparse",
+                    effective_limit=None,
+                    consumed=None,
+                    omitted_scope="linked",
+                ),
+                SkippedScope(
+                    scope="nested",
+                    reason="nested_repository",
+                    effective_limit=None,
+                    consumed=None,
+                    omitted_scope="nested",
+                ),
+                SkippedScope(
+                    scope="remaining",
+                    reason="max_entries",
+                    effective_limit=100,
+                    consumed=100,
+                    omitted_scope="remaining/**",
+                ),
+            ),
+            key=lambda item: (item.scope, item.reason),
+        )
+    )
+    result = replace(sample_result(), skipped_scopes=skipped_scopes)
+
+    state = state_from_scan(result, load_configuration(root), {})
+
+    assert {(item.scope, item.reason) for item in state.skipped_scopes} == {
+        ("configured", "configuration"),
+        ("credentials", "sensitive_content"),
+        ("linked", "link_or_reparse"),
+        ("nested", "nested_repository"),
+        ("remaining", "max_entries"),
+    }
 
 
 @pytest.mark.verifies("TST036")

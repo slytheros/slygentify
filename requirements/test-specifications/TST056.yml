@@ -1,0 +1,25 @@
+active: true
+derived: false
+header: |
+  Stable volatile skipped-scope provenance tests
+level: 1.56
+links:
+- REQ055: v4qNpcaFgz_-km0eQqi-RfMj7-X6-1HO0FrwEBqBRTs=
+normative: true
+ref: ''
+references:
+- keyword: TST056
+  path: tests/test_doctor.py
+  type: file
+- keyword: TST056
+  path: tests/test_initialization_acceptance.py
+  type: file
+- keyword: TST056
+  path: tests/test_provenance.py
+  type: file
+reviewed: QF0TfyB5eZRfxTcy7fRlqBW6wwtBvmRClOkWVsefxA4=
+text: |
+  Verify Gitignored and built-in skipped scopes remain visible in fresh scan, map, and
+  doctor results but do not enter newly generated state or cause workspace-dependent
+  initialization churn. Verify other skipped scopes remain in state and supported old
+  sidecars receive one informational stale-state notice until explicit regeneration.

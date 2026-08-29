@@ -201,7 +201,16 @@ def _can_replace(ownership: OwnershipState, requested: bool) -> bool:
 
 
 @implements(
-    "REQ002", "REQ003", "REQ004", "REQ005", "REQ038", "REQ039", "REQ044", "REQ053", "REQ054"
+    "REQ002",
+    "REQ003",
+    "REQ004",
+    "REQ005",
+    "REQ038",
+    "REQ039",
+    "REQ044",
+    "REQ053",
+    "REQ054",
+    "REQ055",
 )
 def plan_initialization(
     path: str | os.PathLike[str] = ".", *, replace: bool = False, adopt: bool = False
