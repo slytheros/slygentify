@@ -114,10 +114,20 @@ invocation. A higher or unlimited resource setting never weakens these boundarie
 
 `slygentify init` writes deterministic schema-major-2 provenance beside generated
 guidance. The sidecar records safe relative locations, SHA-256 digests, effective limits,
-derivations, generated-artifact ownership, completion, and skipped scopes. It contains no
-timestamps, host paths, source bodies, environment values, or credentials. Packaged
+derivations, generated-artifact ownership, completion, and durable skipped scopes.
+Fresh scan, map, and doctor results report every observed skipped scope, but committed
+state omits workspace-dependent observations caused by checked-out Gitignore rules and
+built-in cache or dependency exclusions. Configured exclusions, safety boundaries,
+nested repositories, and partial-result boundaries remain recorded. The sidecar contains
+no timestamps, host paths, source bodies, environment values, or credentials. Packaged
 [`state-v2.schema.json`](schemas.md) describes the document; legacy v1 sidecars remain
 readable. Scan and map do not read or write it; a fresh scan remains authoritative.
+
+Existing v1 or v2 sidecars that contain now-omitted volatile records remain valid and
+require no schema migration. Doctor can report one informational `doctor.state.stale`
+notice, with exit 0, until a reviewed explicit init regenerates canonical v2 state.
+After regeneration, creating or removing those ignored workspace paths does not make
+state stale or cause another state write.
 
 When a whole-document digest matches a regular `AGENTS.md`, init may regenerate it. An
 adopted visible section records its own digest, so later updates preserve human changes

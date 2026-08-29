@@ -27,6 +27,18 @@ Diagnostics: 0 errors, 0 warnings, 0 info
 
 Human wording and layout may evolve and must not be parsed by automation.
 
+## Volatile skipped scopes
+
+Fresh doctor output retains every observed skipped scope, including ignored build output,
+virtual environments, bytecode, and tool caches. These workspace-dependent observations
+do not enter newly generated committed provenance and do not make regenerated state
+stale when they appear or disappear.
+
+An existing supported sidecar may still contain these older records. It remains valid;
+doctor reports the existing informational `doctor.state.stale` notice and exits 0 until
+an explicit reviewed init regenerates canonical v2 state. No schema migration or special
+recovery command is required.
+
 ## Canonical JSON
 
 ```console

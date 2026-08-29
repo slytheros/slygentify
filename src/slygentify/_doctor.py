@@ -434,7 +434,7 @@ def _command_became_unverifiable(
     )
 
 
-@implements("REQ047", "REQ048", "REQ054")
+@implements("REQ047", "REQ048", "REQ054", "REQ055")
 def doctor_repository(
     path: str | os.PathLike[str] = ".",
     *,

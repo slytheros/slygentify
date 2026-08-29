@@ -412,6 +412,43 @@ def test_provenance_only_change_is_informational_state_stale(tmp_path: Path) -> 
     assert result.diagnostics[0].disposition == "notice"
 
 
+@pytest.mark.verifies("TST056")
+@pytest.mark.parametrize("volatile_reason", ["built_in_exclusion", "gitignore"])
+@pytest.mark.parametrize("schema_version", [1, 2])
+def test_old_volatile_state_is_stale_until_explicit_regeneration(
+    tmp_path: Path, schema_version: int, volatile_reason: str
+) -> None:
+    root = _root(tmp_path)
+    _managed(root)
+    target = root / ".slygentify" / "state.json"
+    state = load_state_json(target.read_bytes())
+    volatile_scope = ".pytest_cache" if volatile_reason == "built_in_exclusion" else "dist"
+    volatile = SkippedScope(
+        scope=volatile_scope,
+        reason=volatile_reason,
+        effective_limit=None,
+        consumed=None,
+        omitted_scope=volatile_scope,
+    )
+    target.write_bytes(
+        dump_state_json(replace(state, schema_version=schema_version, skipped_scopes=(volatile,)))
+    )
+
+    stale = doctor.doctor_repository(root)
+
+    assert _codes(stale) == {"doctor.state.stale"}
+    assert stale.diagnostics[0].severity == "info"
+    assert stale.diagnostics[0].disposition == "notice"
+    regeneration = plan_initialization(root)
+    assert regeneration.state_action == "replace"
+    assert apply_initialization(regeneration).changed_locations == (".slygentify/state.json",)
+    regenerated = load_state_json(target.read_bytes())
+    assert regenerated.schema_version == 2
+    assert regenerated.skipped_scopes == ()
+    assert doctor.doctor_repository(root).diagnostics == ()
+    assert plan_initialization(root).state_action == "no_change"
+
+
 @pytest.mark.verifies("TST047")
 def test_recoverable_artifact_digest_is_informational_state_stale(tmp_path: Path) -> None:
     root = _root(tmp_path)
