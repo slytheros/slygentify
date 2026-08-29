@@ -57,6 +57,41 @@ dynamic configuration, or execute and verify discovered commands. Sandboxed comm
 verification, cloud services, and runtime CodeGraph or forge integrations are not
 implemented.
 
+## Compatibility
+
+Compatibility means that Slygentify can inspect the named static repository evidence. It
+does not imply that Slygentify installs the tool, runs its commands, resolves its
+dependencies, or connects to its hosted service.
+
+### Ecosystems and project formats
+
+| Ecosystem or format | Inspection level | Recognized evidence |
+| --- | --- | --- |
+| Python | First-class | `pyproject.toml`, supported `setup.cfg`, uv and Poetry metadata and locks, requirements and constraints files, Python runtime declarations, supported tools, direct framework declarations, entry points, workspaces, and attributable CI commands |
+| JavaScript and TypeScript | First-class | `package.json`, npm, pnpm, Yarn and Corepack declarations, Node.js and npm runtime declarations, workspaces, supported tools, direct framework declarations, scripts and bin entries, TypeScript project references, and attributable CI commands |
+| Rust and Cargo | Component boundaries | Cargo package and workspace boundaries and safe workspace-member relationships from `Cargo.toml` |
+| Go | Component boundaries | Module and workspace boundaries and safe workspace-member relationships from `go.mod` and `go.work` |
+| Java and Maven | Component boundaries | Maven project and module boundaries and safe module relationships from `pom.xml` |
+| CMake and ESP-IDF | Project boundaries | Static `project(...)` and `idf_component_register(...)` markers in `CMakeLists.txt`; ecosystem-specific metadata remains unsupported |
+| KiCad | Project boundaries | Valid `.kicad_pro` project boundaries and associated `.kicad_pcb` and `.kicad_sch` artifact evidence |
+| Other ecosystems | Explicit declaration | A maintainer can declare a component boundary in root `slygentify.toml`; unsupported ecosystem-specific metadata remains unknown |
+
+See the detailed [Python](docs/python-inspection.md) and
+[JavaScript/TypeScript](docs/javascript-inspection.md) inspection references for exact
+fields, tools, frameworks, and deliberate exclusions.
+
+### CI configuration
+
+| CI platform | Recognized static evidence | Important limits |
+| --- | --- | --- |
+| GitHub Actions | Workflow YAML under `.github/workflows/`, literal `run` commands, supported static Python and Node.js setup values, working directories, and literal checkout paths used for component attribution | Expressions are not executed; expression-only commands and ambiguous checkout scopes remain unknown |
+| Gitea Actions | Workflow YAML under `.gitea/workflows/` with the same bounded static command, runtime, working-directory, and checkout-path inspection | Expressions are not executed; unsupported or ambiguous values remain unknown |
+| GitLab CI/CD | Root `.gitlab-ci.yml`, literal script or run fields, working directories, and bounded in-repository `include:local` files | Dynamic and external includes are not fetched; expressions are not evaluated |
+| Other CI systems | No platform-specific inspection | Files may contribute only evidence supported by another detector or an explicit component declaration |
+
+CI compatibility is inspection-only. Slygentify does not connect to GitHub, Gitea,
+GitLab, or their runners, and it does not verify that a declared workflow succeeds.
+
 ## Quickstart
 
 Install Slygentify from a reviewed source checkout as described in the
