@@ -13,6 +13,8 @@ from slygentify._configuration import EffectiveConfiguration, load_configuration
 from slygentify._diagnostics import DiagnosticDetail
 from slygentify._generation import generate_agents_document
 from slygentify._managed_section import (
+    SECTION_BEGIN,
+    SECTION_END,
     ManagedSectionError,
     extract_managed_section,
     render_managed_section,
@@ -205,6 +207,81 @@ def _load_state(root: Path) -> tuple[StateDocument | None, str | None]:
         return None, error.category
 
 
+def _invalid_state_remediation(root: Path, category: str, fresh_guidance: str) -> str:
+    """Return the exact safe recovery workflow for one invalid-state scenario."""
+
+    if category == "state.unsupported-schema":
+        return (
+            "Install a reviewed Slygentify build that supports the newer state schema, then "
+            "rerun slygentify init . --dry-run; --replace does not authorize a downgrade."
+        )
+    if category == "state.too-large":
+        return (
+            "Move .slygentify/state.json to a new collision-safe backup name, then rerun "
+            "slygentify init . --dry-run; oversized state is not replaced automatically."
+        )
+    if category == "state.unreadable":
+        return (
+            "Make .slygentify/state.json readable or move it to a new collision-safe backup "
+            "name, then rerun slygentify init . --dry-run."
+        )
+    if category == "state.unsafe-entry":
+        return (
+            "Replace the unsafe state entry manually with a safe regular file or move it to "
+            "a new collision-safe backup name, then rerun slygentify init . --dry-run."
+        )
+    if _safe_managed_section(root) is not None:
+        return (
+            "Run slygentify init . --dry-run; ordinary init can replace only the marked "
+            "section and rebuild canonical state."
+        )
+    target = root / AGENTS_FILENAME
+    if not os.path.lexists(target):
+        return (
+            "Run slygentify init . --dry-run; ordinary init can create guidance and rebuild "
+            "canonical state."
+        )
+    try:
+        metadata = target.lstat()
+    except OSError:
+        return (
+            "Make AGENTS.md readable or move it to a new collision-safe backup name, then "
+            "rerun slygentify init . --dry-run."
+        )
+    if not stat.S_ISREG(metadata.st_mode) or stat.S_ISLNK(metadata.st_mode):
+        return (
+            "Replace the unsafe AGENTS.md entry manually with a safe regular file or move it "
+            "to a new collision-safe backup name, then rerun slygentify init . --dry-run."
+        )
+    if metadata.st_size > _MAX_STATE_BYTES:
+        return (
+            "Move the oversized AGENTS.md to a new collision-safe backup name, then rerun "
+            "slygentify init . --dry-run."
+        )
+    fresh_digest = hashlib.sha256(fresh_guidance.encode("utf-8")).hexdigest()
+    if _safe_digest(root, AGENTS_FILENAME) == fresh_digest:
+        return (
+            "Run slygentify init . --dry-run; ordinary init can preserve current guidance "
+            "and rebuild canonical state."
+        )
+    try:
+        current = target.read_bytes()
+    except OSError:
+        return (
+            "Make AGENTS.md readable or move it to a new collision-safe backup name, then "
+            "rerun slygentify init . --dry-run."
+        )
+    if SECTION_BEGIN in current or SECTION_END in current:
+        return (
+            "Review slygentify init . --replace --dry-run, then use --replace to authorize "
+            "full-document and state replacement."
+        )
+    return (
+        "Review slygentify init . --adopt --dry-run to preserve existing guidance, or use "
+        "--replace --dry-run only if the whole document may be discarded."
+    )
+
+
 def _projection(state: StateDocument, codes: frozenset[str]) -> tuple[object, ...]:
     return tuple(item for item in state.derivations if item.claim_code in codes)
 
@@ -357,7 +434,7 @@ def _command_became_unverifiable(
     )
 
 
-@implements("REQ047", "REQ048")
+@implements("REQ047", "REQ048", "REQ054")
 def doctor_repository(
     path: str | os.PathLike[str] = ".",
     *,
@@ -392,6 +469,11 @@ def doctor_repository(
     completion: Literal["complete", "partial"] = result.completion
 
     if invalid_state_category is not None:
+        fresh_guidance = generate_agents_document(
+            result,
+            max_bytes=execution.configuration.max_agents_bytes,
+            max_component_entries=execution.configuration.max_component_entries,
+        ).markdown
         state_evidence = _comparison_evidence(
             evidence,
             kind="invalid-state",
@@ -407,11 +489,11 @@ def doctor_repository(
             location=STATE_LOCATION,
             problem="The generated ownership and provenance record for AGENTS.md could not be validated.",
             effect="Doctor cannot rely on managed ownership or compare recorded repository knowledge.",
-            remediation="Upgrade to the latest reviewed Slygentify build and rerun slygentify init . --dry-run. If it still fails, rename the state file to a new non-existing backup name, rerun the dry-run, and apply only a recoverable or otherwise safe plan.",
+            remediation=_invalid_state_remediation(root, invalid_state_category, fresh_guidance),
             evidence_ids=(state_evidence,),
             disposition="problem",
             category=invalid_state_category,
-            safety_rationale="Doctor is read-only and invalid state cannot safely establish ownership for automatic replacement.",
+            safety_rationale="Doctor is read-only; only the separately invoked mutating init workflow may apply a bounded recovery.",
         )
         completion = "partial"
     elif recorded is None:

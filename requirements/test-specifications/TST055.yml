@@ -1,0 +1,26 @@
+active: true
+derived: false
+header: |
+  Generated-artifact recovery tests
+level: 1.55
+links:
+- REQ054: yF0hqf9RQa9LvzsBnjd8TshofUkt8MZW8qoAGfLHkHo=
+normative: true
+ref: ''
+references:
+- keyword: TST055
+  path: tests/test_cli.py
+  type: file
+- keyword: TST055
+  path: tests/test_doctor.py
+  type: file
+- keyword: TST055
+  path: tests/test_initialization.py
+  type: file
+reviewed: OqleWYHI8psMBmW9S7mvTsuNx-vtAVHh0czh8V-LAGM=
+text: |
+  Verify automatic supported-schema upgrade and bounded invalid-state rebuild for marked,
+  absent, and exact whole-document artifacts; explicit adoption and replacement fallbacks;
+  exact surrounding-byte preservation; state and artifact race protection; dry-run and CLI
+  recovery reporting; read-only doctor remediation; non-disclosure; and refusal of newer,
+  unbounded, unreadable, or unsafe state.

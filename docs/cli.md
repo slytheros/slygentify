@@ -19,19 +19,26 @@ slygentify init path/to/repository --replace
 
 Use `--dry-run` first. It prints the complete guidance or visible managed section plus a
 provenance summary and performs no writes; add `--show-state` to print exact state JSON.
-Without `--replace`, initialization applies only to a new target, unchanged
-managed guidance, or a recoverable missing sidecar. For an unmanaged or human-edited
+Without `--replace`, initialization applies to a new target, unchanged managed guidance,
+a recoverable missing sidecar, or bounded invalid state whose artifact ownership is
+established independently. For an unmanaged or human-edited
 safe regular `AGENTS.md`, ordinary init preserves the file and prints a deterministic,
 paste-ready Slygentify section; it exits 4 to identify the required manual incorporation.
 The section does not include a document-level title or managed-artifact boilerplate, and
 this path does not create provenance state. Dry-run still prints the full exact artifact
 review and exits 4. `--adopt` is the explicit alternative for an unmanaged regular file:
 it appends a visible marked Slygentify section, preserves surrounding text, and records
-section ownership. Missing managed, malformed, and unsafe states fail closed.
+section ownership. It can also rebuild bounded invalid state when no markers exist.
+
+Exactly one well-formed marker pair owns only its bounded section during invalid-state
+recovery, so ordinary init can refresh that section and rebuild state while preserving
+surrounding bytes. Ambiguous whole-document content requires `--replace`. Newer state
+schema majors, oversized or unreadable state, malformed markers without replacement,
+and unsafe entries fail with a condition-specific next action.
 
 `--replace` may discard an existing regular `AGENTS.md`; it does not create a backup or
 merge user text and never authorizes replacing a symbolic link, directory, or unsafe
-state. Application revalidates the plan, writes atomically, and reports exact changed
+state or downgrade a newer schema. Application revalidates the plan, writes atomically, and reports exact changed
 locations if the guidance write succeeds but the sidecar write fails.
 
 Init uses these exit statuses: 0 for applied, no-change, and applicable dry-run results;

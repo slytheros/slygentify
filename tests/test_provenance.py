@@ -27,6 +27,7 @@ from slygentify._provenance import (
     dump_state_json,
     load_state_json,
     plan_state_write,
+    read_state_bytes,
     state_from_scan,
     state_json_schema,
 )
@@ -173,12 +174,29 @@ def test_state_v2_artifact_ownership_is_validated() -> None:
 
 
 @pytest.mark.verifies("TST036")
-def test_state_loader_rejects_version_order_digest_and_path_violations() -> None:
-    document = json.loads(dump_state_json(_state()))
-    document["schema_version"] = 3
-    with pytest.raises(StateError, match="schema version"):
-        load_state_json(json.dumps(document))
+@pytest.mark.parametrize(
+    ("encoded_version", "category"),
+    [
+        ("3", "state.unsupported-schema"),
+        ("3.0", "state.unsupported-schema"),
+        ("3e0", "state.unsupported-schema"),
+        ("3.5", "state.invalid-structure"),
+        ("2.0", "state.invalid-structure"),
+        ("true", "state.invalid-structure"),
+        ('"3"', "state.invalid-structure"),
+    ],
+)
+def test_state_loader_classifies_schema_version_numbers(
+    encoded_version: str, category: str
+) -> None:
+    with pytest.raises(StateError) as captured:
+        load_state_json('{"schema_version":' + encoded_version + "}")
 
+    assert captured.value.category == category
+
+
+@pytest.mark.verifies("TST036")
+def test_state_loader_rejects_order_digest_and_path_violations() -> None:
     document = json.loads(dump_state_json(_state()))
     document["inputs"][0]["sha256"] = "UPPER"
     with pytest.raises(StateError):
@@ -231,6 +249,53 @@ def test_state_write_create_no_change_replace_and_malformed_refusal(tmp_path: Pa
     (root / ".slygentify" / "state.json").write_text("bad", encoding="utf-8")
     with pytest.raises(StateError, match="existing"):
         plan_state_write(root, state)
+
+
+@pytest.mark.verifies("TST037", "TST055")
+def test_state_write_rebuilds_only_bounded_invalid_state_with_race_guards(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "repository"
+    target = root / ".slygentify" / "state.json"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"invalid-state")
+
+    recovery = plan_state_write(root, _state(), replace_invalid=True)
+    assert recovery.action == "replace"
+    target.write_bytes(b"changed-state")
+    with pytest.raises(StateError, match="changed concurrently"):
+        apply_state_write(recovery)
+
+    target.write_text('{"schema_version": 3}', encoding="utf-8")
+    with pytest.raises(StateError) as future:
+        plan_state_write(root, _state(), replace_invalid=True)
+    assert future.value.category == "state.unsupported-schema"
+
+    target.write_bytes(b"large")
+    monkeypatch.setattr(provenance, "_MAX_BYTES", 4)
+    with pytest.raises(StateError) as oversized:
+        read_state_bytes(target)
+    assert oversized.value.category == "state.too-large"
+    with pytest.raises(StateError) as oversized_data:
+        load_state_json(b"large")
+    assert oversized_data.value.category == "state.too-large"
+
+    with pytest.raises(StateError) as missing:
+        read_state_bytes(root / "missing.json")
+    assert missing.value.category == "state.unreadable"
+
+    monkeypatch.setattr(provenance, "_MAX_BYTES", 128 * 1024 * 1024)
+    original_read_bytes = Path.read_bytes
+
+    def failing_read_bytes(path: Path) -> bytes:
+        if path == target:
+            raise OSError("unreadable")
+        return original_read_bytes(path)
+
+    monkeypatch.setattr(Path, "read_bytes", failing_read_bytes)
+    with pytest.raises(StateError) as unreadable:
+        read_state_bytes(target)
+    assert unreadable.value.category == "state.unreadable"
 
 
 @pytest.mark.verifies("TST037")

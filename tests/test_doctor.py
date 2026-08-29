@@ -11,7 +11,7 @@ import slygentify._doctor as doctor
 from slygentify import apply_initialization, plan_initialization
 from slygentify._configuration import load_configuration
 from slygentify._git_tracking import _TrackedPaths
-from slygentify._managed_section import SECTION_END
+from slygentify._managed_section import SECTION_BEGIN, SECTION_END
 from slygentify._provenance import (
     StateInput,
     dump_state_json,
@@ -33,7 +33,7 @@ from tests.scan_samples import sample_result
 
 def _root(tmp_path: Path) -> Path:
     root = tmp_path / "repository"
-    root.mkdir()
+    root.mkdir(parents=True)
     (root / ".git").mkdir()
     (root / "pyproject.toml").write_text(
         "[project]\nname = 'doctor-fixture'\nrequires-python = '>=3.11'\n\n[tool.ruff]\nline-length = 88\n",
@@ -260,7 +260,7 @@ def test_invalid_configuration_stops_before_fresh_scan(
     assert result.diagnostics[0].severity == "error"
 
 
-@pytest.mark.verifies("TST047")
+@pytest.mark.verifies("TST047", "TST055")
 def test_invalid_state_is_partial_but_allows_fresh_scan(tmp_path: Path) -> None:
     root = _root(tmp_path)
     state_directory = root / ".slygentify"
@@ -272,8 +272,111 @@ def test_invalid_state_is_partial_but_allows_fresh_scan(tmp_path: Path) -> None:
     assert result.completion == "partial"
     assert _codes(result) == {"doctor.state.invalid"}
     diagnostic = result.diagnostics[0]
-    assert diagnostic.category == "state.unsupported-schema"
+    assert diagnostic.category == "state.invalid-structure"
+    assert diagnostic.remediation is not None
+    assert "ordinary init can create guidance" in diagnostic.remediation
     assert diagnostic.safety_rationale is not None
+
+
+@pytest.mark.verifies("TST047", "TST055")
+def test_invalid_state_remediation_matches_section_adoption_and_future_schema(
+    tmp_path: Path,
+) -> None:
+    section_root = _root(tmp_path / "section")
+    section_agents = section_root / "AGENTS.md"
+    section_agents.write_text("human\n", encoding="utf-8")
+    apply_initialization(plan_initialization(section_root, adopt=True))
+    section_state = section_root / ".slygentify" / "state.json"
+    section_state.write_text("{}", encoding="utf-8")
+    section_result = doctor.doctor_repository(section_root)
+    assert section_result.diagnostics[0].remediation is not None
+    assert "replace only the marked section" in section_result.diagnostics[0].remediation
+
+    adopt_root = _root(tmp_path / "adopt")
+    (adopt_root / "AGENTS.md").write_text("human\n", encoding="utf-8")
+    adopt_state = adopt_root / ".slygentify" / "state.json"
+    adopt_state.parent.mkdir()
+    adopt_state.write_text("{}", encoding="utf-8")
+    adopt_result = doctor.doctor_repository(adopt_root)
+    assert adopt_result.diagnostics[0].remediation is not None
+    assert "--adopt --dry-run" in adopt_result.diagnostics[0].remediation
+
+    future_root = _root(tmp_path / "future")
+    future_state = future_root / ".slygentify" / "state.json"
+    future_state.parent.mkdir()
+    future_state.write_text('{"schema_version": 3}', encoding="utf-8")
+    future_result = doctor.doctor_repository(future_root)
+    assert future_result.diagnostics[0].category == "state.unsupported-schema"
+    assert future_result.diagnostics[0].remediation is not None
+    assert "does not authorize a downgrade" in future_result.diagnostics[0].remediation
+
+
+@pytest.mark.verifies("TST047", "TST055")
+def test_invalid_state_remediation_covers_protected_and_malformed_entries(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _root(tmp_path)
+    assert "readable" in doctor._invalid_state_remediation(root, "state.unreadable", "fresh")
+    assert "unsafe state entry" in doctor._invalid_state_remediation(
+        root, "state.unsafe-entry", "fresh"
+    )
+
+    agents = root / "AGENTS.md"
+    agents.write_bytes(SECTION_BEGIN + b"broken\n")
+    assert "--replace --dry-run" in doctor._invalid_state_remediation(
+        root, "state.invalid-structure", "fresh"
+    )
+
+    unsafe_root = _root(tmp_path / "unsafe-guidance")
+    (unsafe_root / "AGENTS.md").mkdir()
+    unsafe_state = unsafe_root / ".slygentify" / "state.json"
+    unsafe_state.parent.mkdir()
+    unsafe_state.write_text("{}", encoding="utf-8")
+    unsafe_result = doctor.doctor_repository(unsafe_root)
+    unsafe_diagnostic = next(
+        item for item in unsafe_result.diagnostics if item.code == "doctor.state.invalid"
+    )
+    unsafe_recovery = unsafe_diagnostic.remediation or ""
+    assert "unsafe AGENTS.md entry" in unsafe_recovery
+    assert "--adopt" not in unsafe_recovery
+
+    original_lstat = Path.lstat
+
+    def failing_lstat(path: Path) -> object:
+        if path == agents:
+            raise OSError("unreadable")
+        return original_lstat(path)
+
+    with monkeypatch.context() as context:
+        context.setattr(Path, "lstat", failing_lstat)
+        unreadable_metadata = doctor._invalid_state_remediation(
+            root, "state.invalid-structure", "fresh"
+        )
+    assert "Make AGENTS.md readable" in unreadable_metadata
+    assert "--adopt" not in unreadable_metadata
+
+    with monkeypatch.context() as context:
+        context.setattr(doctor, "_MAX_STATE_BYTES", 1)
+        oversized_recovery = doctor._invalid_state_remediation(
+            root, "state.invalid-structure", "fresh"
+        )
+    assert "oversized AGENTS.md" in oversized_recovery
+
+    original_read_bytes = Path.read_bytes
+
+    def failing_read_bytes(path: Path) -> bytes:
+        if path == agents:
+            raise OSError("unreadable")
+        return original_read_bytes(path)
+
+    with monkeypatch.context() as context:
+        context.setattr(doctor, "_safe_digest", lambda *_args: None)
+        context.setattr(Path, "read_bytes", failing_read_bytes)
+        unreadable_content = doctor._invalid_state_remediation(
+            root, "state.invalid-structure", "fresh"
+        )
+    assert "Make AGENTS.md readable" in unreadable_content
+    assert "--adopt" not in unreadable_content
 
 
 @pytest.mark.verifies("TST047", "TST046")

@@ -143,7 +143,7 @@ def _render_lifecycle_next() -> None:
 
 
 @app.command("init")
-@implements("REQ003", "REQ004", "REQ040", "REQ044", "REQ053")
+@implements("REQ003", "REQ004", "REQ040", "REQ044", "REQ053", "REQ054")
 def init_command(
     path: Annotated[
         Path,
@@ -206,6 +206,7 @@ def init_command(
         typer.echo(f"Ownership: {plan.ownership}")
         typer.echo(f"AGENTS.md: {plan.agents_action}")
         typer.echo(f".slygentify/state.json: {plan.state_action}")
+        typer.echo(f"State recovery: {plan.state_recovery}")
         if plan.managed_section is None:
             typer.echo("\n--- AGENTS.md ---")
             typer.echo(plan.agents_markdown, nl=False)
@@ -230,7 +231,7 @@ def init_command(
         for diagnostic in plan.diagnostics:
             _render_initialization_diagnostic(diagnostic)
         raise typer.Exit(code=1)
-    if replace and plan.agents_action == "replace":
+    if replace and plan.agents_action == "replace" and plan.managed_section is None:
         typer.echo(
             render_diagnostic(
                 DiagnosticDetail(
@@ -253,6 +254,19 @@ def init_command(
         raise typer.Exit(code=1) from None
     if not result.changed_locations:
         typer.echo("No changes.")
+    elif result.state_recovery == "schema-upgrade":
+        if AGENTS_FILENAME not in result.changed_locations:
+            typer.echo("Upgraded .slygentify/state.json to state-v2")
+        elif result.agents_action == "create":
+            typer.echo("Created AGENTS.md and upgraded .slygentify/state.json to state-v2")
+        else:
+            typer.echo("Regenerated AGENTS.md and upgraded .slygentify/state.json to state-v2")
+    elif result.state_recovery == "state-rebuild" and result.agents_action == "no_change":
+        typer.echo("Rebuilt .slygentify/state.json from current generated guidance")
+    elif result.state_recovery == "state-rebuild" and result.agents_action == "create":
+        typer.echo("Created AGENTS.md and rebuilt .slygentify/state.json")
+    elif result.state_recovery == "state-rebuild" and plan.managed_section is not None:
+        typer.echo("Recovered Slygentify bootstrap guidance and rebuilt .slygentify/state.json")
     elif result.ownership == "recoverable-state":
         typer.echo("Repaired .slygentify/state.json")
     elif result.agents_action == "create":

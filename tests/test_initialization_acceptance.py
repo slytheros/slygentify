@@ -72,7 +72,7 @@ def test_first_dry_run_create_no_change_and_regeneration_from_inputs(tmp_path: P
     assert apply_initialization(plan_initialization(root)).changed_locations == ()
 
 
-@pytest.mark.verifies("TST039")
+@pytest.mark.verifies("TST039", "TST055")
 def test_protected_entries_stale_recovery_and_schema_refusal(tmp_path: Path) -> None:
     root = _managed_repository(tmp_path)
     agents = root / "AGENTS.md"
@@ -114,9 +114,16 @@ def test_protected_entries_stale_recovery_and_schema_refusal(tmp_path: Path) -> 
 
     state_target.write_text('{"schema_version": 2}', encoding="utf-8")
     invalid = plan_initialization(root, replace=True)
-    assert invalid.ownership == "invalid-state"
-    assert not invalid.can_apply
-    assert state_target.read_text(encoding="utf-8") == '{"schema_version": 2}'
+    assert invalid.ownership == "recoverable-state"
+    assert invalid.can_apply
+    assert invalid.state_recovery == "state-rebuild"
+    assert apply_initialization(invalid).changed_locations == (".slygentify/state.json",)
+
+    state_target.write_text('{"schema_version": 3}', encoding="utf-8")
+    future = plan_initialization(root, replace=True)
+    assert future.ownership == "invalid-state"
+    assert not future.can_apply
+    assert state_target.read_text(encoding="utf-8") == '{"schema_version": 3}'
 
 
 @pytest.mark.verifies("TST039")

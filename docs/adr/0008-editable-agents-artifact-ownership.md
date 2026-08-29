@@ -2,7 +2,10 @@
 
 ## Status
 
-Accepted
+Superseded
+
+Superseded by [ADR 0013](0013-generated-artifact-recovery.md), which consolidates the
+generated-guidance ownership and recovery policy.
 
 ## Context
 

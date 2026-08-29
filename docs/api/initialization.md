@@ -5,16 +5,23 @@ root `AGENTS.md` guidance with its deterministic ownership sidecar.
 
 ## Plan before writing
 
-`plan_initialization(path=".", *, replace=False)` returns an immutable
+`plan_initialization(path=".", *, replace=False, adopt=False)` returns an immutable
 `InitializationPlan` without writing. It includes ownership classification,
 applicability, separate actions and exact bytes for `AGENTS.md` and
 `.slygentify/state.json`, and actionable diagnostics.
+Use `agents_bytes` for the exact planned `AGENTS.md` payload; this preserves opaque
+human-owned bytes surrounding a managed section even when they are not valid UTF-8.
+`state_recovery` is `none`, `schema-upgrade`, or `state-rebuild`; the result repeats the
+applied classification. Source digests in the plan ensure that artifact or invalid-state
+changes between planning and application are rejected.
 Each `InitializationDiagnostic` exposes a `problem` or `notice` disposition. Current
 initialization conditions do not use `limitation`; operational failures remain problems.
 
 Ordinary plans apply only to `new`, `clean-managed`, and `recoverable-state` ownership.
-`replace=True` is required for unmanaged, human-edited, or missing managed artifacts;
-it never authorizes unsafe or malformed targets. The plan is the Python equivalent of
+`replace=True` is required for unmanaged, human-edited, or missing managed artifacts
+that lack a safe marked-section recovery. `adopt=True` can preserve unmanaged guidance
+while rebuilding bounded invalid state. Neither option authorizes unsafe entries,
+unbounded state, or a newer schema downgrade. The plan is the Python equivalent of
 the CLI dry-run review surface. The full ownership vocabulary also includes
 `unmanaged`, `human-edited`, `missing-managed-artifact`, `invalid-state`, and
 `unsafe-entry`.

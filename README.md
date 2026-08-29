@@ -56,6 +56,11 @@ ordinary `init` prints a paste-ready Slygentify section and exits 4 so a user ca
 manually. `--replace` is an explicit destructive choice and does not create a backup or
 merge.
 
+Supported legacy state and bounded invalid generated state are upgraded during `init`
+when ownership is independently safe. Exactly one well-formed visible marker pair owns
+only its managed section for recovery, so surrounding human guidance remains unchanged.
+Newer schemas, unbounded state, and unsafe entries fail with an exact next action.
+
 See the [first-repository tutorial](docs/tutorials/first-repository.md) for a runnable
 walkthrough, the [troubleshooting guide](docs/guides/troubleshooting.md) for safe
 recovery, and the [CLI guide](docs/cli.md) for complete command behavior. The optional
