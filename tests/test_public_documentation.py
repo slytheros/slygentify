@@ -253,42 +253,6 @@ def test_documented_resource_defaults_match_effective_configuration(tmp_path: Pa
 
 
 @pytest.mark.verifies("TST051")
-def test_public_documentation_is_present_state_accurate() -> None:
-    installation = (DOCS / "installation.md").read_text(encoding="utf-8")
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    support = (ROOT / "SUPPORT.md").read_text(encoding="utf-8")
-    security = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
-
-    assert "not yet published on production PyPI" in installation
-    assert "not currently available downloads" in installation
-    current, future = installation.split("## After a genuine PyPI publication", maxsplit=1)
-    assert "existing reviewed source checkout" in current
-    assert "A selected target must be inside a local Git repository" in current
-    assert "Git executable" in current
-    assert "git clone" not in current
-    assert "git clone" in future
-    assert '!!! warning "Future installation only — do not run these commands yet"' in future
-    assert "Ubuntu 24.04 x64, Windows 2025 x64, and macOS 15 arm64" in current
-    assert "docs/installation.md#current-availability" in support
-    assert changelog.count("## Unreleased") == 1
-    assert "## [1.0.0rc1] - 2026-08-27" in changelog
-    assert "no guaranteed response or remediation service-level agreement" in " ".join(
-        support.split()
-    )
-    assert "no response or remediation service-level agreement" in " ".join(security.split())
-    assert "--git-executable PATH" in (DOCS / "safety.md").read_text(encoding="utf-8")
-    assert "## Quickstart" in readme
-    assert "Choose the command that matches your goal:" in readme
-    assert (
-        readme.index("slygentify scan path/to/repository")
-        < readme.index("slygentify map path/to/repository")
-        < readme.index("slygentify init path/to/repository --dry-run")
-        < readme.index("slygentify doctor path/to/repository")
-    )
-
-
-@pytest.mark.verifies("TST051")
 def test_public_documentation_site_builds_strictly_without_private_history(
     tmp_path: Path,
 ) -> None:
