@@ -253,6 +253,7 @@ def plan_initialization(
     state_recovery: StateRecovery = "none"
     state_write_recovery = False
     blocked_state = False
+    invalid_state_has_markers = False
     agents_source_sha256: str | None = None
     state_source_sha256: str | None = None
     unsafe_target = AGENTS_FILENAME
@@ -319,6 +320,7 @@ def plan_initialization(
                         state_write_recovery = True
                     else:
                         blocked_state = True
+                        invalid_state_has_markers = not no_markers
                         ownership = "invalid-state"
                 else:
                     agents_data = replace_managed_section(
@@ -422,6 +424,13 @@ def plan_initialization(
         )
     except InitializationError:
         raise
+    except StateError as error:
+        raise InitializationError(
+            "initialization.concurrent-change",
+            "Provenance state changed during initialization planning; no files were changed.",
+            target=".slygentify/state.json",
+            category=error.category,
+        ) from None
     except OSError:
         blocked_state = True
         ownership = "unsafe-entry"
@@ -472,12 +481,10 @@ def plan_initialization(
             )
             rationale = "Following or replacing a symbolic link or non-regular target could escape repository containment."
         else:
-            current = agents.read_bytes() if os.path.lexists(agents) and _regular(agents) else b""
-            has_markers = SECTION_BEGIN in current or SECTION_END in current
             recovery = (
                 "Review slygentify init . --replace --dry-run, then use --replace to authorize "
                 "full-document and state replacement."
-                if has_markers
+                if invalid_state_has_markers
                 else "Review slygentify init . --adopt --dry-run to preserve existing guidance, "
                 "or use --replace --dry-run only if the whole document may be discarded."
             )

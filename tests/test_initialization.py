@@ -577,6 +577,68 @@ def test_planner_contains_agents_removal_during_source_digest_capture(
 
 
 @pytest.mark.verifies("TST039", "TST055")
+def test_planner_does_not_reread_ambiguous_agents_for_invalid_state_diagnostic(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _repository(tmp_path)
+    agents = root / "AGENTS.md"
+    agents.write_text("ambiguous human guidance\n", encoding="utf-8")
+    state = root / ".slygentify" / "state.json"
+    state.parent.mkdir()
+    state.write_text("{}", encoding="utf-8")
+    original_regular = initialization._regular
+    regular_calls = 0
+
+    def fail_on_late_diagnostic_read(path: Path) -> bool:
+        nonlocal regular_calls
+        if path == agents:
+            regular_calls += 1
+            if regular_calls == 4:
+                agents.unlink()
+                raise OSError("late diagnostic race")
+        return original_regular(path)
+
+    monkeypatch.setattr(initialization, "_regular", fail_on_late_diagnostic_read)
+
+    plan = plan_initialization(root)
+
+    assert regular_calls == 3
+    assert agents.is_file()
+    assert not plan.can_apply
+    assert plan.ownership == "invalid-state"
+    assert "--adopt --dry-run" in plan.diagnostics[0].recovery
+
+
+@pytest.mark.verifies("TST039", "TST055")
+def test_planner_translates_state_error_from_late_validation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _repository(tmp_path)
+    state = root / ".slygentify" / "state.json"
+    state.parent.mkdir()
+    state.write_text("{}", encoding="utf-8")
+    original_plan_state_write = cast(
+        Callable[..., StateWritePlan], initialization.__dict__["plan_state_write"]
+    )
+
+    def replace_with_future_state(
+        root_arg: Path, state_arg: StateDocument, *, replace_invalid: bool = False
+    ) -> StateWritePlan:
+        state.write_text('{"schema_version":3}', encoding="utf-8")
+        return original_plan_state_write(root_arg, state_arg, replace_invalid=replace_invalid)
+
+    monkeypatch.setattr(initialization, "plan_state_write", replace_with_future_state)
+
+    with pytest.raises(InitializationError) as captured:
+        plan_initialization(root)
+
+    assert captured.value.code == "initialization.concurrent-change"
+    assert captured.value.diagnostic.target == ".slygentify/state.json"
+    assert captured.value.diagnostic.category == "state.unsupported-schema"
+    assert state.read_text(encoding="utf-8") == '{"schema_version":3}'
+
+
+@pytest.mark.verifies("TST039", "TST055")
 def test_apply_rejects_agents_creation_after_replanning(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
