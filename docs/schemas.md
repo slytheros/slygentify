@@ -1,6 +1,6 @@
 # JSON Schema reference
 
-Slygentify owns four packaged JSON Schemas using JSON Schema Draft 2020-12. The package
+Slygentify owns five packaged JSON Schemas using JSON Schema Draft 2020-12. The package
 copies under `src/slygentify/schemas/` are normative. This page is an index and
 compatibility guide; it does not duplicate or redefine their constraints.
 
@@ -9,7 +9,10 @@ compatibility guide; it does not duplicate or redefine their constraints.
 | Complete scan | `schemas/scan-v1.schema.json` | `dump_scan_json` | [`scan-v1.schema.json`](https://github.com/slytheros/slygentify/blob/develop/src/slygentify/schemas/scan-v1.schema.json) |
 | Task map | `schemas/scan-projection-v1.schema.json` | `dump_scan_projection_json` | [`scan-projection-v1.schema.json`](https://github.com/slytheros/slygentify/blob/develop/src/slygentify/schemas/scan-projection-v1.schema.json) |
 | Static doctor | `schemas/doctor-v1.schema.json` | `dump_doctor_json` | [`doctor-v1.schema.json`](https://github.com/slytheros/slygentify/blob/develop/src/slygentify/schemas/doctor-v1.schema.json) |
-| Initialization state | `schemas/state-v1.schema.json` | `.slygentify/state.json` | [`state-v1.schema.json`](https://github.com/slytheros/slygentify/blob/develop/src/slygentify/schemas/state-v1.schema.json) |
+| Initialization state | `schemas/state-v2.schema.json` | `.slygentify/state.json` | [`state-v2.schema.json`](https://github.com/slytheros/slygentify/blob/develop/src/slygentify/schemas/state-v2.schema.json) |
+
+Legacy initialization state remains documented as
+[`state-v1.schema.json`](https://github.com/slytheros/slygentify/blob/develop/src/slygentify/schemas/state-v1.schema.json).
 
 Every schema is checked during tests with an independent Draft 2020-12 validator. Scan,
 map, and doctor also expose public functions that return fresh schema dictionaries so a
@@ -22,8 +25,12 @@ not a public Python result type.
 - Use Slygentify's public loaders for untrusted scan, map, or doctor JSON when possible;
   they enforce duplicate-key, encoding, size, depth, collection, and graph bounds that a
   JSON Schema validator alone does not provide.
-- Schema-major-1 readers ignore unknown object properties for compatible additive
-  evolution. Current producers emit only canonical declared fields.
+- Treat `state-v1` as legacy readable provenance and `state-v2` as the current producer
+  format. Mutating init upgrades supported legacy state when ownership is safe; current
+  producers emit only canonical declared fields. Older binaries refuse newer state
+  schema majors rather than downgrading them.
+- Scan, map, and doctor diagnostic `disposition` is an optional schema-major-1 enum for
+  compatibility. Current producers emit it; readers default its absence to `problem`.
 - Do not load a task map as a complete scan or use initialization state as cached scan
   authority.
 

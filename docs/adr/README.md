@@ -34,7 +34,9 @@ pull requests, or close human gates.
 | [ADR 0005](0005-repository-inspection-configuration-and-provenance.md) | Accepted | Repository inspection, configuration, and provenance |
 | [ADR 0006](0006-scan-pipeline-extension-boundaries.md) | Accepted | Scan pipeline and extension boundaries |
 | [ADR 0007](0007-git-backed-tracked-path-discovery.md) | Accepted | Git-backed tracked-path discovery |
-| [ADR 0008](0008-editable-agents-artifact-ownership.md) | Accepted | Editable AGENTS.md artifact ownership and regeneration |
+| [ADR 0008](0008-editable-agents-artifact-ownership.md) | Superseded | Editable AGENTS.md artifact ownership and regeneration |
 | [ADR 0009](0009-thin-agents-and-task-scoped-operating-maps.md) | Accepted | Thin AGENTS.md and task-scoped operating maps |
 | [ADR 0010](0010-static-doctor-diagnostics-and-automation-contract.md) | Accepted | Static doctor diagnostics and automation contract |
+| [ADR 0012](0012-visible-managed-guidance-sections.md) | Superseded | Visible managed guidance sections |
 | [ADR 0011](0011-public-migration-release-and-support-policy.md) | Accepted | Public migration, release, and support policy |
+| [ADR 0013](0013-generated-artifact-recovery.md) | Accepted | First-class generated-artifact recovery |

@@ -1,0 +1,31 @@
+active: true
+derived: false
+header: |
+  First-class generated-artifact recovery
+level: 1.54
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ054
+  path: src/slygentify/_doctor.py
+  type: file
+- keyword: REQ054
+  path: src/slygentify/_provenance.py
+  type: file
+- keyword: REQ054
+  path: src/slygentify/initialization.py
+  type: file
+- keyword: REQ054
+  path: src/slygentify/cli.py
+  type: file
+reviewed: yF0hqf9RQa9LvzsBnjd8TshofUkt8MZW8qoAGfLHkHo=
+text: |
+  During initialization, Slygentify shall automatically upgrade supported legacy state
+  and shall rebuild bounded readable invalid state when fresh whole-document bytes, an
+  absent artifact, or exactly one well-formed visible managed-section boundary establishes
+  safe ownership. Section recovery shall preserve every surrounding byte. Explicit adopt
+  may append a section while rebuilding invalid state, and explicit replace may replace an
+  ambiguous safe regular document. Newer schema majors, oversized or unreadable state, and
+  unsafe entries shall fail without mutation and identify the required recovery action.
+  Invalid state bytes shall never be reproduced or automatically backed up.

@@ -43,6 +43,9 @@ class _DoctorDiagnosticInput(_InputModel):
     effect: str
     remediation: str | None = None
     evidence_ids: list[str]
+    category: str | None = None
+    safety_rationale: str | None = None
+    disposition: Literal["problem", "limitation", "notice"] = "problem"
 
 
 class _DoctorInput(_InputModel):
@@ -90,6 +93,9 @@ def _doctor_mapping(result: DoctorResult) -> dict[str, object]:
         record["effect"] = diagnostic_item.effect
         _optional(record, "remediation", diagnostic_item.remediation)
         record["evidence_ids"] = list(diagnostic_item.evidence_ids)
+        _optional(record, "category", diagnostic_item.category)
+        _optional(record, "safety_rationale", diagnostic_item.safety_rationale)
+        record["disposition"] = diagnostic_item.disposition
         diagnostics.append(record)
     skipped_scopes: list[dict[str, object]] = []
     for skipped_item in result.skipped_scopes:
@@ -139,6 +145,9 @@ def _public_doctor(value: _DoctorInput) -> DoctorResult:
             effect=item.effect,
             remediation=item.remediation,
             evidence_ids=tuple(item.evidence_ids),
+            category=item.category,
+            safety_rationale=item.safety_rationale,
+            disposition=item.disposition,
         )
         for item in value.diagnostics
     )

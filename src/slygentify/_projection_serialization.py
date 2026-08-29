@@ -141,6 +141,12 @@ def _projection_mapping(projection: ScanProjection) -> dict[str, object]:
         _optional(record, "location", diagnostic.location)
         record["message"] = diagnostic.message
         record["evidence_ids"] = list(diagnostic.evidence_ids)
+        _optional(record, "category", diagnostic.category)
+        _optional(record, "problem", diagnostic.problem)
+        _optional(record, "effect", diagnostic.effect)
+        _optional(record, "recovery", diagnostic.recovery)
+        _optional(record, "safety_rationale", diagnostic.safety_rationale)
+        record["disposition"] = diagnostic.disposition
         diagnostics.append(record)
     skipped_scopes: list[dict[str, object]] = []
     for skipped in projection.skipped_scopes:
@@ -233,6 +239,12 @@ def _public_projection(value: _ProjectionInput) -> ScanProjection:
             location=item.location,
             message=item.message,
             evidence_ids=tuple(item.evidence_ids),
+            category=item.category,
+            problem=item.problem,
+            effect=item.effect,
+            recovery=item.recovery,
+            safety_rationale=item.safety_rationale,
+            disposition=item.disposition,
         )
         for item in value.diagnostics
     )

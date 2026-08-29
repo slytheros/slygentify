@@ -10,10 +10,30 @@ references:
 - keyword: REQ046
   path: src/slygentify/_scan/contracts.py
   type: file
-reviewed: 1w3QuJWM3IFmN0kY_1xSO-P81GWLud62IFo4QqvQzqE=
+- keyword: REQ046
+  path: src/slygentify/initialization.py
+  type: file
+- keyword: REQ046
+  path: src/slygentify/models.py
+  type: file
+reviewed: MU4XsKzfPjHV75_51w4RWH-t0ynDLEeTyxPBSC4hRiQ=
 text: |
-  User-visible diagnostics shall distinguish the observed problem from its effect on
-  retained, omitted, withheld, or partial evidence. A diagnostic shall include recovery
-  text only when a safe, concrete review or correction is available, shall not recommend
-  weaker safety boundaries or unapproved effects, and shall compose the public message
-  deterministically without changing the public diagnostic data model.
+  Every Slygentify-authored result diagnostic, operational error, refusal, and warning
+  shall identify a stable code, safe target, and explicit disposition. `problem` identifies
+  a repository or operational condition requiring intervention; `limitation` identifies
+  trustworthy uncertainty imposed by a static, safety, resource, or support boundary;
+  `notice` identifies retained state or a choice worth review without implying a defect.
+  Disposition shall remain independent of claim classification, doctor severity,
+  completion, and exit status. Diagnostics shall distinguish the observed condition from its
+  effect on retained, omitted, withheld, refused, or partial work, and provide recovery
+  only when it is safe and concrete. A diagnostic that refuses automatic repair shall
+  state the ownership or safety rationale. Diagnostics shall not recommend weaker safety
+  boundaries or unapproved effects, expose raw parser, Git, or operating-system exception
+  text, or disclose secret-shaped content. Resolvable malformed, missing, unreadable,
+  conflict, dynamic, unsupported, and resource-limit conditions shall name a
+  condition-specific safe next step. Scan and map retain their compatible message while
+  producers additionally expose optional structured category, problem, effect, recovery,
+  and safety-rationale fields; doctor retains remediation and adds category and safety
+  rationale. Private diagnostic candidates shall retain explicit structure and compose
+  compatible public messages deterministically, and every private producer shall supply a
+  disposition explicitly rather than infer it from a code or message.

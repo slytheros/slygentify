@@ -12,8 +12,12 @@ slygentify doctor path/to/repository --verbose
 ```
 
 Default text includes the resolved repository, completion, severity counts, and every
-diagnostic's classification, stable code, target, problem, effect, and remediation.
+diagnostic's classification, disposition, stable code, target, description, effect, and remediation.
 Verbose mode adds evidence references, one evidence appendix, and every skipped scope.
+If fresh inspection is partial, doctor emits one `doctor.inspection.partial` warning for
+each distinct cause instead of one umbrella warning. Each warning keeps the exact safe
+location and cause-specific action. In verbose and JSON output, synthetic provenance
+evidence identifies the originating scan code or resource-boundary reason.
 
 ```text
 Repository: .
@@ -22,6 +26,18 @@ Diagnostics: 0 errors, 0 warnings, 0 info
 ```
 
 Human wording and layout may evolve and must not be parsed by automation.
+
+## Volatile skipped scopes
+
+Fresh doctor output retains every observed skipped scope, including ignored build output,
+virtual environments, bytecode, and tool caches. These workspace-dependent observations
+do not enter newly generated committed provenance and do not make regenerated state
+stale when they appear or disappear.
+
+An existing supported sidecar may still contain these older records. It remains valid;
+doctor reports the existing informational `doctor.state.stale` notice and exits 0 until
+an explicit reviewed init regenerates canonical v2 state. No schema migration or special
+recovery command is required.
 
 ## Canonical JSON
 
@@ -39,7 +55,7 @@ from slygentify import doctor_repository, dump_doctor_json
 
 result = doctor_repository("path/to/repository")
 for diagnostic in result.diagnostics:
-    print(diagnostic.severity, diagnostic.code, diagnostic.remediation)
+    print(diagnostic.severity, diagnostic.disposition, diagnostic.code, diagnostic.remediation)
 document = dump_doctor_json(result)
 ```
 

@@ -143,6 +143,13 @@
         "code": {
           "$ref": "#/$defs/nonEmptyString"
         },
+        "disposition": {
+          "enum": [
+            "problem",
+            "limitation",
+            "notice"
+          ]
+        },
         "severity": {
           "enum": [
             "info",
@@ -171,6 +178,12 @@
           "$ref": "#/$defs/nonEmptyString"
         },
         "remediation": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "category": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "safety_rationale": {
           "$ref": "#/$defs/nonEmptyString"
         },
         "evidence_ids": {

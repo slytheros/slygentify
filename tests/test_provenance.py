@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 from typing import cast
 
@@ -26,9 +27,11 @@ from slygentify._provenance import (
     dump_state_json,
     load_state_json,
     plan_state_write,
+    read_state_bytes,
     state_from_scan,
     state_json_schema,
 )
+from slygentify.models import SkippedScope
 from tests.scan_samples import sample_result
 
 
@@ -59,7 +62,7 @@ def _state() -> StateDocument:
         ),
     )
     return StateDocument(
-        1,
+        2,
         "0.1.0",
         StateConfiguration("slygentify.toml", _digest("configuration")),
         tuple(StateLimit(name, 1, 1, 1, "default") for name in names),
@@ -81,8 +84,44 @@ def test_state_round_trip_is_canonical_and_schema_is_packaged() -> None:
     assert load_state_json(data) == state
     assert dump_state_json(load_state_json(data)) == data
     schema = state_json_schema()
-    assert schema["$id"] == "schemas/state-v1.schema.json"
+    assert schema["$id"] == "schemas/state-v2.schema.json"
     assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
+
+
+@pytest.mark.verifies("TST036")
+def test_state_loader_classifies_parser_recursion_without_disclosure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def recursive_parse(*args: object, **kwargs: object) -> object:
+        raise RecursionError("untrusted nesting")
+
+    monkeypatch.setattr(json, "loads", recursive_parse)
+    with pytest.raises(StateError) as raised:
+        load_state_json(b"{}")
+
+    assert raised.value.category == "state.invalid-json"
+    assert "untrusted nesting" not in str(raised.value)
+
+
+@pytest.mark.verifies("TST036")
+def test_legacy_v1_state_remains_readable() -> None:
+    state = _state()
+    legacy = StateDocument(
+        1,
+        state.producer_version,
+        state.configuration,
+        state.effective_limits,
+        state.inputs,
+        state.derivations,
+        state.artifacts,
+        state.completion,
+        state.skipped_scopes,
+    )
+
+    loaded = load_state_json(dump_state_json(legacy))
+
+    assert loaded.schema_version == 1
+    assert loaded.artifacts[0].ownership == "document"
 
 
 @pytest.mark.verifies("TST036")
@@ -114,12 +153,51 @@ def test_state_reader_ignores_unknown_same_major_fields_and_rejects_bad_referenc
 
 
 @pytest.mark.verifies("TST036")
-def test_state_loader_rejects_version_order_digest_and_path_violations() -> None:
+def test_state_v2_artifact_ownership_is_validated() -> None:
     document = json.loads(dump_state_json(_state()))
-    document["schema_version"] = 2
-    with pytest.raises(StateError, match="schema version"):
+    document["artifacts"][0].pop("location")
+    with pytest.raises(StateError):
         load_state_json(json.dumps(document))
 
+    document = json.loads(dump_state_json(_state()))
+    document["artifacts"][0]["ownership"] = "unsupported"
+    with pytest.raises(StateError):
+        load_state_json(json.dumps(document))
+
+    with pytest.raises(StateError, match="schema version"):
+        dump_state_json(
+            replace(
+                _state(),
+                schema_version=1,
+                artifacts=(replace(_state().artifacts[0], ownership="section"),),
+            )
+        )
+
+
+@pytest.mark.verifies("TST036")
+@pytest.mark.parametrize(
+    ("encoded_version", "category"),
+    [
+        ("3", "state.unsupported-schema"),
+        ("3.0", "state.unsupported-schema"),
+        ("3e0", "state.unsupported-schema"),
+        ("3.5", "state.invalid-structure"),
+        ("2.0", "state.invalid-structure"),
+        ("true", "state.invalid-structure"),
+        ('"3"', "state.invalid-structure"),
+    ],
+)
+def test_state_loader_classifies_schema_version_numbers(
+    encoded_version: str, category: str
+) -> None:
+    with pytest.raises(StateError) as captured:
+        load_state_json('{"schema_version":' + encoded_version + "}")
+
+    assert captured.value.category == category
+
+
+@pytest.mark.verifies("TST036")
+def test_state_loader_rejects_order_digest_and_path_violations() -> None:
     document = json.loads(dump_state_json(_state()))
     document["inputs"][0]["sha256"] = "UPPER"
     with pytest.raises(StateError):
@@ -174,6 +252,53 @@ def test_state_write_create_no_change_replace_and_malformed_refusal(tmp_path: Pa
         plan_state_write(root, state)
 
 
+@pytest.mark.verifies("TST037", "TST055")
+def test_state_write_rebuilds_only_bounded_invalid_state_with_race_guards(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "repository"
+    target = root / ".slygentify" / "state.json"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"invalid-state")
+
+    recovery = plan_state_write(root, _state(), replace_invalid=True)
+    assert recovery.action == "replace"
+    target.write_bytes(b"changed-state")
+    with pytest.raises(StateError, match="changed concurrently"):
+        apply_state_write(recovery)
+
+    target.write_text('{"schema_version": 3}', encoding="utf-8")
+    with pytest.raises(StateError) as future:
+        plan_state_write(root, _state(), replace_invalid=True)
+    assert future.value.category == "state.unsupported-schema"
+
+    target.write_bytes(b"large")
+    monkeypatch.setattr(provenance, "_MAX_BYTES", 4)
+    with pytest.raises(StateError) as oversized:
+        read_state_bytes(target)
+    assert oversized.value.category == "state.too-large"
+    with pytest.raises(StateError) as oversized_data:
+        load_state_json(b"large")
+    assert oversized_data.value.category == "state.too-large"
+
+    with pytest.raises(StateError) as missing:
+        read_state_bytes(root / "missing.json")
+    assert missing.value.category == "state.unreadable"
+
+    monkeypatch.setattr(provenance, "_MAX_BYTES", 128 * 1024 * 1024)
+    original_read_bytes = Path.read_bytes
+
+    def failing_read_bytes(path: Path) -> bytes:
+        if path == target:
+            raise OSError("unreadable")
+        return original_read_bytes(path)
+
+    monkeypatch.setattr(Path, "read_bytes", failing_read_bytes)
+    with pytest.raises(StateError) as unreadable:
+        read_state_bytes(target)
+    assert unreadable.value.category == "state.unreadable"
+
+
 @pytest.mark.verifies("TST037")
 def test_state_write_refuses_unsafe_and_changed_targets(tmp_path: Path) -> None:
     root = tmp_path / "repository"
@@ -204,6 +329,79 @@ def test_state_from_scan_uses_only_already_read_regular_file_bytes(tmp_path: Pat
     )
     with pytest.raises(StateError):
         state_from_scan(object(), load_configuration(root), {})  # type: ignore[arg-type]
+
+
+@pytest.mark.verifies("TST056")
+def test_state_from_scan_omits_only_volatile_skipped_scope_reasons(tmp_path: Path) -> None:
+    root = tmp_path / "repository"
+    root.mkdir()
+    skipped_scopes = tuple(
+        sorted(
+            (
+                SkippedScope(
+                    scope=".pytest_cache",
+                    reason="built_in_exclusion",
+                    effective_limit=None,
+                    consumed=None,
+                    omitted_scope=".pytest_cache",
+                ),
+                SkippedScope(
+                    scope="build",
+                    reason="gitignore",
+                    effective_limit=None,
+                    consumed=None,
+                    omitted_scope="build",
+                ),
+                SkippedScope(
+                    scope="configured",
+                    reason="configuration",
+                    effective_limit=None,
+                    consumed=None,
+                    omitted_scope="configured",
+                ),
+                SkippedScope(
+                    scope="credentials",
+                    reason="sensitive_content",
+                    effective_limit=None,
+                    consumed=None,
+                    omitted_scope="credentials",
+                ),
+                SkippedScope(
+                    scope="linked",
+                    reason="link_or_reparse",
+                    effective_limit=None,
+                    consumed=None,
+                    omitted_scope="linked",
+                ),
+                SkippedScope(
+                    scope="nested",
+                    reason="nested_repository",
+                    effective_limit=None,
+                    consumed=None,
+                    omitted_scope="nested",
+                ),
+                SkippedScope(
+                    scope="remaining",
+                    reason="max_entries",
+                    effective_limit=100,
+                    consumed=100,
+                    omitted_scope="remaining/**",
+                ),
+            ),
+            key=lambda item: (item.scope, item.reason),
+        )
+    )
+    result = replace(sample_result(), skipped_scopes=skipped_scopes)
+
+    state = state_from_scan(result, load_configuration(root), {})
+
+    assert {(item.scope, item.reason) for item in state.skipped_scopes} == {
+        ("configured", "configuration"),
+        ("credentials", "sensitive_content"),
+        ("linked", "link_or_reparse"),
+        ("nested", "nested_repository"),
+        ("remaining", "max_entries"),
+    }
 
 
 @pytest.mark.verifies("TST036")

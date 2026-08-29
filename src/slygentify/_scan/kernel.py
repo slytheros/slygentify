@@ -21,6 +21,7 @@ from pathspec.patterns.gitignore import GitIgnorePatternError
 from slygentify._configuration import EffectiveConfiguration
 from slygentify._git_tracking import _TrackedPaths
 from slygentify._scan.contracts import DiagnosticCandidate as _DiagnosticCandidate
+from slygentify._scan.contracts import PartialCause as _PartialCause
 from slygentify._scan.contracts import PathCandidate as _PathCandidate
 from slygentify._scan.paths import parent as _parent
 from slygentify._scan.paths import path_metadata as _path_metadata
@@ -129,6 +130,7 @@ class _Inspection:
     started: float = 0.0
     memory_consumed: int = 0
     clock: Callable[[], float] = time.monotonic
+    partial_skipped: tuple[SkippedScope, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -139,6 +141,7 @@ class _ScanExecution:
     result: ScanResult
     configuration: EffectiveConfiguration
     content_fingerprints: Mapping[str, str]
+    partial_causes: tuple[_PartialCause, ...] = ()
 
     def __iter__(self) -> Iterator[Any]:
         """Retain the existing private tuple-unpacking convention."""
@@ -212,6 +215,7 @@ class _RepositoryView:
             self._clock = time.monotonic
             self._elapsed_exhausted = False
         self.skipped: list[SkippedScope] = []
+        self.partial_skipped: list[SkippedScope] = []
         self.diagnostics: list[_DiagnosticCandidate] = []
         self.partial = False
         self._catalog_memory_consumed = 0
@@ -289,15 +293,15 @@ class _RepositoryView:
         ):
             return False
         if not any(item.reason == "max_elapsed_seconds" for item in self.skipped):
-            self.skipped.append(
-                _skip(
-                    ".",
-                    "max_elapsed_seconds",
-                    max(1, int(self._limits.max_elapsed_seconds)),
-                    max(0, int(elapsed)),
-                    omitted_scope="**",
-                )
+            skipped = _skip(
+                ".",
+                "max_elapsed_seconds",
+                max(1, int(self._limits.max_elapsed_seconds)),
+                max(0, int(elapsed)),
+                omitted_scope="**",
             )
+            self.skipped.append(skipped)
+            self.partial_skipped.append(skipped)
         self.partial = True
         self._elapsed_exhausted = True
         return True
@@ -329,13 +333,13 @@ class _RepositoryView:
             self._memory_consumed += len(data)
             return data
         except TimeoutError:
-            self.skipped.append(
-                _skip(
-                    path,
-                    "max_elapsed_seconds",
-                    max(1, int(self._limits.max_elapsed_seconds or 1)),
-                )
+            skipped = _skip(
+                path,
+                "max_elapsed_seconds",
+                max(1, int(self._limits.max_elapsed_seconds or 1)),
             )
+            self.skipped.append(skipped)
+            self.partial_skipped.append(skipped)
         except OverflowError as error:
             reason = str(error)
             limit = (
@@ -343,24 +347,29 @@ class _RepositoryView:
                 if reason == "max_file_bytes"
                 else self._limits.max_total_bytes
             )
-            self.skipped.append(_skip(path, reason, limit, self._bytes_read))
+            skipped = _skip(path, reason, limit, self._bytes_read)
+            self.skipped.append(skipped)
+            self.partial_skipped.append(skipped)
         except MemoryError:
-            self.skipped.append(
-                _skip(
-                    path,
-                    "max_memory_bytes",
-                    self._limits.max_memory_bytes,
-                    self._memory_consumed,
-                )
+            skipped = _skip(
+                path,
+                "max_memory_bytes",
+                self._limits.max_memory_bytes,
+                self._memory_consumed,
             )
+            self.skipped.append(skipped)
+            self.partial_skipped.append(skipped)
         except OSError:
-            self.skipped.append(_skip(path, "unsafe_file"))
+            skipped = _skip(path, "unsafe_file")
+            self.skipped.append(skipped)
+            self.partial_skipped.append(skipped)
         self.diagnostics.append(
             _DiagnosticCandidate(
                 "inspection.unreadable-evidence",
                 path,
                 "Evidence file could not be read safely within the inspection limits.",
                 True,
+                disposition="limitation",
             )
         )
         self.partial = True
@@ -541,6 +550,7 @@ def _inspect(
     files: dict[str, bytes] = {}
     catalog: dict[str, _Entry] = {}
     skipped: list[SkippedScope] = []
+    partial_skipped: list[SkippedScope] = []
     diagnostics: list[_DiagnosticCandidate] = []
     entries_examined = 0
     bytes_read = tracked.bytes_read
@@ -549,7 +559,9 @@ def _inspect(
     root_device = root.stat().st_dev
 
     if not tracked.available:
-        skipped.append(_skip(".", "git_tracking_unavailable", omitted_scope="**"))
+        tracked_skip = _skip(".", "git_tracking_unavailable", omitted_scope="**")
+        skipped.append(tracked_skip)
+        partial_skipped.append(tracked_skip)
         diagnostics.append(
             _DiagnosticCandidate(
                 "inspection.git-tracked-paths-unavailable",
@@ -557,12 +569,15 @@ def _inspect(
                 "Tracked paths were unavailable; checked-out Gitignore rules were applied "
                 "without tracked-file exceptions.",
                 True,
+                disposition="limitation",
             )
         )
     if ledger.add(1):
         queue.append((".", 0))
     else:
-        skipped.append(_skip(".", "max_memory_bytes", limits.max_memory_bytes, ledger.consumed))
+        memory_skip = _skip(".", "max_memory_bytes", limits.max_memory_bytes, ledger.consumed)
+        skipped.append(memory_skip)
+        partial_skipped.append(memory_skip)
         partial = True
 
     while queue and not stop:
@@ -570,27 +585,30 @@ def _inspect(
         ledger.release(len(relative.encode("utf-8")))
         elapsed = clock() - started
         if limits.max_elapsed_seconds is not None and elapsed >= limits.max_elapsed_seconds:
-            skipped.append(
-                _skip(
-                    ".",
-                    "max_elapsed_seconds",
-                    max(1, int(limits.max_elapsed_seconds)),
-                    max(0, int(elapsed)),
-                    omitted_scope="**",
-                )
+            elapsed_skip = _skip(
+                ".",
+                "max_elapsed_seconds",
+                max(1, int(limits.max_elapsed_seconds)),
+                max(0, int(elapsed)),
+                omitted_scope="**",
             )
+            skipped.append(elapsed_skip)
+            partial_skipped.append(elapsed_skip)
             partial = True
             break
         try:
             entries = _list_entries(root, relative)
         except OSError:
-            skipped.append(_skip(relative, "unsafe_directory"))
+            directory_skip = _skip(relative, "unsafe_directory")
+            skipped.append(directory_skip)
+            partial_skipped.append(directory_skip)
             diagnostics.append(
                 _DiagnosticCandidate(
                     "inspection.unsafe-directory",
                     relative,
                     "Directory could not be inspected safely.",
                     True,
+                    disposition="problem",
                 )
             )
             partial = True
@@ -624,13 +642,16 @@ def _inspect(
                     raise MemoryError
                 bytes_read += len(data)
             except (GitIgnorePatternError, OSError, UnicodeError):
-                skipped.append(_skip(gitignore.path, "invalid_gitignore"))
+                gitignore_skip = _skip(gitignore.path, "invalid_gitignore")
+                skipped.append(gitignore_skip)
+                partial_skipped.append(gitignore_skip)
                 diagnostics.append(
                     _DiagnosticCandidate(
                         "inspection.invalid-gitignore",
                         gitignore.path,
                         "Gitignore rules could not be read safely.",
                         True,
+                        disposition="problem",
                     )
                 )
                 partial = True
@@ -643,22 +664,26 @@ def _inspect(
                     if reason == "max_file_bytes"
                     else limits.max_total_bytes
                 )
-                skipped.append(_skip(gitignore.path, reason, limit, bytes_read))
+                boundary_skip = _skip(gitignore.path, reason, limit, bytes_read)
+                skipped.append(boundary_skip)
+                partial_skipped.append(boundary_skip)
                 partial = True
             except MemoryError:
-                skipped.append(
-                    _skip(
-                        gitignore.path, "max_memory_bytes", limits.max_memory_bytes, ledger.consumed
-                    )
+                memory_skip = _skip(
+                    gitignore.path, "max_memory_bytes", limits.max_memory_bytes, ledger.consumed
                 )
+                skipped.append(memory_skip)
+                partial_skipped.append(memory_skip)
                 partial = True
 
         for entry in entries:
             entries_examined += 1
             if limits.max_entries is not None and entries_examined > limits.max_entries:
-                skipped.append(
-                    _skip(entry.path, "max_entries", limits.max_entries, entries_examined - 1)
+                entry_skip = _skip(
+                    entry.path, "max_entries", limits.max_entries, entries_examined - 1
                 )
+                skipped.append(entry_skip)
+                partial_skipped.append(entry_skip)
                 partial = True
                 stop = True
                 break
@@ -697,16 +722,18 @@ def _inspect(
                 continue
             if entry.is_dir:
                 if limits.max_depth is not None and depth + 1 > limits.max_depth:
-                    skipped.append(_skip(entry.path, "max_depth", limits.max_depth, depth))
+                    depth_skip = _skip(entry.path, "max_depth", limits.max_depth, depth)
+                    skipped.append(depth_skip)
+                    partial_skipped.append(depth_skip)
                     partial = True
                     continue
                 path_bytes = len(entry.path.encode("utf-8"))
                 if not ledger.add(path_bytes):
-                    skipped.append(
-                        _skip(
-                            entry.path, "max_memory_bytes", limits.max_memory_bytes, ledger.consumed
-                        )
+                    memory_skip = _skip(
+                        entry.path, "max_memory_bytes", limits.max_memory_bytes, ledger.consumed
                     )
+                    skipped.append(memory_skip)
+                    partial_skipped.append(memory_skip)
                     partial = True
                     continue
                 queue.append((entry.path, depth + 1))
@@ -714,14 +741,14 @@ def _inspect(
             if entry.is_file:
                 catalog_size = len(entry.path.encode("utf-8"))
                 if not ledger.add(catalog_size):
-                    skipped.append(
-                        _skip(
-                            entry.path,
-                            "max_memory_bytes",
-                            limits.max_memory_bytes,
-                            ledger.consumed,
-                        )
+                    memory_skip = _skip(
+                        entry.path,
+                        "max_memory_bytes",
+                        limits.max_memory_bytes,
+                        ledger.consumed,
                     )
+                    skipped.append(memory_skip)
+                    partial_skipped.append(memory_skip)
                     partial = True
                     continue
                 catalog[entry.path] = entry
@@ -741,10 +768,16 @@ def _inspect(
                 files[entry.path] = data
                 bytes_read += len(data)
             except OSError:
-                skipped.append(_skip(entry.path, "unsafe_file"))
+                file_skip = _skip(entry.path, "unsafe_file")
+                skipped.append(file_skip)
+                partial_skipped.append(file_skip)
                 diagnostics.append(
                     _DiagnosticCandidate(
-                        "inspection.unsafe-file", entry.path, "File could not be read safely.", True
+                        "inspection.unsafe-file",
+                        entry.path,
+                        "File could not be read safely.",
+                        True,
+                        disposition="problem",
                     )
                 )
                 partial = True
@@ -753,17 +786,22 @@ def _inspect(
                 limit = (
                     limits.max_file_bytes if reason == "max_file_bytes" else limits.max_total_bytes
                 )
-                skipped.append(_skip(entry.path, reason, limit, bytes_read))
+                boundary_skip = _skip(entry.path, reason, limit, bytes_read)
+                skipped.append(boundary_skip)
+                partial_skipped.append(boundary_skip)
                 partial = True
             except MemoryError:
-                skipped.append(
-                    _skip(entry.path, "max_memory_bytes", limits.max_memory_bytes, ledger.consumed)
+                memory_skip = _skip(
+                    entry.path, "max_memory_bytes", limits.max_memory_bytes, ledger.consumed
                 )
+                skipped.append(memory_skip)
+                partial_skipped.append(memory_skip)
                 partial = True
 
     return _Inspection(
         files=MappingProxyType(files),
         skipped=tuple(sorted(skipped, key=lambda item: (item.scope, item.reason))),
+        partial_skipped=tuple(sorted(partial_skipped, key=lambda item: (item.scope, item.reason))),
         diagnostics=tuple(diagnostics),
         partial=partial,
         entries=MappingProxyType(catalog),

@@ -61,7 +61,7 @@ def test_public_package_metadata_and_documentation_dependencies_are_exact() -> N
 
     assert metadata["dynamic"] == ["version"]
     assert project["tool"]["hatch"]["version"] == {"path": "src/slygentify/_version.py"}
-    assert slygentify.__version__ == "0.1.0"
+    assert slygentify.__version__ == "1.0.0rc1"
     assert metadata["license"] == "Apache-2.0"
     assert metadata["license-files"] == ["LICENSE"]
     assert metadata["urls"] == {
@@ -72,7 +72,7 @@ def test_public_package_metadata_and_documentation_dependencies_are_exact() -> N
         "Changelog": "https://github.com/slytheros/slygentify/blob/develop/CHANGELOG.md",
     }
     assert {
-        "Development Status :: 2 - Pre-Alpha",
+        "Development Status :: 4 - Beta",
         "Environment :: Console",
         "Intended Audience :: Developers",
         "Operating System :: OS Independent",
@@ -115,6 +115,7 @@ def test_packaged_schemas_and_documented_examples_are_valid() -> None:
         "scan-projection-v1.schema.json",
         "scan-v1.schema.json",
         "state-v1.schema.json",
+        "state-v2.schema.json",
     }
     assert {path.name for path in schema_paths} == expected
 
@@ -131,7 +132,7 @@ def test_packaged_schemas_and_documented_examples_are_valid() -> None:
     assert load_scan_projection_json((examples / "map.json").read_bytes()).schema_version == 1
     assert load_doctor_json((examples / "doctor.json").read_bytes()).schema_version == 1
     state = json.loads((examples / "state.json").read_text(encoding="utf-8"))
-    Draft202012Validator(schemas["state-v1.schema.json"]).validate(state)
+    Draft202012Validator(schemas["state-v2.schema.json"]).validate(state)
 
     representative_scan = load_scan_json((examples / "representative-scan.json").read_bytes())
     representative_map = load_scan_projection_json(
@@ -249,42 +250,6 @@ def test_documented_resource_defaults_match_effective_configuration(tmp_path: Pa
     assert "64 KiB" in accounting
     for stale_claim in ("depth 64", "100,000 examined entries", "60-second scan deadline"):
         assert stale_claim not in accounting
-
-
-@pytest.mark.verifies("TST051")
-def test_public_documentation_is_present_state_accurate() -> None:
-    installation = (DOCS / "installation.md").read_text(encoding="utf-8")
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    support = (ROOT / "SUPPORT.md").read_text(encoding="utf-8")
-    security = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
-
-    assert "not yet published on PyPI" in installation
-    assert "not currently available downloads" in installation
-    current, future = installation.split("## After a genuine PyPI publication", maxsplit=1)
-    assert "existing reviewed source checkout" in current
-    assert "A selected target must be inside a local Git repository" in current
-    assert "Git executable" in current
-    assert "git clone" not in current
-    assert "git clone" in future
-    assert '!!! warning "Future installation only — do not run these commands yet"' in future
-    assert "no pre-release OS support matrix is promised" in current
-    assert "docs/installation.md#current-availability" in support
-    assert changelog.count("## Unreleased") == 1
-    assert not re.search(r"^## \[?\d+\.\d+\.\d+", changelog, re.MULTILINE)
-    assert "no guaranteed response or remediation service-level agreement" in " ".join(
-        support.split()
-    )
-    assert "no response or remediation service-level agreement" in " ".join(security.split())
-    assert "--git-executable PATH" in (DOCS / "safety.md").read_text(encoding="utf-8")
-    assert "## Quickstart" in readme
-    assert "Choose the command that matches your goal:" in readme
-    assert (
-        readme.index("slygentify scan path/to/repository")
-        < readme.index("slygentify map path/to/repository")
-        < readme.index("slygentify init path/to/repository --dry-run")
-        < readme.index("slygentify doctor path/to/repository")
-    )
 
 
 @pytest.mark.verifies("TST051")

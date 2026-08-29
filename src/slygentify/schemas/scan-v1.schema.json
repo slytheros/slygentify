@@ -275,6 +275,13 @@
         "code": {
           "$ref": "#/$defs/nonEmptyString"
         },
+        "disposition": {
+          "enum": [
+            "problem",
+            "limitation",
+            "notice"
+          ]
+        },
         "subject_id": {
           "$ref": "#/$defs/nonEmptyString"
         },
@@ -282,6 +289,21 @@
           "$ref": "#/$defs/safePath"
         },
         "message": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "category": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "problem": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "effect": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "recovery": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "safety_rationale": {
           "$ref": "#/$defs/nonEmptyString"
         },
         "evidence_ids": {

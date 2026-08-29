@@ -21,6 +21,7 @@ from tools.support.initialization_acceptance import (
     InitializationAcceptanceError,
     InitializationReview,
     candidate_review_matrix,
+    canonical_agents_bytes,
     compare_initialization_reviews,
     initialization_corpus_metrics,
     initialization_review,
@@ -213,7 +214,7 @@ def _snapshot(
 
 def _review_checkout(
     entry: dict[str, str], checkout: Path
-) -> tuple[InitializationReview, str, bytes]:
+) -> tuple[InitializationReview, bytes, bytes]:
     first = plan_initialization(checkout)
     second = plan_initialization(checkout)
     if first.agents_markdown != second.agents_markdown or first.state_json != second.state_json:
@@ -232,7 +233,7 @@ def _review_checkout(
             first.agents_markdown,
             first_projection,
         ),
-        first.agents_markdown,
+        canonical_agents_bytes(first.agents_markdown),
         first_projection_json,
     )
 
@@ -342,12 +343,12 @@ def main(arguments: Sequence[str] | None = None) -> int:
                 temporary_root / entry["id"],
                 hooks_directory,
             )
-            review, markdown, projection_json = _review_checkout(entry, snapshot)
+            review, agents_bytes, projection_json = _review_checkout(entry, snapshot)
             reviews.append(review)
             if args.candidate_matrix is not None:
                 repository_artifacts = artifacts_staging / entry["id"]
                 repository_artifacts.mkdir()
-                (repository_artifacts / "AGENTS.md").write_text(markdown, encoding="utf-8")
+                (repository_artifacts / "AGENTS.md").write_bytes(agents_bytes)
                 (repository_artifacts / "root-map.json").write_bytes(projection_json)
 
         try:

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "producer_version": "0.1.0",
+  "producer_version": "1.0.0rc1",
   "completion": "partial",
   "repository": {
     "id": "repository_c140010bf267fcd92f5cf59a9250459d63078cb45b41e6451fef20e19c9fd170",
@@ -19,10 +19,11 @@
       "verification_method": "deterministic provenance comparison"
     },
     {
-      "id": "doctor-evidence_c7e7b624636d78676f9818ae20a283f6259bd0fcd68c4e472c14b25f83896f7a",
+      "id": "doctor-evidence_a62d46c10e953b51697b4561530d1f38b89476356ea9a9c110689f5d024801e5",
       "source_kind": "doctor-provenance",
-      "location": ".",
-      "observation": "Fresh inspection reached a documented safety, policy, or resource boundary.",
+      "location": "packages/broken/package.json",
+      "locator": "javascript.invalid-manifest",
+      "observation": "Fresh scan reported javascript.invalid-manifest as a partial cause.",
       "verification_method": "deterministic provenance comparison"
     },
     {
@@ -146,21 +147,24 @@
       "remediation": "Leave human-owned guidance unchanged or adopt it through a reviewed initialization flow.",
       "evidence_ids": [
         "doctor-evidence_3d174a30bb0de8ba2e92e619181ef64724502b096643c98513ff0e48652c9d62"
-      ]
+      ],
+      "disposition": "notice"
     },
     {
-      "id": "doctor-diagnostic_94b268ed49827fbeff2931a6d4a9e89b5582acdf7129fbc1ca0193dff83dee14",
+      "id": "doctor-diagnostic_693bc6146b5948a386a3661aad679bffac6691c2442f4227a5e5716a513624e8",
       "code": "doctor.inspection.partial",
       "severity": "warning",
       "classification": "unknown",
       "subject_id": "repository_c140010bf267fcd92f5cf59a9250459d63078cb45b41e6451fef20e19c9fd170",
-      "location": ".",
-      "problem": "Fresh repository inspection is partial.",
-      "effect": "Doctor cannot claim exhaustive drift absence outside the reported inspection boundary.",
-      "remediation": "Inspect omitted boundaries or explicitly raise the applicable limit and rerun doctor.",
+      "location": "packages/broken/package.json",
+      "problem": "JavaScript manifest packages/broken/package.json is not a unique-key UTF-8 JSON object.",
+      "effect": "The package boundary and declarations from packages/broken/package.json were omitted. Doctor cannot claim drift absence for this boundary.",
+      "remediation": "Correct its JSON syntax, encoding, duplicate keys, or top-level shape, or intentionally exclude the file if it is outside the intended scan scope.",
       "evidence_ids": [
-        "doctor-evidence_c7e7b624636d78676f9818ae20a283f6259bd0fcd68c4e472c14b25f83896f7a"
-      ]
+        "doctor-evidence_a62d46c10e953b51697b4561530d1f38b89476356ea9a9c110689f5d024801e5",
+        "javascript-inspect-v1_31e49b927e3d7d4f3ff116325f47b4da0aeb998292ebc404b8d16291b2247124"
+      ],
+      "disposition": "problem"
     }
   ],
   "skipped_scopes": []

@@ -64,7 +64,11 @@ def _cargo(
             components,
             [
                 _DiagnosticCandidate(
-                    "inspection.invalid-manifest", path, "Cargo manifest is invalid.", True
+                    "inspection.invalid-manifest",
+                    path,
+                    "Cargo manifest is invalid.",
+                    True,
+                    disposition="problem",
                 )
             ],
         )
@@ -91,6 +95,7 @@ def _cargo(
                     path,
                     "Cargo workspace members are invalid.",
                     True,
+                    disposition="problem",
                 )
             )
         else:
@@ -108,6 +113,7 @@ def _cargo(
                             path,
                             "Cargo workspace member escapes the repository.",
                             True,
+                            disposition="problem",
                         )
                     )
                 elif not any(fnmatch.fnmatchcase(candidate, resolved) for candidate in cargo_paths):
@@ -117,6 +123,7 @@ def _cargo(
                             path,
                             "Cargo workspace member has no safe manifest.",
                             True,
+                            disposition="problem",
                         )
                     )
     if keys:
@@ -142,7 +149,11 @@ def _go(
             components,
             [
                 _DiagnosticCandidate(
-                    "inspection.invalid-manifest", path, "Go manifest is not UTF-8.", True
+                    "inspection.invalid-manifest",
+                    path,
+                    "Go manifest is not UTF-8.",
+                    True,
+                    disposition="problem",
                 )
             ],
         )
@@ -155,7 +166,11 @@ def _go(
         else:
             diagnostics.append(
                 _DiagnosticCandidate(
-                    "inspection.invalid-manifest", path, "Go module declaration is missing.", True
+                    "inspection.invalid-manifest",
+                    path,
+                    "Go module declaration is missing.",
+                    True,
+                    disposition="problem",
                 )
             )
         return evidence, components, diagnostics
@@ -179,7 +194,11 @@ def _go(
             components,
             [
                 _DiagnosticCandidate(
-                    "inspection.invalid-manifest", path, "Go workspace has no use entries.", True
+                    "inspection.invalid-manifest",
+                    path,
+                    "Go workspace has no use entries.",
+                    True,
+                    disposition="problem",
                 )
             ],
         )
@@ -195,6 +214,7 @@ def _go(
                     path,
                     "Go workspace member escapes the repository.",
                     True,
+                    disposition="problem",
                 )
             )
         elif expected not in available:
@@ -204,6 +224,7 @@ def _go(
                     path,
                     "Go workspace member has no safe manifest.",
                     True,
+                    disposition="problem",
                 )
             )
     return evidence, components, diagnostics
@@ -225,6 +246,7 @@ def _maven(
                     path,
                     "Maven manifest contains a prohibited declaration.",
                     True,
+                    disposition="problem",
                 )
             ],
         )
@@ -236,7 +258,11 @@ def _maven(
             components,
             [
                 _DiagnosticCandidate(
-                    "inspection.invalid-manifest", path, "Maven manifest is invalid.", True
+                    "inspection.invalid-manifest",
+                    path,
+                    "Maven manifest is invalid.",
+                    True,
+                    disposition="problem",
                 )
             ],
         )
@@ -246,7 +272,11 @@ def _maven(
             components,
             [
                 _DiagnosticCandidate(
-                    "inspection.invalid-manifest", path, "Maven manifest root is not project.", True
+                    "inspection.invalid-manifest",
+                    path,
+                    "Maven manifest root is not project.",
+                    True,
+                    disposition="problem",
                 )
             ],
         )
@@ -273,6 +303,7 @@ def _maven(
                     path,
                     "Maven module escapes the repository.",
                     True,
+                    disposition="problem",
                 )
             )
         elif expected not in available:
@@ -282,6 +313,7 @@ def _maven(
                     path,
                     "Maven module has no safe manifest.",
                     True,
+                    disposition="problem",
                 )
             )
     return evidence, components, diagnostics
@@ -303,6 +335,7 @@ def _cmake(
                     path,
                     "CMake project evidence is not UTF-8. Next: encode the file as UTF-8.",
                     True,
+                    disposition="problem",
                 )
             ],
         )
@@ -322,6 +355,7 @@ def _cmake(
                     f'[[scan.components]] with path = "{_parent(path)}" in the root '
                     "slygentify.toml.",
                     False,
+                    disposition="limitation",
                 )
             ],
         )
@@ -375,6 +409,7 @@ def _kicad_project(
                     "KiCad project evidence is not a unique-key UTF-8 JSON object. "
                     "Next: correct the project file or declare the intended boundary explicitly.",
                     True,
+                    disposition="problem",
                 )
             ],
         )
@@ -547,6 +582,7 @@ def detect_generic(view: RepositoryView, context: DetectionContext) -> Detection
                     f'path = "{_parent(item.location)}" in the root slygentify.toml.',
                     False,
                     evidence_keys=(_evidence_key(item),),
+                    disposition="limitation",
                 )
             )
     composed_components: list[_ComponentCandidate] = []

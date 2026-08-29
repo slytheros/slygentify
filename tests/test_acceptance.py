@@ -169,6 +169,67 @@ def test_claims_from_scan_and_candidate_matrix_are_deterministic() -> None:
 
 
 @pytest.mark.verifies("TST034")
+def test_candidate_coalesces_duplicate_claim_keys_and_promotes_to_formal_scoring(
+    tmp_path: Path,
+) -> None:
+    result = _scan()
+    manifest_evidence = result.evidence[1]
+    workflow_evidence = replace(
+        manifest_evidence,
+        id="e-workflow",
+        location=".github/workflows/test.yml",
+        locator="/jobs/test/steps/0/run",
+    )
+    finding = next(item for item in result.findings if item.code == "test.verified")
+    workflow_finding = replace(
+        finding,
+        id="finding-workflow",
+        evidence_ids=(workflow_evidence.id,),
+    )
+    object.__setattr__(result, "evidence", (*result.evidence, workflow_evidence))
+    object.__setattr__(result, "findings", (*result.findings, workflow_finding))
+
+    claims = claims_from_scan("example", result)
+    repeated = next(item for item in claims if item.code == "test.verified")
+    expected_evidence = (
+        EvidenceLocator(".github/workflows/test.yml", "/jobs/test/steps/0/run"),
+        EvidenceLocator("pyproject.toml", "project.name"),
+    )
+
+    assert repeated.evidence == expected_evidence
+    assert len([item for item in claims if item.key == repeated.key]) == 1
+    duplicate = replace(
+        repeated,
+        evidence=(EvidenceLocator("tox.ini", "testenv"),),
+    )
+    duplicate_candidate = candidate_matrix((*claims, duplicate))
+    assert duplicate_candidate == candidate_matrix((duplicate, *reversed(claims)))
+    duplicate_document = json.loads(duplicate_candidate)
+    duplicate_serialized = next(
+        item for item in duplicate_document["claims"] if item["code"] == "test.verified"
+    )
+    assert duplicate_serialized["evidence"][-1] == {
+        "location": "tox.ini",
+        "locator": "testenv",
+    }
+
+    candidate = candidate_matrix(claims)
+    document = json.loads(candidate)
+    serialized = next(item for item in document["claims"] if item["code"] == "test.verified")
+    assert serialized["evidence"] == [
+        {"location": ".github/workflows/test.yml", "locator": "/jobs/test/steps/0/run"},
+        {"location": "pyproject.toml", "locator": "project.name"},
+    ]
+
+    document["review_status"] = "reviewed"
+    matrix = tmp_path / "reviewed.json"
+    matrix.write_text(json.dumps(document), encoding="utf-8")
+    reviewed = load_reviewed_claims(matrix)
+
+    assert measure_claims(reviewed, claims).passes
+
+
+@pytest.mark.verifies("TST034")
 def test_claims_from_scan_rejects_blank_repository_and_invalid_references() -> None:
     result = _scan()
     with pytest.raises(AcceptanceError, match="repository key"):

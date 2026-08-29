@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "producer_version": "0.1.0",
+  "producer_version": "1.0.0rc1",
   "completion": "partial",
   "repository": {
     "id": "repository_c140010bf267fcd92f5cf59a9250459d63078cb45b41e6451fef20e19c9fd170",
@@ -338,13 +338,18 @@
   ],
   "diagnostics": [
     {
-      "id": "diagnostic_10d38da05023ab0edd753029df0b3a870b85ca5118b3fd2f3f5ef585e4fdf730",
+      "id": "diagnostic_911fad11f2b3943cf96381dade9ab6e8e955b5ef5d7d83ccd3ad76961db16dff",
       "code": "javascript.invalid-manifest",
       "location": "packages/broken/package.json",
-      "message": "JavaScript manifest packages/broken/package.json is not a unique-key UTF-8 JSON object. The affected evidence was omitted, so the scan is partial. Next: correct its JSON syntax, encoding, duplicate keys, or top-level shape.",
+      "message": "JavaScript manifest packages/broken/package.json is not a unique-key UTF-8 JSON object. The package boundary and declarations from packages/broken/package.json were omitted. Next: correct its JSON syntax, encoding, duplicate keys, or top-level shape, or intentionally exclude the file if it is outside the intended scan scope.",
       "evidence_ids": [
         "javascript-inspect-v1_31e49b927e3d7d4f3ff116325f47b4da0aeb998292ebc404b8d16291b2247124"
-      ]
+      ],
+      "problem": "JavaScript manifest packages/broken/package.json is not a unique-key UTF-8 JSON object",
+      "effect": "The package boundary and declarations from packages/broken/package.json were omitted",
+      "recovery": "correct its JSON syntax, encoding, duplicate keys, or top-level shape, or intentionally exclude the file if it is outside the intended scan scope",
+      "safety_rationale": "Slygentify inspection is read-only and does not rewrite repository content.",
+      "disposition": "problem"
     }
   ],
   "skipped_scopes": []

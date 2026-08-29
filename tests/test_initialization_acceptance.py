@@ -9,7 +9,14 @@ import pytest
 from typer.testing import CliRunner
 
 import slygentify.initialization as initialization
-from slygentify import InitializationError, apply_initialization, plan_initialization
+from slygentify import (
+    InitializationError,
+    apply_initialization,
+    doctor_repository,
+    map_repository,
+    plan_initialization,
+    scan_repository,
+)
 from slygentify._provenance import Artifact, StateDocument, dump_state_json, load_state_json
 from slygentify.cli import app
 
@@ -72,7 +79,53 @@ def test_first_dry_run_create_no_change_and_regeneration_from_inputs(tmp_path: P
     assert apply_initialization(plan_initialization(root)).changed_locations == ()
 
 
-@pytest.mark.verifies("TST039")
+@pytest.mark.verifies("TST056")
+def test_volatile_workspace_scopes_do_not_change_managed_state(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    (root / ".gitignore").write_text("dist/\n", encoding="utf-8")
+    initial = plan_initialization(root)
+    apply_initialization(initial)
+    state_bytes = (root / ".slygentify" / "state.json").read_bytes()
+
+    volatile_directories = (
+        root / ".pytest_cache",
+        root / ".venv",
+        root / "dist",
+        root / "src" / "__pycache__",
+    )
+    for directory in volatile_directories:
+        directory.mkdir(parents=True)
+
+    scan = scan_repository(root)
+    projection = map_repository(root, max_bytes="unlimited")
+    doctor = doctor_repository(root)
+    expected = {
+        (".pytest_cache", "built_in_exclusion"),
+        (".venv", "built_in_exclusion"),
+        ("dist", "gitignore"),
+        ("src/__pycache__", "built_in_exclusion"),
+    }
+
+    assert expected <= {(item.scope, item.reason) for item in scan.skipped_scopes}
+    assert expected <= {(item.scope, item.reason) for item in projection.skipped_scopes}
+    assert expected <= {(item.scope, item.reason) for item in doctor.skipped_scopes}
+    assert doctor.diagnostics == ()
+    unchanged = plan_initialization(root)
+    assert unchanged.agents_action == "no_change"
+    assert unchanged.state_action == "no_change"
+    assert unchanged.state_json == state_bytes
+    assert apply_initialization(unchanged).changed_locations == ()
+
+    for directory in reversed(volatile_directories):
+        directory.rmdir()
+    (root / "src").rmdir()
+
+    clean_again = plan_initialization(root)
+    assert clean_again.state_action == "no_change"
+    assert clean_again.state_json == state_bytes
+
+
+@pytest.mark.verifies("TST039", "TST055")
 def test_protected_entries_stale_recovery_and_schema_refusal(tmp_path: Path) -> None:
     root = _managed_repository(tmp_path)
     agents = root / "AGENTS.md"
@@ -114,9 +167,16 @@ def test_protected_entries_stale_recovery_and_schema_refusal(tmp_path: Path) -> 
 
     state_target.write_text('{"schema_version": 2}', encoding="utf-8")
     invalid = plan_initialization(root, replace=True)
-    assert invalid.ownership == "invalid-state"
-    assert not invalid.can_apply
-    assert state_target.read_text(encoding="utf-8") == '{"schema_version": 2}'
+    assert invalid.ownership == "recoverable-state"
+    assert invalid.can_apply
+    assert invalid.state_recovery == "state-rebuild"
+    assert apply_initialization(invalid).changed_locations == (".slygentify/state.json",)
+
+    state_target.write_text('{"schema_version": 3}', encoding="utf-8")
+    future = plan_initialization(root, replace=True)
+    assert future.ownership == "invalid-state"
+    assert not future.can_apply
+    assert state_target.read_text(encoding="utf-8") == '{"schema_version": 3}'
 
 
 @pytest.mark.verifies("TST039")
@@ -144,7 +204,7 @@ def test_revalidation_rejects_lifecycle_races(tmp_path: Path, changed: str) -> N
     assert error.value.changed_locations == ()
 
 
-@pytest.mark.verifies("TST039", "TST040")
+@pytest.mark.verifies("TST039", "TST040", "TST054")
 def test_write_failures_leave_safe_recovery_paths_and_actionable_cli_output(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -182,6 +242,9 @@ def test_write_failures_leave_safe_recovery_paths_and_actionable_cli_output(
 
     (root / "AGENTS.md").write_text("secret-do-not-print", encoding="utf-8")
     result = CliRunner().invoke(app, ["init", str(root)])
-    assert result.exit_code == 1
-    assert "initialization.human-edited" in result.stderr
+    assert result.exit_code == 4
+    assert "Notice [initialization.human-edited] AGENTS.md" in result.stderr
+    assert "Disposition: Notice" in result.stderr
+    assert "Existing AGENTS.md was preserved." in result.stdout
     assert "secret-do-not-print" not in result.stderr
+    assert "secret-do-not-print" not in result.stdout

@@ -10,11 +10,12 @@ references:
 - keyword: REQ020
   path: src/slygentify/_scan/detectors/python.py
   type: file
-reviewed: H8fXu0Ipo82-3UtJaAnyLzpNFAsIJOJ-zmbaTK3yGMU=
+reviewed: qTI56TwLdPT4manxzy9_mqx2yCRhEBFyZRZDj0VfCbY=
 text: |
   Slygentify shall identify Python components only from approved static manifest
   declarations, retain exact evidence locations for supported metadata and direct
-  dependencies, accept whitespace-delimited inline comments in requirements files,
+  dependencies, encode dynamic TOML keys as unambiguous valid dotted-key segments,
+  accept whitespace-delimited inline comments in requirements files,
   distinguish direct requirements from constraints and recognizable generated lock
   output, and shall never evaluate setup.py, unrendered template manifests, or dynamic
   metadata. When an approved generic

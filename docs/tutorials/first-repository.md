@@ -72,13 +72,16 @@ from slygentify import scan_repository
 result = scan_repository("path/to/tutorial-repository")
 print(result.completion)
 for diagnostic in result.diagnostics:
-    print(diagnostic.code, diagnostic.message)
+    print(diagnostic.disposition, diagnostic.code, diagnostic.message)
 ```
 
 Expected outcome: completion is `partial`; valid root, web, and demo components are still
 present, while a diagnostic identifies `packages/broken/package.json`. The demo component
 is inferred to be auxiliary because it lives below `examples/`. Review diagnostics and
-skipped scopes before relying on evidence from the omitted boundary.
+skipped scopes before relying on evidence from the omitted boundary. In the human
+report, the diagnostic is the problem and the unknown JavaScript component finding is
+nested beneath it as related context. Correct the malformed JSON or intentionally
+exclude that file if it is outside the intended inspection scope.
 
 The checked-in [representative scan JSON](../examples/representative-scan.json) is the
 canonical machine-readable result for this fixture. Use `--format json` or
@@ -116,7 +119,8 @@ canonical document.
 
 ### 3. Review initialization without writing
 
-Dry-run prints the exact proposed `AGENTS.md` and ownership state without creating them:
+Dry-run prints proposed `AGENTS.md`, ownership state, and a concise provenance summary
+without creating files; add `--show-state` to inspect exact state JSON:
 
 ```console
 slygentify init path/to/tutorial-repository --dry-run
@@ -150,13 +154,26 @@ from slygentify import doctor_repository
 
 assessment = doctor_repository("path/to/tutorial-repository")
 for diagnostic in assessment.diagnostics:
-    print(diagnostic.severity, diagnostic.code, diagnostic.remediation)
+    print(
+        diagnostic.severity,
+        diagnostic.disposition,
+        diagnostic.code,
+        diagnostic.remediation,
+    )
 ```
 
 Expected outcome before applying initialization: doctor reports unmanaged guidance and a
-warning that fresh inspection is partial. Its result is still trustworthy within the
-reported boundary. The [representative doctor JSON](../examples/representative-doctor.json)
-contains the exact canonical result.
+`doctor.inspection.partial` warning for `packages/broken/package.json`. The warning says
+the package boundary and declarations were omitted and recommends correcting or
+intentionally excluding that file; it does not suggest changing an unrelated resource
+limit. Its result is still trustworthy within the reported boundary. The
+[representative doctor JSON](../examples/representative-doctor.json) contains the exact
+canonical result.
+
+After applying managed guidance, rerun `slygentify doctor` after structural, tooling, or
+workflow changes. When it reports drift, review `init --dry-run` before explicit
+regeneration. For an existing human-owned `AGENTS.md`, preview visible-section adoption
+with `slygentify init PATH --adopt --dry-run`.
 
 ## What to do next
 

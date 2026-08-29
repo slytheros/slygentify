@@ -112,6 +112,32 @@ def _evidence_locators(
     return tuple(sorted(set(locations), key=lambda item: (item.location, item.locator or "")))
 
 
+def _coalesce_claims(claims: tuple[AcceptanceClaim, ...]) -> tuple[AcceptanceClaim, ...]:
+    """Return one deterministic claim per key with every supporting locator."""
+
+    claims_by_key: dict[tuple[str, str, str, str, str], AcceptanceClaim] = {}
+    for claim in claims:
+        existing = claims_by_key.get(claim.key)
+        if existing is None:
+            claims_by_key[claim.key] = claim
+            continue
+        evidence = tuple(
+            sorted(
+                {*existing.evidence, *claim.evidence},
+                key=lambda item: (item.location, item.locator or ""),
+            )
+        )
+        claims_by_key[claim.key] = AcceptanceClaim(
+            existing.repository,
+            existing.kind,
+            existing.subject,
+            existing.code,
+            existing.value,
+            evidence,
+        )
+    return tuple(sorted(claims_by_key.values(), key=lambda item: item.key))
+
+
 @implements("REQ034")
 def claims_from_scan(repository: str, result: ScanResult) -> tuple[AcceptanceClaim, ...]:
     """Return every factual component, Verified finding, and Verified relationship."""
@@ -161,7 +187,7 @@ def claims_from_scan(repository: str, result: ScanResult) -> tuple[AcceptanceCla
                     _evidence_locators(result, relationship.evidence_ids),
                 )
             )
-    return tuple(sorted(claims, key=lambda item: item.key))
+    return _coalesce_claims(tuple(claims))
 
 
 def _mapping(value: object, context: str) -> dict[str, object]:
@@ -267,7 +293,8 @@ def measure_claims(
 def candidate_matrix(claims: tuple[AcceptanceClaim, ...]) -> bytes:
     """Serialize unreviewed candidate facts without presenting them as ground truth."""
 
-    if not claims:
+    coalesced = _coalesce_claims(claims)
+    if not coalesced:
         raise AcceptanceError("candidate matrix requires at least one claim")
     document = {
         "schema_version": 1,
@@ -284,7 +311,7 @@ def candidate_matrix(claims: tuple[AcceptanceClaim, ...]) -> bytes:
                     for evidence in claim.evidence
                 ],
             }
-            for claim in claims
+            for claim in coalesced
         ],
     }
     return (

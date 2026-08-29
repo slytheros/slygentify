@@ -112,17 +112,37 @@ invocation. A higher or unlimited resource setting never weakens these boundarie
 
 ## `.slygentify/state.json`
 
-`slygentify init` writes deterministic schema-major-1 provenance beside generated
+`slygentify init` writes deterministic schema-major-2 provenance beside generated
 guidance. The sidecar records safe relative locations, SHA-256 digests, effective limits,
-derivations, generated-artifact digests, completion, and skipped scopes. It contains no
-timestamps, host paths, source bodies, environment values, or credentials. Packaged
-[`state-v1.schema.json`](schemas.md) describes the
-document. Scan and map do not read or write it; a fresh scan remains authoritative.
+derivations, generated-artifact ownership, completion, and durable skipped scopes.
+Fresh scan, map, and doctor results report every observed skipped scope, but committed
+state omits workspace-dependent observations caused by checked-out Gitignore rules and
+built-in cache or dependency exclusions. Configured exclusions, safety boundaries,
+nested repositories, and partial-result boundaries remain recorded. The sidecar contains
+no timestamps, host paths, source bodies, environment values, or credentials. Packaged
+[`state-v2.schema.json`](schemas.md) describes the document; legacy v1 sidecars remain
+readable. Scan and map do not read or write it; a fresh scan remains authoritative.
 
-When the recorded digest matches a regular `AGENTS.md`, init may regenerate it. Missing,
-unmatched, malformed, or unsafe state is protected by default. `--dry-run` displays both
-exact artifacts. `--replace` may discard an existing regular `AGENTS.md` but never a
-symbolic link, directory, or malformed state. Writes are atomic, guidance first and state
-second. If the second write fails, the error reports the changed guidance location and a
-safe recovery. If generated guidance already matches but the sidecar is missing, init can
-repair only the sidecar.
+Existing v1 or v2 sidecars that contain now-omitted volatile records remain valid and
+require no schema migration. Doctor can report one informational `doctor.state.stale`
+notice, with exit 0, until a reviewed explicit init regenerates canonical v2 state.
+After regeneration, creating or removing those ignored workspace paths does not make
+state stale or cause another state write.
+
+When a whole-document digest matches a regular `AGENTS.md`, init may regenerate it. An
+adopted visible section records its own digest, so later updates preserve human changes
+outside the fixed markers and refuse a changed or malformed section while state is valid.
+If bounded readable state is invalid, exactly one well-formed marker pair independently
+owns only its section; init may refresh it and rebuild v2 state without changing
+surrounding bytes. Exact fresh whole-document content and an absent artifact are also
+recoverable. `--dry-run` displays generated guidance, artifact actions, the state-recovery
+classification, and a provenance summary; `--show-state` displays exact state JSON.
+`--replace` may discard ambiguous regular `AGENTS.md` content but never a symbolic link,
+directory, unbounded state, or newer schema. Writes are atomic, guidance first and state
+second, and invalid state is replaced without a backup or content disclosure.
+
+For an unmanaged or human-edited safe regular `AGENTS.md`, ordinary init instead prints
+a deterministic paste-ready section and exits 4. `init --adopt` is an explicit, safe
+alternative for unmanaged guidance without valid provenance: it appends a marked visible
+section and writes or rebuilds v2 state, without echoing surrounding user content during
+review.

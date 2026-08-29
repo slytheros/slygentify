@@ -65,6 +65,7 @@ _PYTHON_TOOLS = {
     "pre-commit": "pre-commit",
 }
 _PYTHON_FRAMEWORKS = frozenset({"fastapi", "flask", "django", "sqlalchemy", "alembic"})
+_TOML_BARE_KEY = re.compile(r"[A-Za-z0-9_-]+")
 _CREDENTIAL_ASSIGNMENT = re.compile(
     r"(?i)(?<![A-Za-z0-9_])"
     r"[A-Za-z0-9_]*(?:token|password|passwd|secret|api[_-]?key)[A-Za-z0-9_]*"
@@ -104,6 +105,21 @@ def _python_evidence(
         "python.inspect.v1",
         semantic_key,
     )
+
+
+def _toml_key(value: str) -> str:
+    """Return one key segment in deterministic TOML dotted-key syntax."""
+
+    if _TOML_BARE_KEY.fullmatch(value):
+        return value
+    return json.dumps(value, ensure_ascii=False).replace("\x7f", r"\u007F")
+
+
+def _toml_locator(*segments: str, index: int | None = None) -> str:
+    """Return an unambiguous TOML dotted-key locator with an optional array index."""
+
+    locator = ".".join(_toml_key(segment) for segment in segments)
+    return f"{locator}[{index}]" if index is not None else locator
 
 
 def _template_path(path: str) -> bool:
@@ -307,6 +323,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                 False,
                 None,
                 (key,),
+                disposition="limitation",
             )
         )
 
@@ -400,6 +417,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                     "Next: correct the declaration or remove unsupported pip-only syntax.",
                     True,
                     root,
+                    disposition="problem",
                 )
             )
             return
@@ -453,6 +471,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                     "Next: correct the TOML syntax or encoding and scan again.",
                     True,
                     root,
+                    disposition="problem",
                 )
             )
             continue
@@ -477,6 +496,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                     "uv workspace members and exclusions must be lists of literal strings.",
                     True,
                     None,
+                    disposition="problem",
                 )
             )
         qualifiers = [
@@ -533,6 +553,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                     "Python INI configuration is invalid.",
                     True,
                     _parent(path),
+                    disposition="problem",
                 )
             )
             continue
@@ -603,6 +624,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                     False,
                     root,
                     (key,),
+                    disposition="limitation",
                 )
             )
 
@@ -680,6 +702,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                                 False,
                                 root,
                                 (key,),
+                                disposition="limitation",
                             )
                         )
             dependencies = project.get("dependencies")
@@ -699,7 +722,9 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                                     root,
                                     raw,
                                     path,
-                                    f"project.optional-dependencies.{group}[{index}]",
+                                    _toml_locator(
+                                        "project", "optional-dependencies", group, index=index
+                                    ),
                                     f"extra:{group}",
                                 )
             for table_name in ("scripts", "gui-scripts"):
@@ -710,7 +735,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                             _python_evidence(
                                 "entry-point",
                                 path,
-                                f"project.{table_name}.{name}",
+                                _toml_locator("project", table_name, name),
                                 f"Install-time entry point {name} is declared.",
                                 f"entry-point:{root}:{table_name}:{name}",
                             )
@@ -733,7 +758,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                                 root,
                                 raw,
                                 path,
-                                f"dependency-groups.{group}[{index}]",
+                                _toml_locator("dependency-groups", group, index=index),
                                 f"group:{group}",
                             )
 
@@ -758,7 +783,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                         root,
                         name,
                         path,
-                        f"tool.poetry.dependencies.{name}",
+                        _toml_locator("tool", "poetry", "dependencies", name),
                         "poetry:main",
                     )
             poetry_groups = poetry.get("group")
@@ -773,7 +798,9 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                                 root,
                                 name,
                                 path,
-                                f"tool.poetry.group.{group}.dependencies.{name}",
+                                _toml_locator(
+                                    "tool", "poetry", "group", group, "dependencies", name
+                                ),
                                 f"poetry:{group}",
                             )
             scripts = poetry.get("scripts")
@@ -783,7 +810,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                         _python_evidence(
                             "entry-point",
                             path,
-                            f"tool.poetry.scripts.{name}",
+                            _toml_locator("tool", "poetry", "scripts", name),
                             f"Legacy Poetry entry point {name} is declared.",
                             f"entry-point:{root}:poetry:{name}",
                         )
@@ -818,6 +845,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                         True,
                         root,
                         (workspace_key,),
+                        disposition="problem",
                     )
                 )
             else:
@@ -834,6 +862,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                                 True,
                                 root,
                                 (workspace_key,),
+                                disposition="problem",
                             )
                         )
                         continue
@@ -863,6 +892,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                                 True,
                                 root,
                                 (workspace_key,),
+                                disposition="problem",
                             )
                         )
                     for member_root in sorted(matches):
@@ -922,6 +952,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                             ".python-version is not valid UTF-8.",
                             True,
                             root,
+                            disposition="problem",
                         )
                     )
                 else:
@@ -947,6 +978,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                         "Requirements evidence is not valid UTF-8.",
                         True,
                         root,
+                        disposition="problem",
                     )
                 )
                 continue
@@ -994,6 +1026,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                     False,
                     None,
                     (key,),
+                    disposition="limitation",
                 )
             )
 
@@ -1053,8 +1086,8 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                         ),
                         path,
                         (
-                            f"{tool_name} configuration at {path} uses a YAML structure that "
-                            f"bounded inspection does not support ({error}). Next: replace aliases, "
+                            f"{tool_name} configuration at {path} uses an unsupported YAML "
+                            "structure. Next: replace aliases, "
                             "custom tags, or cyclic structures with explicit safe values if this "
                             "configuration should be inspected."
                             if unsupported
@@ -1063,6 +1096,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                         ),
                         True,
                         root if root in qualified_roots else None,
+                        disposition="limitation" if unsupported else "problem",
                     )
                 )
                 continue
@@ -1166,6 +1200,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                     False,
                     subject,
                     (key,),
+                    disposition="notice",
                 )
             )
         else:
@@ -1202,6 +1237,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                 False,
                 subject,
                 (key,),
+                disposition="limitation",
             )
         )
 
@@ -1223,7 +1259,11 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
         except (UnicodeError, yaml.YAMLError, _YamlStructureError):
             diagnostics.append(
                 _DiagnosticCandidate(
-                    "python.invalid-ci-workflow", path, "CI workflow YAML is invalid.", True
+                    "python.invalid-ci-workflow",
+                    path,
+                    "CI workflow YAML is invalid.",
+                    True,
+                    disposition="problem",
                 )
             )
             continue
@@ -1341,6 +1381,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                                 False,
                                 subject,
                                 (key,),
+                                disposition="limitation",
                             )
                         )
 
@@ -1356,6 +1397,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                         "A GitLab local include cycle was not expanded.",
                         False,
                         ".",
+                        disposition="problem",
                     )
                 )
                 return
@@ -1367,6 +1409,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                         "GitLab local include nesting exceeded the supported bound.",
                         True,
                         ".",
+                        disposition="limitation",
                     )
                 )
                 return
@@ -1381,7 +1424,12 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
             except (UnicodeError, yaml.YAMLError, _YamlStructureError):
                 diagnostics.append(
                     _DiagnosticCandidate(
-                        "python.invalid-ci-workflow", path, "GitLab CI YAML is invalid.", True, "."
+                        "python.invalid-ci-workflow",
+                        path,
+                        "GitLab CI YAML is invalid.",
+                        True,
+                        ".",
+                        disposition="problem",
                     )
                 )
                 return
@@ -1405,6 +1453,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                                 "A GitLab local include is missing or escapes the repository.",
                                 True,
                                 ".",
+                                disposition="problem",
                             )
                         )
                     else:
@@ -1434,6 +1483,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                             False,
                             ".",
                             (key,),
+                            disposition="limitation",
                         )
                     )
             reserved = {
@@ -1517,6 +1567,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                     False,
                     root if root in qualified_roots else None,
                     conflict_keys,
+                    disposition="problem",
                 )
             )
     for root, declarations in runtimes.items():
@@ -1559,6 +1610,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                     False,
                     root,
                     conflict_keys,
+                    disposition="problem",
                 )
             )
     for root, by_tool in tools.items():
@@ -1575,6 +1627,7 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
                         False,
                         root if root in qualified_roots else None,
                         tuple(keys),
+                        disposition="problem",
                     )
                 )
 

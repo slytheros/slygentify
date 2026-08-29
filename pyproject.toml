@@ -12,7 +12,7 @@ license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [{ name = "Slygentify contributors" }]
 classifiers = [
-  "Development Status :: 2 - Pre-Alpha",
+  "Development Status :: 4 - Beta",
   "Environment :: Console",
   "Intended Audience :: Developers",
   "Operating System :: OS Independent",
@@ -50,10 +50,13 @@ dev = [
   "hatchling>=1.27,<2",
   "jsonschema>=4.25,<5",
   "mypy>=1.17,<2",
+  "pipx>=1.8,<2",
   "pre-commit>=4.3,<5",
   "pytest>=8.4,<10",
   "pytest-cov>=6.2,<8",
+  "pypi-attestations>=0.0.30,<1",
   "ruff>=0.12,<1",
+  "twine>=7,<8",
 ]
 
 docs = [
@@ -116,5 +119,6 @@ files = [
   "tools/benchmark_scan_scaling.py",
   "tools/measure_acceptance.py",
   "tools/review_initialization.py",
+  "tools/release.py",
   "tools/support",
 ]

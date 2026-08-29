@@ -12,6 +12,7 @@ from slygentify.traceability import implements
 ClaimClassification = Literal["verified", "inferred", "recommended", "unknown"]
 Completion = Literal["complete", "partial"]
 DoctorSeverity = Literal["info", "warning", "error"]
+DiagnosticDisposition = Literal["problem", "limitation", "notice"]
 ComponentRole = Literal["unknown", "auxiliary"]
 LimitValue = int | Literal["unlimited"] | None
 ProjectionSection = Literal["orientation", "workflows", "architecture", "automation", "boundaries"]
@@ -167,10 +168,10 @@ class Finding:
         _references(self.evidence_ids, "evidence_ids")
 
 
-@implements("REQ010")
+@implements("REQ010", "REQ046")
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Diagnostic:
-    """An actionable inspection problem without a public severity contract."""
+    """An inspection diagnostic with an explicit public disposition."""
 
     id: str
     code: str
@@ -178,6 +179,12 @@ class Diagnostic:
     location: str | None
     message: str
     evidence_ids: tuple[str, ...]
+    category: str | None = None
+    problem: str | None = None
+    effect: str | None = None
+    recovery: str | None = None
+    safety_rationale: str | None = None
+    disposition: DiagnosticDisposition = "problem"
 
     def __post_init__(self) -> None:
         _non_empty(self.id, "id")
@@ -189,6 +196,19 @@ class Diagnostic:
         if self.location is not None:
             _safe_path(self.location, "location")
         _non_empty(self.message, "message")
+        for name, value in (
+            ("category", self.category),
+            ("problem", self.problem),
+            ("effect", self.effect),
+            ("recovery", self.recovery),
+            ("safety_rationale", self.safety_rationale),
+        ):
+            if value is not None:
+                _non_empty(value, name)
+        if (self.problem is None) != (self.effect is None):
+            raise ValueError("diagnostic problem and effect must be present together")
+        if self.disposition not in {"problem", "limitation", "notice"}:
+            raise ValueError("diagnostic disposition is not supported")
         _references(self.evidence_ids, "evidence_ids")
 
 
@@ -321,7 +341,7 @@ class ScanResult:
             raise ValueError("partial scans must explain the omitted work")
 
 
-@implements("REQ047", "REQ048")
+@implements("REQ046", "REQ047", "REQ048")
 @dataclass(frozen=True, slots=True, kw_only=True)
 class DoctorDiagnostic:
     """A stable, evidence-backed assessment of managed repository knowledge."""
@@ -336,6 +356,9 @@ class DoctorDiagnostic:
     effect: str
     remediation: str | None
     evidence_ids: tuple[str, ...]
+    category: str | None = None
+    safety_rationale: str | None = None
+    disposition: DiagnosticDisposition = "problem"
 
     def __post_init__(self) -> None:
         _non_empty(self.id, "id")
@@ -344,6 +367,8 @@ class DoctorDiagnostic:
             raise ValueError("severity is not supported")
         if self.classification not in {"verified", "inferred", "recommended", "unknown"}:
             raise ValueError("classification is not supported")
+        if self.disposition not in {"problem", "limitation", "notice"}:
+            raise ValueError("doctor diagnostic disposition is not supported")
         if self.subject_id is None and self.location is None:
             raise ValueError("doctor diagnostic requires a subject_id or location")
         if self.subject_id is not None:
@@ -354,6 +379,10 @@ class DoctorDiagnostic:
         _non_empty(self.effect, "effect")
         if self.remediation is not None:
             _non_empty(self.remediation, "remediation")
+        if self.category is not None:
+            _non_empty(self.category, "category")
+        if self.safety_rationale is not None:
+            _non_empty(self.safety_rationale, "safety_rationale")
         _references(self.evidence_ids, "evidence_ids")
 
 

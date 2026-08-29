@@ -12,6 +12,14 @@ The complete text report groups orientation, workflows, architecture, automation
 concerns, inspection boundaries, and source provenance by component. A successful report
 is `complete` or `partial`; partial completion is not an operational failure.
 
+Within **Attention & limitations**, diagnostics appear under **Problems & next steps**,
+**Limitations & explanations**, or **Notices** according to their explicit disposition.
+When an unknown finding and a diagnostic describe the same target and source evidence,
+the finding appears once as related context under that diagnostic regardless of
+disposition. Remaining records appear under **Unknowns to confirm**, **Cautions**, or
+**Recommendations**. Aggregate item counts are neutral; disposition groups use problem,
+limitation, or notice counts. Record counts show that canonical records were retained.
+
 An abridged result can look like:
 
 ```text
@@ -54,6 +62,12 @@ has the trusted-code meaning described in [safety boundaries](../safety.md).
 Review `diagnostics` and `skipped_scopes` before acting on missing evidence. Tight
 configured limits, unavailable automatic Git, unreadable files, and environmental
 exhaustion can produce partial results without weakening safety controls.
+
+Each diagnostic identifies its disposition, describes the observed condition and effect,
+and gives a safe next step when one exists. A limitation explains bounded uncertainty
+without asserting a defect. Resource-limit advice names the exact limit only when that
+limit was reached; malformed input instead asks you to correct or intentionally exclude
+the exact file.
 
 ## Next steps
 

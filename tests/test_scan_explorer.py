@@ -16,8 +16,9 @@ from textual.widgets.tree import TreeNode
 from textual.worker import Worker, WorkerState
 
 import slygentify._explorer as explorer
-from slygentify import ComponentRelationship, ScanError, ScanResult
+from slygentify import ComponentRelationship, Finding, ScanError, ScanResult
 from slygentify._explorer import ScanExplorer, _GlossaryScreen, _NodePayload
+from slygentify.models import DiagnosticDisposition
 from tests.scan_samples import sample_result
 
 
@@ -124,7 +125,7 @@ def test_explorer_navigates_lazy_groups_and_resolves_details() -> None:
             app.query_one("#classification", Select).value = "unknown"
             await pilot.pause()
             labels = [_label(node) for node in _nodes(app.query_one("#tree", Tree).root)]
-            assert any("Unknowns (1)" in label for label in labels)
+            assert any("Unknowns to confirm (1)" in label for label in labels)
             assert not any(".git (1)" in label for label in labels)
 
             auxiliary_group = _find(app.query_one("#tree", Tree), "Auxiliary components")
@@ -201,7 +202,10 @@ def test_explorer_groups_high_cardinality_diagnostics_without_merging() -> None:
             tree = app.query_one("#tree", Tree)
             assert _find(tree, "child - generic/package")
             assert _find(tree, "Relationships (1)")
-            group = _find(tree, "Diagnostics / . / example.diagnostic (50)")
+            group = _find(
+                tree,
+                "Problems & next steps / . / example.diagnostic (50 problems; 50 records)",
+            )
             assert len(group.children) == 0
 
             group.expand()
@@ -214,12 +218,130 @@ def test_explorer_groups_high_cardinality_diagnostics_without_merging() -> None:
 
             app.query_one("#search", Input).value = "message 42"
             await pilot.pause()
-            filtered = _find(app.query_one("#tree", Tree), "example.diagnostic (1)")
+            filtered = _find(
+                app.query_one("#tree", Tree),
+                "example.diagnostic (1 problem; 1 record)",
+            )
             assert len(filtered.children) == 0
             filtered.expand()
             await pilot.pause()
             assert len(filtered.children) == 1
             assert "Repeated diagnostic message 42" in _label(filtered.children[0])
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.verifies("TST019", "TST033")
+def test_explorer_nests_related_unknown_context_and_preserves_filters() -> None:
+    scan = sample_result()
+    component = scan.components[0]
+    evidence_id = scan.evidence[1].id
+    finding = Finding(
+        id="paired_unknown",
+        code="example.related-unknown",
+        classification="unknown",
+        subject_id=component.id,
+        summary="The related package boundary could not be established.",
+        evidence_ids=(evidence_id,),
+    )
+    diagnostics = tuple(
+        sorted(
+            (
+                replace(
+                    scan.diagnostics[0],
+                    id="diagnostic_a",
+                    subject_id=component.id,
+                    evidence_ids=(evidence_id,),
+                ),
+                replace(
+                    scan.diagnostics[0],
+                    id="diagnostic_b",
+                    subject_id=component.id,
+                    message="A second independent problem needs review.",
+                    evidence_ids=(),
+                ),
+            ),
+            key=lambda item: (item.code, item.subject_id or item.location or "", item.id),
+        )
+    )
+    result = replace(scan, findings=(finding,), diagnostics=diagnostics)
+
+    async def scenario() -> None:
+        app = ScanExplorer(result, Path("repository"))
+        async with app.run_test(size=(140, 40)) as pilot:
+            assert app.presentation is not None
+            assert app._attention_counts(app.presentation.component_groups(component.id)) == (2, 3)
+            tree = app.query_one("#tree", Tree)
+            assert _find(tree, "Attention & limitations (2 items; 3 records)")
+            problems = _find(
+                tree,
+                "Problems & next steps / . / example.diagnostic (2 problems; 3 records)",
+            )
+            assert len(problems.children) == 2
+            assert _find(tree, "Related context (1)")
+
+            app.query_one("#search", Input).value = "related package boundary"
+            await pilot.pause()
+            assert app.presentation is not None
+            assert app._attention_counts(app.presentation.component_groups(component.id)) == (1, 1)
+            filtered = app.query_one("#tree", Tree)
+            assert _find(filtered, "Attention & limitations (1 item; 1 record)")
+            problems = _find(
+                filtered,
+                "Problems & next steps / . / example.diagnostic (1 problem; 1 record)",
+            )
+            assert len(problems.children) == 1
+            issue = problems.children[0]
+            assert len(issue.children) == 1
+            assert "Related context (1)" in _label(issue.children[0])
+            assert "example.diagnostic" not in " ".join(_label(node) for node in _nodes(issue))
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.verifies("TST019", "TST033")
+def test_explorer_routes_and_searches_every_diagnostic_disposition() -> None:
+    scan = sample_result()
+    dispositions: tuple[DiagnosticDisposition, ...] = ("problem", "limitation", "notice")
+    diagnostics = tuple(
+        sorted(
+            (
+                replace(
+                    scan.diagnostics[0],
+                    id=f"diagnostic_{disposition}",
+                    code=f"example.{disposition}",
+                    disposition=disposition,
+                    message=f"A searchable {disposition} diagnostic.",
+                )
+                for disposition in dispositions
+            ),
+            key=lambda item: (item.code, item.subject_id or item.location or "", item.id),
+        )
+    )
+    result = replace(scan, diagnostics=diagnostics)
+
+    async def scenario() -> None:
+        app = ScanExplorer(result, Path("repository"))
+        async with app.run_test(size=(150, 40)) as pilot:
+            tree = app.query_one("#tree", Tree)
+            assert _find(tree, "Problems & next steps / . / example.problem (1 problem; 1 record)")
+            limitation = _find(
+                tree,
+                "Limitations & explanations / . / example.limitation (1 limitation; 1 record)",
+            )
+            assert _find(tree, "Notices / . / example.notice (1 notice; 1 record)")
+            limitation.expand()
+            await pilot.pause()
+            tree.move_cursor(limitation.children[0])
+            await pilot.press("enter")
+            await pilot.pause()
+            assert "Disposition: Limitation" in _detail_text(app)
+
+            app.query_one("#search", Input).value = "searchable notice"
+            await pilot.pause()
+            labels = [_label(node) for node in _nodes(app.query_one("#tree", Tree).root)]
+            assert any("example.notice (1 notice; 1 record)" in label for label in labels)
+            assert not any("example.problem" in label for label in labels)
 
     asyncio.run(scenario())
 

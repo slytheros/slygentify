@@ -64,9 +64,9 @@ def test_doctor_text_is_concise_complete_and_severity_grouped() -> None:
     assert "Status: Partial doctor result" in output
     assert "Diagnostics: 0 errors, 1 warning, 1 info" in output
     assert output.index("Warnings (1)") < output.index("Information (1)")
-    assert "WARNING VERIFIED [doctor.tooling.drift] AGENTS.md (repository-1)" in output
-    assert "INFO UNKNOWN [doctor.guidance.unmanaged] repository-1" in output
-    assert "Problem: Tooling knowledge changed." in output
+    assert "WARNING VERIFIED PROBLEM [doctor.tooling.drift] AGENTS.md (repository-1)" in output
+    assert "INFO UNKNOWN NOTICE [doctor.guidance.unmanaged] repository-1" in output
+    assert "Description: Tooling knowledge changed." in output
     assert "Effect: Managed workflow guidance may be stale." in output
     assert "Next: Review and regenerate managed guidance." in output
     assert "Evidence IDs:" not in output
@@ -106,13 +106,17 @@ def test_doctor_text_handles_clean_error_and_location_only_results() -> None:
         location=".slygentify/state.json",
         problem="State is invalid.",
         effect="Ownership cannot be trusted.",
+        category="state.invalid-json",
+        safety_rationale="Automatic replacement could overwrite content whose ownership is unknown.",
         remediation="Regenerate through a reviewed flow.",
         evidence_ids=("evidence-1",),
     )
     errored = replace(original, diagnostics=(location_only,))
     output = _render(errored)
     assert "Errors (1)" in output
-    assert "ERROR VERIFIED [doctor.state.invalid] .slygentify/state.json" in output
+    assert "ERROR VERIFIED PROBLEM [doctor.state.invalid] .slygentify/state.json" in output
+    assert "Category: state.invalid-json" in output
+    assert "Why no automatic repair: Automatic replacement could overwrite content" in output
 
 
 @pytest.mark.verifies("TST049")

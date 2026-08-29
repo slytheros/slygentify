@@ -29,10 +29,20 @@ _LIMIT_NAMES = (
     "max_open_files",
     "max_memory_bytes",
 )
+_VOLATILE_SKIPPED_SCOPE_REASONS = frozenset({"built_in_exclusion", "gitignore"})
 
 
 class StateError(ValueError):
     """State is malformed, unsupported, unsafe, or changed concurrently."""
+
+    def __init__(
+        self,
+        message: str = "provenance state is invalid",
+        *,
+        category: str = "state.invalid-structure",
+    ) -> None:
+        super().__init__(message)
+        self.category = category
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,6 +85,7 @@ class Artifact:
     location: str
     sha256: str
     evidence_ids: tuple[str, ...]
+    ownership: Literal["document", "section"] = "document"
 
 
 @dataclass(frozen=True, slots=True)
@@ -99,8 +110,14 @@ class StateWritePlan:
     sha256: str | None
 
 
-def _error(message: str = "provenance state is invalid") -> StateError:
-    return StateError(message)
+def _error(
+    message: str = "provenance state is invalid", *, category: str = "state.invalid-structure"
+) -> StateError:
+    return StateError(message, category=category)
+
+
+def _is_provenance_skipped_scope(value: SkippedScope) -> bool:
+    return value.reason not in _VOLATILE_SKIPPED_SCOPE_REASONS
 
 
 def _path(value: object) -> str:
@@ -208,11 +225,19 @@ def _document(value: object) -> StateDocument:
         "completion",
         "skipped_scopes",
     }
-    if not required <= item.keys() or item.get("schema_version") != 1:
-        raise _error("provenance state schema version is unsupported")
-    if isinstance(
-        item["schema_version"], bool
-    ):  # pragma: no cover - equality check above rejects bool
+    schema_version = item.get("schema_version")
+    if (
+        not isinstance(schema_version, bool)
+        and isinstance(schema_version, (int, float))
+        and schema_version > 2
+        and (isinstance(schema_version, int) or schema_version.is_integer())
+    ):
+        raise _error(
+            "provenance state schema version is unsupported", category="state.unsupported-schema"
+        )
+    if not required <= item.keys() or schema_version not in {1, 2}:
+        raise _error()
+    if isinstance(schema_version, bool):  # pragma: no cover - equality check above rejects bool
         raise _error()
     configuration: StateConfiguration | None = None
     if "configuration" in item:
@@ -338,15 +363,19 @@ def _document(value: object) -> StateDocument:
     artifacts: list[Artifact] = []
     for raw in raw_artifacts:
         record = _mapping(raw)
-        if (
-            not {"location", "sha256", "evidence_ids"} <= record.keys()
-        ):  # pragma: no cover - strict producer supplies fields
+        if not {"location", "sha256", "evidence_ids"} <= record.keys():
+            raise _error()
+        ownership = record.get("ownership", "document")
+        if ownership not in {"document", "section"} or (
+            schema_version == 1 and ownership != "document"
+        ):
             raise _error()
         artifacts.append(
             Artifact(
                 _path(record["location"]),
                 _digest(record["sha256"]),
                 _refs(record["evidence_ids"], input_ids),
+                cast(Literal["document", "section"], ownership),
             )
         )
     if tuple(artifacts) != tuple(
@@ -365,7 +394,7 @@ def _document(value: object) -> StateDocument:
     ):  # pragma: no cover - canonical producer ordering
         raise _error()
     return StateDocument(
-        1,
+        schema_version,
         _text(item["producer_version"]),
         configuration,
         tuple(limits),
@@ -378,6 +407,12 @@ def _document(value: object) -> StateDocument:
 
 
 def _mapping_from_state(value: StateDocument) -> dict[str, object]:
+    if value.schema_version not in {1, 2} or (
+        value.schema_version == 1 and any(item.ownership != "document" for item in value.artifacts)
+    ):
+        raise _error(
+            "provenance state schema version is unsupported", category="state.unsupported-schema"
+        )
     configuration = (
         None
         if value.configuration is None
@@ -426,12 +461,17 @@ def _mapping_from_state(value: StateDocument) -> dict[str, object]:
         for value in value.derivations
     ]
     result["artifacts"] = [
-        {
-            "location": value.location,
-            "sha256": value.sha256,
-            "evidence_ids": list(value.evidence_ids),
-        }
-        for value in value.artifacts
+        dict(
+            (key, item)
+            for key, item in (
+                ("location", artifact.location),
+                ("sha256", artifact.sha256),
+                ("evidence_ids", list(artifact.evidence_ids)),
+                ("ownership", artifact.ownership if value.schema_version == 2 else None),
+            )
+            if item is not None
+        )
+        for artifact in value.artifacts
     ]
     result["completion"] = value.completion
     result["skipped_scopes"] = [
@@ -455,29 +495,35 @@ def _mapping_from_state(value: StateDocument) -> dict[str, object]:
 def load_state_json(data: str | bytes) -> StateDocument:
     """Load one bounded schema-major-1 state document."""
     if isinstance(data, bytes):
-        if len(data) > _MAX_BYTES or data.startswith(b"\xef\xbb\xbf"):
-            raise _error()
+        if len(data) > _MAX_BYTES:
+            raise _error(category="state.too-large")
+        if data.startswith(b"\xef\xbb\xbf"):
+            raise _error(category="state.invalid-encoding")
         try:
             text = data.decode("utf-8", errors="strict")
         except (
             UnicodeDecodeError
         ) as error:  # pragma: no cover - covered by JSON UTF-8 contract elsewhere
-            raise _error() from error
+            raise _error(category="state.invalid-encoding") from error
     elif isinstance(data, str):
         try:
             if (
                 data.startswith("\ufeff") or len(data.encode("utf-8")) > _MAX_BYTES
             ):  # pragma: no cover - bounded equivalent is tested for bytes
-                raise _error()
+                raise _error(category="state.invalid-encoding")
         except UnicodeEncodeError as error:
-            raise _error() from error
+            raise _error(category="state.invalid-encoding") from error
         text = data
     else:
-        raise _error()
+        raise _error(category="state.invalid-structure")
     try:
         parsed = json.loads(text, object_pairs_hook=_object, parse_constant=_finite)
-    except (json.JSONDecodeError, RecursionError, StateError) as error:
-        raise _error() from error
+    except json.JSONDecodeError as error:
+        raise _error(category="state.invalid-json") from error
+    except RecursionError as error:
+        raise _error(category="state.invalid-json") from error
+    except StateError as error:
+        raise _error(category=error.category) from error
     return _document(parsed)
 
 
@@ -495,11 +541,11 @@ def dump_state_json(value: StateDocument) -> bytes:
 
 @implements("REQ036")
 def state_json_schema() -> dict[str, object]:
-    """Return a fresh copy of the packaged state schema."""
+    """Return a fresh copy of the latest packaged state schema."""
     try:
         value = json.loads(
             resources.files("slygentify")
-            .joinpath("schemas/state-v1.schema.json")
+            .joinpath("schemas/state-v2.schema.json")
             .read_text(encoding="utf-8")
         )
     except (
@@ -512,13 +558,14 @@ def state_json_schema() -> dict[str, object]:
     return cast(dict[str, object], value)
 
 
-@implements("REQ036")
+@implements("REQ036", "REQ055")
 def state_from_scan(
     result: ScanResult,
     configuration: EffectiveConfiguration,
     files: Mapping[str, bytes | str],
     *,
     artifacts: tuple[Artifact, ...] = (),
+    schema_version: Literal[1, 2] = 2,
 ) -> StateDocument:
     """Derive state only from scan data and already captured content fingerprints."""
     if not isinstance(result, ScanResult) or not isinstance(configuration, EffectiveConfiguration):
@@ -565,7 +612,7 @@ def state_from_scan(
         else StateConfiguration("slygentify.toml", configuration.sha256)
     )
     return StateDocument(
-        1,
+        schema_version,
         result.producer_version,
         config,
         limits,
@@ -573,7 +620,7 @@ def state_from_scan(
         derivations,
         artifacts,
         result.completion,
-        result.skipped_scopes,
+        tuple(filter(_is_provenance_skipped_scope, result.skipped_scopes)),
     )
 
 
@@ -592,12 +639,31 @@ def _identity(path: Path) -> tuple[int, int, int]:
     if not stat.S_ISREG(metadata.st_mode) or stat.S_ISLNK(
         metadata.st_mode
     ):  # pragma: no cover - target lstat guard
-        raise _error("provenance state target is unsafe")
+        raise _error("provenance state target is unsafe", category="state.unsafe-entry")
     return metadata.st_dev, metadata.st_ino, metadata.st_size
 
 
-@implements("REQ037")
-def plan_state_write(root: Path, state: StateDocument) -> StateWritePlan:
+def read_state_bytes(path: Path) -> bytes:
+    """Read one bounded safe regular state entry without following links."""
+
+    try:
+        metadata = path.lstat()
+    except OSError as error:
+        raise _error("provenance state is unreadable", category="state.unreadable") from error
+    if not stat.S_ISREG(metadata.st_mode) or stat.S_ISLNK(metadata.st_mode):
+        raise _error("provenance state target is unsafe", category="state.unsafe-entry")
+    if metadata.st_size > _MAX_BYTES:
+        raise _error("provenance state exceeds the supported bound", category="state.too-large")
+    try:
+        return path.read_bytes()
+    except OSError as error:
+        raise _error("provenance state is unreadable", category="state.unreadable") from error
+
+
+@implements("REQ037", "REQ054")
+def plan_state_write(
+    root: Path, state: StateDocument, *, replace_invalid: bool = False
+) -> StateWritePlan:
     """Plan a state create, replacement, or exact no-op without writing."""
     data = dump_state_json(state)
     target = _target(root)
@@ -605,10 +671,20 @@ def plan_state_write(root: Path, state: StateDocument) -> StateWritePlan:
         return StateWritePlan(root, "create", data, None, None)
     identity = _identity(target)
     try:
-        current = target.read_bytes()
+        current = read_state_bytes(target)
         load_state_json(current)
-    except (OSError, StateError) as error:
-        raise _error("existing provenance state is malformed or unsafe") from error
+    except StateError as error:
+        protected = {
+            "state.too-large",
+            "state.unreadable",
+            "state.unsafe-entry",
+            "state.unsupported-schema",
+        }
+        if not replace_invalid or error.category in protected:
+            raise _error(
+                "existing provenance state is malformed or unsafe",
+                category=error.category,
+            ) from error
     digest = hashlib.sha256(current).hexdigest()
     return StateWritePlan(
         root, "no_change" if current == data else "replace", data, identity, digest
@@ -627,7 +703,7 @@ def apply_state_write(plan: StateWritePlan) -> bool:
     if os.path.lexists(parent):
         metadata = parent.lstat()
         if not stat.S_ISDIR(metadata.st_mode) or stat.S_ISLNK(metadata.st_mode):
-            raise _error("provenance state directory is unsafe")
+            raise _error("provenance state directory is unsafe", category="state.unsafe-entry")
     elif plan.action == "create":
         parent.mkdir()
     else:  # pragma: no cover - replacement cannot have an absent parent after planning

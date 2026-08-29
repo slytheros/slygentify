@@ -10,8 +10,14 @@ references:
 - keyword: REQ040
   path: src/slygentify/cli.py
   type: file
-reviewed: XaJeoIGGLUHMhcuygjtA18fGZgxBxkIiMhCAEi_Ymv0=
+- keyword: REQ040
+  path: src/slygentify/initialization.py
+  type: file
+reviewed: KghQmNdauhqd4N7f9UU73JKH8ijllbxBrVA65dYPBP8=
 text: |
   Slygentify shall provide a reviewable initialization CLI dry-run, explicit replacement
   control, and actionable stdout, stderr, and exit-status behavior for successful, refused,
-  and partially completed operations.
+  and partially completed operations. Initialization diagnostics shall expose and render
+  `notice` for relaxed limits, replacement-without-backup, and unmanaged or human-edited
+  ownership boundaries, and `problem` for all other current conditions; disposition shall
+  not change write, refusal, or exit behavior.

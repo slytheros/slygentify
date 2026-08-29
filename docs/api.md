@@ -43,6 +43,7 @@ compatibility surfaces.
         - Component
         - ComponentRelationship
         - Diagnostic
+        - DiagnosticDisposition
         - DoctorDiagnostic
         - DoctorInputError
         - DoctorOperationalError

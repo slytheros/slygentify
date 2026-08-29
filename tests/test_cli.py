@@ -1,11 +1,19 @@
 """Tests for the public command-line interface."""
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
 
-from slygentify import InitializationError, InitializationResult, plan_initialization
+from slygentify import (
+    InitializationError,
+    InitializationResult,
+    plan_initialization,
+    scan_repository,
+)
+from slygentify._generation import _render_paste_snippet, generate_agents_document
+from slygentify._provenance import dump_state_json, load_state_json
 from slygentify.cli import app
 
 
@@ -17,7 +25,7 @@ def _repository(tmp_path: Path) -> Path:
     return root
 
 
-@pytest.mark.verifies("TST002", "TST040")
+@pytest.mark.verifies("TST002", "TST040", "TST055")
 def test_init_cli_dry_run_and_creation(tmp_path: Path) -> None:
     root = _repository(tmp_path)
     runner = CliRunner()
@@ -25,35 +33,70 @@ def test_init_cli_dry_run_and_creation(tmp_path: Path) -> None:
     dry_run = runner.invoke(app, ["init", str(root), "--dry-run"])
     assert dry_run.exit_code == 0
     assert "Ownership: new" in dry_run.stdout
+    assert "State recovery: none" in dry_run.stdout
     assert "--- AGENTS.md ---" in dry_run.stdout
-    assert "--- .slygentify/state.json ---" in dry_run.stdout
+    assert "--- provenance summary ---" in dry_run.stdout
+    assert '"inputs"' not in dry_run.stdout
     assert not (root / "AGENTS.md").exists()
+
+    full_dry_run = runner.invoke(app, ["init", str(root), "--dry-run", "--show-state"])
+    assert full_dry_run.exit_code == 0
+    assert "--- .slygentify/state.json ---" in full_dry_run.stdout
+    assert '"inputs"' in full_dry_run.stdout
+    assert runner.invoke(app, ["init", str(root), "--show-state"]).exit_code == 2
 
     created = runner.invoke(app, ["init", str(root)])
     assert created.exit_code == 0
-    assert created.stdout == "Created AGENTS.md and .slygentify/state.json\n"
+    assert "Created AGENTS.md and .slygentify/state.json" in created.stdout
+    assert "slygentify doctor ." in created.stdout
     assert (root / "AGENTS.md").is_file()
 
 
-@pytest.mark.verifies("TST003", "TST040")
+@pytest.mark.verifies("TST003", "TST040", "TST054")
 def test_init_cli_refusal_replacement_and_no_change(tmp_path: Path) -> None:
     root = _repository(tmp_path)
     (root / "AGENTS.md").write_text("human", encoding="utf-8")
     runner = CliRunner()
 
-    refused = runner.invoke(app, ["init", str(root)])
-    assert refused.exit_code == 1
-    assert "initialization.unmanaged" in refused.stderr
+    paste_guidance = runner.invoke(app, ["init", str(root)])
+    assert paste_guidance.exit_code == 4
+    assert "Notice [initialization.unmanaged] AGENTS.md" in paste_guidance.stderr
+    assert "Disposition: Notice" in paste_guidance.stderr
+    assert "Existing AGENTS.md was preserved." in paste_guidance.stdout
+    assert "## Slygentify bootstrap guidance" in paste_guidance.stdout
+    assert "# AGENTS.md" not in paste_guidance.stdout
+    assert "managed-artifact lifecycle" not in paste_guidance.stdout
     assert (root / "AGENTS.md").read_text(encoding="utf-8") == "human"
 
     replaced = runner.invoke(app, ["init", str(root), "--replace"])
     assert replaced.exit_code == 0
-    assert "Warning: --replace" in replaced.stderr
+    assert "Warning [initialization.replace-without-backup] AGENTS.md" in replaced.stderr
+    assert "Disposition: Notice" in replaced.stderr
+    assert "Slygentify will not create a backup" in replaced.stderr
     assert "Regenerated" in replaced.stdout
 
     unchanged = runner.invoke(app, ["init", str(root)])
     assert unchanged.exit_code == 0
-    assert unchanged.stdout == "No changes.\n"
+    assert "No changes." in unchanged.stdout
+
+
+@pytest.mark.verifies("TST040", "TST054")
+def test_init_cli_adopts_without_echoing_existing_guidance(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    (root / "AGENTS.md").write_text("do-not-echo-this-human-guidance", encoding="utf-8")
+    runner = CliRunner()
+
+    dry_run = runner.invoke(app, ["init", str(root), "--adopt", "--dry-run"])
+    assert dry_run.exit_code == 0
+    assert "--- Slygentify bootstrap guidance ---" in dry_run.stdout
+    assert "do-not-echo-this-human-guidance" not in dry_run.stdout
+    assert not (root / ".slygentify" / "state.json").exists()
+    assert runner.invoke(app, ["init", str(root), "--adopt", "--replace"]).exit_code == 2
+
+    adopted = runner.invoke(app, ["init", str(root), "--adopt"])
+    assert adopted.exit_code == 0
+    assert "Adopted Slygentify bootstrap guidance" in adopted.stdout
+    assert "do-not-echo-this-human-guidance" in (root / "AGENTS.md").read_text(encoding="utf-8")
 
 
 @pytest.mark.verifies("TST040")
@@ -65,9 +108,13 @@ def test_init_cli_reports_planning_and_apply_errors(
     (root / "AGENTS.md").write_text("human", encoding="utf-8")
 
     dry_run = runner.invoke(app, ["init", str(root), "--dry-run"])
-    assert dry_run.exit_code == 1
+    assert dry_run.exit_code == 4
     assert "Ownership: unmanaged" in dry_run.stdout
-    assert "initialization.unmanaged" in dry_run.stderr
+    assert "--- AGENTS.md ---" in dry_run.stdout
+    assert "--- provenance summary ---" in dry_run.stdout
+    assert "Notice [initialization.unmanaged] AGENTS.md" in dry_run.stderr
+    assert "Disposition: Notice" in dry_run.stderr
+    assert plan_initialization(root, replace=True).can_apply
 
     def fail_plan(*_args: object, **_kwargs: object) -> object:
         raise InitializationError("initialization.path", "bad path")
@@ -75,13 +122,14 @@ def test_init_cli_reports_planning_and_apply_errors(
     monkeypatch.setattr("slygentify.cli.plan_initialization", fail_plan)
     planning_error = runner.invoke(app, ["init", str(root)])
     assert planning_error.exit_code == 1
-    assert planning_error.stderr == (
-        "Error [initialization.path]: bad path\n"
-        "Next: Run slygentify init --dry-run to review the current state.\n"
+    assert "Error [initialization.path] ." in planning_error.stderr
+    assert "Disposition: Problem" in planning_error.stderr
+    assert "Description: bad path." in planning_error.stderr
+    assert "Effect: Initialization did not complete" in planning_error.stderr
+    assert (
+        "Next: Run slygentify init --dry-run to review the current state." in planning_error.stderr
     )
     monkeypatch.undo()
-
-    plan = plan_initialization(root, replace=True)
 
     def fail_apply(*_args: object, **_kwargs: object) -> object:
         raise InitializationError(
@@ -119,8 +167,132 @@ def test_init_cli_reports_planning_and_apply_errors(
     monkeypatch.setattr("slygentify.cli.apply_initialization", repaired)
     repaired_result = runner.invoke(app, ["init", str(root), "--replace"])
     assert repaired_result.exit_code == 0
-    assert repaired_result.stdout == "Repaired .slygentify/state.json\n"
-    assert plan.can_apply
+    assert "Repaired .slygentify/state.json" in repaired_result.stdout
+    assert "slygentify doctor ." in repaired_result.stdout
+
+
+@pytest.mark.verifies("TST040", "TST054")
+def test_init_cli_prints_deterministic_paste_guidance_for_human_edits(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    runner = CliRunner()
+    assert runner.invoke(app, ["init", str(root)]).exit_code == 0
+    agents = root / "AGENTS.md"
+    agents.write_text("human-owned guidance\n", encoding="utf-8")
+    before = agents.read_bytes()
+
+    result = runner.invoke(app, ["init", str(root)])
+
+    expected = _render_paste_snippet(generate_agents_document(scan_repository(root)).markdown)
+    assert result.exit_code == 4
+    assert "Notice [initialization.human-edited] AGENTS.md" in result.stderr
+    assert "Disposition: Notice" in result.stderr
+    assert result.stdout.endswith(expected)
+    assert "# AGENTS.md" not in result.stdout
+    assert "managed-artifact lifecycle" not in result.stdout
+    assert agents.read_bytes() == before
+
+
+@pytest.mark.verifies("TST040", "TST054", "TST055")
+def test_init_cli_automatically_rebuilds_bounded_invalid_state(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    state = root / ".slygentify" / "state.json"
+    state.parent.mkdir()
+    state.write_text('{"schema_version": 2}', encoding="utf-8")
+    runner = CliRunner()
+
+    dry_run = runner.invoke(app, ["init", str(root), "--dry-run"])
+
+    assert dry_run.exit_code == 0
+    assert "Ownership: recoverable-state" in dry_run.stdout
+    assert "State recovery: state-rebuild" in dry_run.stdout
+    assert state.read_text(encoding="utf-8") == '{"schema_version": 2}'
+    ordinary = runner.invoke(app, ["init", str(root)])
+    assert ordinary.exit_code == 0
+    assert "Created AGENTS.md and rebuilt .slygentify/state.json" in ordinary.stdout
+    assert '"artifacts"' in state.read_text(encoding="utf-8")
+
+    state.write_text("{}", encoding="utf-8")
+    rebuilt = runner.invoke(app, ["init", str(root)])
+    assert "Rebuilt .slygentify/state.json from current generated guidance" in rebuilt.stdout
+
+    current = load_state_json(state.read_bytes())
+    state.write_bytes(dump_state_json(replace(current, schema_version=1)))
+    upgraded = runner.invoke(app, ["init", str(root)])
+    assert "Upgraded .slygentify/state.json to state-v2" in upgraded.stdout
+
+    current = load_state_json(state.read_bytes())
+    state.write_bytes(dump_state_json(replace(current, schema_version=1)))
+    (root / "package.json").write_text('{"name":"changed-example"}\n', encoding="utf-8")
+    regenerated = runner.invoke(app, ["init", str(root)])
+    assert regenerated.exit_code == 0
+    assert (
+        "Regenerated AGENTS.md and upgraded .slygentify/state.json to state-v2"
+        in regenerated.stdout
+    )
+
+    current = load_state_json(state.read_bytes())
+    state.write_bytes(dump_state_json(replace(current, schema_version=1)))
+    (root / "AGENTS.md").unlink()
+    recreated = runner.invoke(app, ["init", str(root), "--replace"])
+    assert recreated.exit_code == 0
+    assert "Created AGENTS.md and upgraded .slygentify/state.json to state-v2" in recreated.stdout
+
+
+@pytest.mark.verifies("TST040", "TST054", "TST055")
+def test_init_cli_recovers_section_without_full_document_warning(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    agents = root / "AGENTS.md"
+    agents.write_text("private-human-guidance\n", encoding="utf-8")
+    runner = CliRunner()
+    assert runner.invoke(app, ["init", str(root), "--adopt"]).exit_code == 0
+    state = root / ".slygentify" / "state.json"
+    agents.write_bytes(agents.read_bytes().replace(b"## Safety", b"## Edited safety", 1))
+    state.write_bytes(b"\xffinvalid")
+
+    dry_run = runner.invoke(app, ["init", str(root), "--dry-run"])
+    applied = runner.invoke(app, ["init", str(root), "--adopt"])
+
+    assert dry_run.exit_code == 0
+    assert "State recovery: state-rebuild" in dry_run.stdout
+    assert "--- Slygentify bootstrap guidance ---" in dry_run.stdout
+    assert "private-human-guidance" not in dry_run.stdout
+    assert applied.exit_code == 0
+    assert "Recovered Slygentify bootstrap guidance" in applied.stdout
+    assert "replace-without-backup" not in applied.stderr
+    assert agents.read_text(encoding="utf-8").startswith("private-human-guidance\n")
+
+
+@pytest.mark.verifies("TST040", "TST055")
+def test_init_cli_refuses_future_state_with_exact_upgrade_action(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    state = root / ".slygentify" / "state.json"
+    state.parent.mkdir()
+    state.write_text('{"schema_version": 3}', encoding="utf-8")
+
+    result = CliRunner().invoke(app, ["init", str(root), "--replace"])
+
+    assert result.exit_code == 1
+    assert "Category: state.unsupported-schema" in result.stderr
+    assert "does not authorize a downgrade" in result.stderr
+    assert state.read_text(encoding="utf-8") == '{"schema_version": 3}'
+
+
+@pytest.mark.verifies("TST040", "TST046")
+def test_init_cli_classifies_oversized_state_without_disclosure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _repository(tmp_path)
+    state = root / ".slygentify" / "state.json"
+    state.parent.mkdir()
+    state.write_bytes(b"sentinel-secret-state")
+    monkeypatch.setattr("slygentify._provenance._MAX_BYTES", 8)
+
+    result = CliRunner().invoke(app, ["init", str(root), "--dry-run"])
+
+    assert result.exit_code == 1
+    assert "Category: state.too-large" in result.stderr
+    assert "sentinel-secret-state" not in result.stderr
+    assert state.read_bytes() == b"sentinel-secret-state"
 
 
 @pytest.mark.verifies("TST004", "TST040")
@@ -142,5 +314,7 @@ max_component_entries = "unlimited"
     result = CliRunner().invoke(app, ["init", str(root), "--dry-run"])
 
     assert result.exit_code == 0
+    assert "Warning [initialization.relaxed-limits] slygentify.toml" in result.stderr
+    assert "Disposition: Notice" in result.stderr
     assert "raises or disables an AGENTS.md byte or component-entry limit" in result.stderr
     assert "--- AGENTS.md ---" in result.stdout

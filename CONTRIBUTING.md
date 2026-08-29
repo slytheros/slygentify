@@ -57,6 +57,7 @@ uv run ruff check .
 uv run ruff format --check .
 uv run mypy
 uv run doorstop
+uv run --locked slygentify doctor .
 uv run --locked mkdocs build --strict
 uv run pre-commit run --all-files
 uv --preview-features audit-command audit --locked
@@ -67,6 +68,10 @@ The dependency audit requires network access. The other core checks, including t
 documentation build, remain local. MkDocs extracts the public Python reference from
 source without importing Slygentify. Do not weaken or suppress an unrelated check to
 make a contribution pass.
+
+Release preparation, TestPyPI rehearsal, recovery, and production approval follow the
+[maintainer release runbook](docs/releasing.md). Contributors and agents never move a
+release tag, reuse a published version, or publish outside that documented process.
 
 ## Requirements and traceability
 

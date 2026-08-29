@@ -11,9 +11,20 @@ Read `diagnostics` and `skipped_scopes` before treating missing evidence as abse
 partial result can reflect an unreadable file, configured resource limit, environmental
 exhaustion, or unavailable tracked-path discovery. Keep the result for the inspected
 boundary, then correct the reported repository condition or use a tighter task scope.
+Doctor reports each distinct partial cause separately. Follow the action attached to
+that cause; do not raise a resource limit unless the diagnostic names the limit that was
+actually reached.
 
 See the [scan guide](scan.md#investigate-a-partial-result) and
 [inspection accounting](../inspection-accounting.md) for the exact boundary semantics.
+
+## A supported manifest is malformed
+
+The diagnostic identifies the exact manifest and the declarations that could not be
+established. Correct its syntax, encoding, duplicate keys, or required top-level shape,
+then rerun the command. If the file is intentionally outside the repository knowledge
+you want Slygentify to inspect, exclude that exact scope in root `slygentify.toml` and
+rerun. This is not a resource-limit condition, so increasing a scan limit is irrelevant.
 
 ## Git tracked-path discovery is unavailable
 
@@ -37,13 +48,29 @@ configuration sources.
 See the [configuration reference](../configuration-and-provenance.md) for the accepted
 shape and path rules.
 
-## Init refuses to create or regenerate guidance
+## Init preserves existing guidance
 
-Run `slygentify init PATH --dry-run` and review the ownership state, diagnostic, and
-recovery text. Ordinary init intentionally refuses unmanaged, human-edited, missing
-managed, malformed, and unsafe targets to preserve existing work. Do not use `--replace`
+For an unmanaged or human-edited safe regular `AGENTS.md`, ordinary init prints a
+paste-ready Slygentify section, preserves the file, and exits 4. Paste the section where
+it fits your existing guidance; this deliberate manual path does not create managed
+provenance state. Run `slygentify init PATH --dry-run` to review the full candidate and
+sidecar before deciding whether to replace the file.
+
+Missing managed, malformed, and unsafe targets still fail closed. Do not use `--replace`
 as routine recovery: it can discard a regular `AGENTS.md`, creates no backup, and never
 permits unsafe entries.
+
+When `.slygentify/state.json` is bounded and readable but invalid, init can rebuild it
+automatically if one well-formed marker pair, absent guidance, or exact fresh generated
+bytes independently establish ownership. `--adopt` preserves unmanaged guidance while
+adding a managed section; `--replace` is the explicit fallback for ambiguous regular
+whole-document content or malformed markers. Invalid bytes are replaced without a
+backup and are never printed.
+
+A newer state schema is never downgraded, including under `--replace`; install a
+compatible reviewed build. Oversized or unreadable state must be made readable or moved
+to a new collision-safe backup name before retrying. Symbolic links, directories, and
+other unsafe entries require manual correction and are never replaced.
 
 If you intentionally want to replace a regular file, first retain the content you need,
 review the dry-run with `--replace`, then choose the explicit apply command. See the

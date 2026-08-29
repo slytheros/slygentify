@@ -17,8 +17,9 @@ network service, or select a preferred tool.
 | Frameworks | Direct FastAPI, Flask, Django, SQLAlchemy, and Alembic declarations; `alembic.ini` configuration | The component directly declares the named dependency or has Alembic configuration. Runtime activation remains unclaimed. |
 | CI | Literal Gitea/GitHub `run` steps and GitLab script/run fields, including bounded in-root `include:local` files | The attributable command text is declared. Static scalar, object-axis, and `matrix.include` Python selections are retained with exact locators. Literal GitHub/Gitea checkout paths constrain component attribution; expression-only commands and ambiguous or external checkout scopes are not presented as component commands. External and dynamic includes or expressions remain unknown and are never fetched. |
 
-TOML evidence uses dotted locators, requirements use line locators, and workflow YAML
-uses JSON-Pointer-style locators. Commands are shown in the complete default report,
+TOML evidence uses dotted locators with syntax-significant dynamic keys represented as
+escaped double-quoted TOML key segments, requirements use line locators, and workflow
+YAML uses JSON-Pointer-style locators. Commands are shown in the complete default report,
 the interactive explorer, and JSON, and are escaped for safe presentation.
 Whitespace-delimited requirements comments are not
 part of the PEP 508 declaration. A recognizable credential literal is withheld and

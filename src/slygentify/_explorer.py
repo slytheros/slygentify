@@ -30,15 +30,18 @@ from textual.worker import Worker, WorkerState
 
 from slygentify._glossary import glossary_text
 from slygentify._presentation import (
+    AttentionDiagnostic,
     ComponentNavigationRole,
     RecordGroup,
     ScanPresentation,
     ScanRecord,
+    attention_count_text,
+    diagnostic_group_noun,
     record_classification,
     record_kind,
     record_label,
 )
-from slygentify.models import Component, Diagnostic, ScanResult, SkippedScope
+from slygentify.models import Component, ScanResult, SkippedScope
 from slygentify.traceability import implements
 
 PayloadKind = Literal["summary", "group", "record"]
@@ -105,7 +108,9 @@ _SECTION_HELP = {
     "Architecture": "Entry points, frameworks, dependencies, tools, and relationships.",
     "Automation": "Commands and runtime choices declared by CI automation.",
     "Repository-wide workflows": "Tasks attributable to the repository as a whole.",
-    "Needs attention": "Unknowns, cautions, recommendations, and diagnostics.",
+    "Attention & limitations": (
+        "Problems, trustworthy limitations, notices, unknowns, cautions, and recommendations."
+    ),
     "Inspection boundaries": "Areas omitted because of safety rules, unsupported input, or resource limits.",
     "Sources & provenance": "Inspected locations and observations supporting scan claims.",
 }
@@ -312,19 +317,119 @@ class ScanExplorer(App[None]):
         self, section: TreeNode[_NodePayload], group: RecordGroup, records: tuple[ScanRecord, ...]
     ) -> None:
         assert self.presentation is not None
-        if group.subsection == "Diagnostics":
-            diagnostics: defaultdict[tuple[str, str], list[ScanRecord]] = defaultdict(list)
-            for record in records:
-                assert isinstance(record, Diagnostic)
-                diagnostics[(self.presentation.diagnostic_target(record), record.code)].append(
-                    record
+        noun = diagnostic_group_noun(group.subsection)
+        if noun is not None:
+            by_target: defaultdict[tuple[str, str], list[AttentionDiagnostic]] = defaultdict(list)
+            for diagnostic_group in self.presentation.attention_diagnostics(group):
+                by_target[
+                    (
+                        self.presentation.diagnostic_target(diagnostic_group.diagnostic),
+                        diagnostic_group.diagnostic.code,
+                    )
+                ].append(diagnostic_group)
+            for target, code in sorted(by_target):
+                diagnostic_groups = by_target[(target, code)]
+                all_record_values: list[ScanRecord] = []
+                for diagnostic_group in diagnostic_groups:
+                    all_record_values.append(diagnostic_group.diagnostic)
+                    all_record_values.extend(diagnostic_group.related_unknowns)
+                all_records = tuple(all_record_values)
+                matches = tuple(record for record in all_records if self._matches(record))
+                visible_items = sum(
+                    any(
+                        self._matches(record)
+                        for record in cast(
+                            tuple[ScanRecord, ...],
+                            (
+                                diagnostic_group.diagnostic,
+                                *diagnostic_group.related_unknowns,
+                            ),
+                        )
+                    )
+                    for diagnostic_group in diagnostic_groups
                 )
-            for target, code in sorted(diagnostics):
-                self._group(
-                    section,
-                    f"Diagnostics / {target} / {code}",
-                    tuple(diagnostics[(target, code)]),
+                label = (
+                    f"{group.subsection} / {target} / {code} "
+                    f"({attention_count_text(visible_items, len(matches), noun=noun)})"
                 )
+                detail = (
+                    f"{visible_items} {noun if visible_items == 1 else f'{noun}s'} "
+                    f"represented by {len(matches)} records"
+                )
+                if not any(item.related_unknowns for item in diagnostic_groups):
+                    section.add(
+                        label,
+                        _NodePayload(
+                            "group",
+                            detail,
+                            records=matches,
+                        ),
+                        allow_expand=True,
+                    )
+                    continue
+                target_node = section.add(
+                    label,
+                    _NodePayload(
+                        "group",
+                        detail,
+                        records=matches,
+                    ),
+                    allow_expand=True,
+                )
+                for diagnostic_group in diagnostic_groups:
+                    diagnostic_records: tuple[ScanRecord, ...] = (
+                        diagnostic_group.diagnostic,
+                        *diagnostic_group.related_unknowns,
+                    )
+                    diagnostic_matches = tuple(
+                        record for record in diagnostic_records if self._matches(record)
+                    )
+                    if not diagnostic_matches:
+                        continue
+                    item_node = target_node.add(
+                        f"{noun.title()} "
+                        f"({attention_count_text(1, len(diagnostic_matches), noun=noun)})",
+                        _NodePayload(
+                            "group",
+                            f"One {noun} represented by {len(diagnostic_matches)} matching records",
+                            records=diagnostic_matches,
+                        ),
+                        allow_expand=True,
+                    )
+                    if self._matches(diagnostic_group.diagnostic):
+                        diagnostic = diagnostic_group.diagnostic
+                        item_node.add_leaf(
+                            record_label(self.presentation, diagnostic),
+                            _NodePayload(
+                                "record",
+                                self.presentation.record_detail(diagnostic),
+                                record=diagnostic,
+                            ),
+                        )
+                    related = tuple(
+                        finding
+                        for finding in diagnostic_group.related_unknowns
+                        if self._matches(finding)
+                    )
+                    if related:
+                        context = item_node.add(
+                            f"Related context ({len(related)})",
+                            _NodePayload(
+                                "group",
+                                f"Related context: {len(related)} records",
+                                records=related,
+                            ),
+                            allow_expand=True,
+                        )
+                        for finding in related:
+                            context.add_leaf(
+                                record_label(self.presentation, finding),
+                                _NodePayload(
+                                    "record",
+                                    self.presentation.record_detail(finding),
+                                    record=finding,
+                                ),
+                            )
             return
         if group.subsection == "Excluded or limited areas":
             skipped: defaultdict[str, list[ScanRecord]] = defaultdict(list)
@@ -365,6 +470,30 @@ class ScanExplorer(App[None]):
         return sum(
             len(self._matching_records(group)) for group in groups if group.section == section
         )
+
+    def _attention_counts(self, groups: tuple[RecordGroup, ...]) -> tuple[int, int]:
+        """Count visible items and records without splitting paired diagnostic context."""
+        assert self.presentation is not None
+        item_count = 0
+        record_count = 0
+        for group in groups:
+            if group.section != "Attention & limitations":
+                continue
+            if diagnostic_group_noun(group.subsection) is not None:
+                for diagnostic_group in self.presentation.attention_diagnostics(group):
+                    records: tuple[ScanRecord, ...] = (
+                        diagnostic_group.diagnostic,
+                        *diagnostic_group.related_unknowns,
+                    )
+                    matches = tuple(record for record in records if self._matches(record))
+                    if matches:
+                        item_count += 1
+                        record_count += len(matches)
+            else:
+                matches = self._matching_records(group)
+                item_count += len(matches)
+                record_count += len(matches)
+        return item_count, record_count
 
     def _add_component(
         self,
@@ -476,17 +605,32 @@ class ScanExplorer(App[None]):
             only_section="Repository-wide workflows",
         )
 
+        attention_items, attention_records = self._attention_counts(repository_groups)
+        for component in self.presentation.result.components:
+            component_items, component_records = self._attention_counts(
+                self.presentation.component_groups(component.id)
+            )
+            attention_items += component_items
+            attention_records += component_records
         attention = self._navigation_group(
             tree.root,
-            "Needs attention",
-            _SECTION_HELP["Needs attention"],
-            self._group_count(repository_groups, "Needs attention"),
+            "Attention & limitations",
+            f"{_SECTION_HELP['Attention & limitations']} {attention_items} items; "
+            f"{attention_records} records.",
+            attention_records,
             expand=True,
+        )
+        attention.set_label(
+            Text(
+                "Attention & limitations "
+                f"({attention_count_text(attention_items, attention_records)})",
+                style="dim" if attention_records == 0 else "",
+            )
         )
         self._add_groups(
             attention,
             repository_groups,
-            only_section="Needs attention",
+            only_section="Attention & limitations",
         )
 
         boundaries = self._navigation_group(

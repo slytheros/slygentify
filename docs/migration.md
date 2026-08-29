@@ -1,6 +1,6 @@
 # Migration and compatibility guidance
 
-Slygentify is currently `0.1.0` and has no public PyPI release history. There is no
+Slygentify is currently `1.0.0rc1` and has no production PyPI release history. There is no
 released-version migration to perform yet. Future changes will be recorded in the root
 changelog without recreating private development chronology.
 
@@ -19,15 +19,17 @@ the next package major.
 
 ## JSON Schema versions
 
-Scan, map, doctor, and initialization state have separately identified schema-major-1
-documents. Package and wire major versions do not advance together automatically.
-Readers accept documented same-major additive fields while producers emit only canonical
-declared fields.
+Scan, map, doctor, and initialization state have separately identified documents.
+Initialization state v2 supersedes v1: readers retain v1 support and producers write v2,
+which adds whole-document or visible-section ownership. Package and wire major versions
+do not advance together automatically.
 
 Deprecated JSON fields remain accepted throughout their schema major. Removal requires
 the next applicable schema major, an explicit reader or migration path, and updated
-guidance. Never edit a canonical document in place without preserving the original for
-recovery and comparison.
+guidance. Never edit a canonical user-owned document in place without preserving the
+original for recovery and comparison. Bounded invalid `.slygentify/state.json` is the
+narrow exception: mutating init may rebuild this deterministic derived artifact without
+a backup after independently establishing the managed-artifact boundary.
 
 ## Upgrade procedure
 
@@ -37,6 +39,10 @@ recovery and comparison.
 4. Validate stored JSON with the new reader and rerun scan or doctor for fresh evidence.
 5. Review an init dry-run before regenerating managed guidance.
 6. Roll forward with a new version if a published release is defective.
+
+Supported legacy state upgrades and safe invalid-state rebuilds occur during `init`; no
+separate migration command is required. An older binary refuses a newer state schema
+rather than downgrading it.
 
 Published versions and filenames are immutable. A defective but intact release is
 normally yanked with a reason, then replaced by a corrected version. Exact pins may still

@@ -115,6 +115,12 @@ def _agents_metrics(markdown: str) -> tuple[int, int]:
     return component_count, 0 if omission is None else int(omission.group(1))
 
 
+def canonical_agents_bytes(markdown: str) -> bytes:
+    """Encode generated guidance as canonical UTF-8 with LF line endings."""
+
+    return markdown.replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
+
+
 @implements("REQ045")
 def initialization_review(
     repository: str,
@@ -123,9 +129,10 @@ def initialization_review(
     projection: ScanProjection,
 ) -> InitializationReview:
     """Build a digest-only record for one bootstrap-to-map review workflow."""
-    agents_bytes = agents_markdown.encode("utf-8")
+    agents_bytes = canonical_agents_bytes(agents_markdown)
+    canonical_markdown = agents_bytes.decode("utf-8")
     projection_bytes = dump_scan_projection_json(projection)
-    component_count, omitted_component_count = _agents_metrics(agents_markdown)
+    component_count, omitted_component_count = _agents_metrics(canonical_markdown)
     projection_record_count = sum(
         len(records)
         for records in (
@@ -142,7 +149,7 @@ def initialization_review(
         commit=commit,
         agents_sha256=hashlib.sha256(agents_bytes).hexdigest(),
         agents_byte_count=len(agents_bytes),
-        agents_line_count=len(agents_markdown.splitlines()),
+        agents_line_count=len(canonical_markdown.splitlines()),
         agents_component_count=component_count,
         agents_omitted_component_count=omitted_component_count,
         projection_sha256=hashlib.sha256(projection_bytes).hexdigest(),

@@ -10,7 +10,16 @@ from pathlib import Path, PurePosixPath
 from typing import Literal
 
 from slygentify._configuration import EffectiveConfiguration, load_configuration
+from slygentify._diagnostics import DiagnosticDetail
 from slygentify._generation import generate_agents_document
+from slygentify._managed_section import (
+    SECTION_BEGIN,
+    SECTION_END,
+    ManagedSectionError,
+    extract_managed_section,
+    render_managed_section,
+    section_digest,
+)
 from slygentify._provenance import (
     STATE_LOCATION,
     StateDocument,
@@ -24,6 +33,7 @@ from slygentify._scan import _scan_foundation, _ScanFoundationError
 from slygentify._scan.normalization import _id
 from slygentify._version import __version__
 from slygentify.models import (
+    DiagnosticDisposition,
     DoctorDiagnostic,
     DoctorResult,
     Evidence,
@@ -98,9 +108,33 @@ _COMMAND_SOURCE_KINDS = frozenset({"ci-command", "declared-command"})
 class DoctorInputError(Exception):
     """A caller-selected doctor target or option prevented a repository result."""
 
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.diagnostic = DiagnosticDetail(
+            "doctor.invalid-input",
+            ".",
+            "Doctor could not safely validate the selected input.",
+            "Doctor did not emit a result and did not modify repository files.",
+            recovery="Correct PATH or the explicitly selected Git executable, then rerun doctor.",
+            safety_rationale="Doctor cannot safely infer a replacement target or executable from invalid caller input.",
+            disposition="problem",
+        )
+
 
 class DoctorOperationalError(Exception):
     """An operational failure prevented a trustworthy doctor result."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.diagnostic = DiagnosticDetail(
+            "doctor.operation-failed",
+            ".",
+            "Doctor could not produce a trustworthy result.",
+            "Doctor did not emit a result and did not modify repository files.",
+            recovery="Correct the reported environment or tool condition, then retry doctor.",
+            safety_rationale="Doctor is read-only and cannot safely repair an operational environment failure.",
+            disposition="problem",
+        )
 
 
 def _evidence_id(kind: str, location: str, locator: str | None = None) -> str:
@@ -133,12 +167,9 @@ def _safe_digest(root: Path, location: str) -> str | None:
     return digest.hexdigest()
 
 
-def _load_state(root: Path) -> tuple[StateDocument | None, bool]:
-    """Return valid state or a bounded invalid-state marker without raising."""
-
-    target = root.joinpath(*PurePosixPath(STATE_LOCATION).parts)
-    if not os.path.lexists(target):
-        return None, False
+def _safe_managed_section(root: Path) -> bytes | None:
+    """Return a bounded, valid managed section without exposing surrounding guidance."""
+    target = root / AGENTS_FILENAME
     try:
         metadata = target.lstat()
         if (
@@ -146,10 +177,109 @@ def _load_state(root: Path) -> tuple[StateDocument | None, bool]:
             or stat.S_ISLNK(metadata.st_mode)
             or metadata.st_size > _MAX_STATE_BYTES
         ):
-            return None, True
-        return load_state_json(target.read_bytes()), False
-    except (OSError, StateError):
-        return None, True
+            return None
+        return extract_managed_section(target.read_bytes())
+    except (OSError, ManagedSectionError):
+        return None
+
+
+def _load_state(root: Path) -> tuple[StateDocument | None, str | None]:
+    """Return valid state or a bounded invalid-state marker without raising."""
+
+    target = root.joinpath(*PurePosixPath(STATE_LOCATION).parts)
+    if not os.path.lexists(target):
+        return None, None
+    try:
+        metadata = target.lstat()
+        if (
+            not stat.S_ISREG(metadata.st_mode)
+            or stat.S_ISLNK(metadata.st_mode)
+            or metadata.st_size > _MAX_STATE_BYTES
+        ):
+            return (
+                None,
+                "state.unsafe-entry" if metadata.st_size <= _MAX_STATE_BYTES else "state.too-large",
+            )
+        return load_state_json(target.read_bytes()), None
+    except OSError:
+        return None, "state.unreadable"
+    except StateError as error:
+        return None, error.category
+
+
+def _invalid_state_remediation(root: Path, category: str, fresh_guidance: str) -> str:
+    """Return the exact safe recovery workflow for one invalid-state scenario."""
+
+    if category == "state.unsupported-schema":
+        return (
+            "Install a reviewed Slygentify build that supports the newer state schema, then "
+            "rerun slygentify init . --dry-run; --replace does not authorize a downgrade."
+        )
+    if category == "state.too-large":
+        return (
+            "Move .slygentify/state.json to a new collision-safe backup name, then rerun "
+            "slygentify init . --dry-run; oversized state is not replaced automatically."
+        )
+    if category == "state.unreadable":
+        return (
+            "Make .slygentify/state.json readable or move it to a new collision-safe backup "
+            "name, then rerun slygentify init . --dry-run."
+        )
+    if category == "state.unsafe-entry":
+        return (
+            "Replace the unsafe state entry manually with a safe regular file or move it to "
+            "a new collision-safe backup name, then rerun slygentify init . --dry-run."
+        )
+    if _safe_managed_section(root) is not None:
+        return (
+            "Run slygentify init . --dry-run; ordinary init can replace only the marked "
+            "section and rebuild canonical state."
+        )
+    target = root / AGENTS_FILENAME
+    if not os.path.lexists(target):
+        return (
+            "Run slygentify init . --dry-run; ordinary init can create guidance and rebuild "
+            "canonical state."
+        )
+    try:
+        metadata = target.lstat()
+    except OSError:
+        return (
+            "Make AGENTS.md readable or move it to a new collision-safe backup name, then "
+            "rerun slygentify init . --dry-run."
+        )
+    if not stat.S_ISREG(metadata.st_mode) or stat.S_ISLNK(metadata.st_mode):
+        return (
+            "Replace the unsafe AGENTS.md entry manually with a safe regular file or move it "
+            "to a new collision-safe backup name, then rerun slygentify init . --dry-run."
+        )
+    if metadata.st_size > _MAX_STATE_BYTES:
+        return (
+            "Move the oversized AGENTS.md to a new collision-safe backup name, then rerun "
+            "slygentify init . --dry-run."
+        )
+    fresh_digest = hashlib.sha256(fresh_guidance.encode("utf-8")).hexdigest()
+    if _safe_digest(root, AGENTS_FILENAME) == fresh_digest:
+        return (
+            "Run slygentify init . --dry-run; ordinary init can preserve current guidance "
+            "and rebuild canonical state."
+        )
+    try:
+        current = target.read_bytes()
+    except OSError:
+        return (
+            "Make AGENTS.md readable or move it to a new collision-safe backup name, then "
+            "rerun slygentify init . --dry-run."
+        )
+    if SECTION_BEGIN in current or SECTION_END in current:
+        return (
+            "Review slygentify init . --replace --dry-run, then use --replace to authorize "
+            "full-document and state replacement."
+        )
+    return (
+        "Review slygentify init . --adopt --dry-run to preserve existing guidance, or use "
+        "--replace --dry-run only if the whole document may be discarded."
+    )
 
 
 def _projection(state: StateDocument, codes: frozenset[str]) -> tuple[object, ...]:
@@ -202,6 +332,7 @@ def _invalid_configuration_result(root: Path) -> DoctorResult:
         effect="Doctor did not traverse repository content because configuration cannot be trusted.",
         remediation="Correct slygentify.toml for the installed schema, then rerun doctor.",
         evidence_ids=(config_evidence.id,),
+        disposition="problem",
     )
     repository = Repository(
         id=_id("repository", "."), root=".", kind="git", evidence_ids=(evidence.id,)
@@ -254,6 +385,9 @@ def _append_diagnostic(
     effect: str,
     remediation: str | None,
     evidence_ids: Iterable[str],
+    disposition: DiagnosticDisposition,
+    category: str | None = None,
+    safety_rationale: str | None = None,
 ) -> None:
     references = tuple(sorted(set(evidence_ids)))
     diagnostics.append(
@@ -268,8 +402,18 @@ def _append_diagnostic(
             effect=effect,
             remediation=remediation,
             evidence_ids=references,
+            category=category,
+            safety_rationale=safety_rationale,
+            disposition=disposition,
         )
     )
+
+
+def _doctor_sentence(value: str) -> str:
+    text = " ".join(value.split()).rstrip(".")
+    if not text:
+        return text
+    return f"{text[0].upper()}{text[1:]}."
 
 
 def _command_became_unverifiable(
@@ -290,7 +434,7 @@ def _command_became_unverifiable(
     )
 
 
-@implements("REQ047", "REQ048")
+@implements("REQ047", "REQ048", "REQ054", "REQ055")
 def doctor_repository(
     path: str | os.PathLike[str] = ".",
     *,
@@ -307,7 +451,7 @@ def doctor_repository(
     except ValueError:
         return _invalid_configuration_result(root)
 
-    recorded, invalid_state = _load_state(root)
+    recorded, invalid_state_category = _load_state(root)
     try:
         execution = _scan_foundation(
             root, git_executable=git_executable, configuration=configuration
@@ -324,7 +468,12 @@ def doctor_repository(
     diagnostics: list[DoctorDiagnostic] = []
     completion: Literal["complete", "partial"] = result.completion
 
-    if invalid_state:
+    if invalid_state_category is not None:
+        fresh_guidance = generate_agents_document(
+            result,
+            max_bytes=execution.configuration.max_agents_bytes,
+            max_component_entries=execution.configuration.max_component_entries,
+        ).markdown
         state_evidence = _comparison_evidence(
             evidence,
             kind="invalid-state",
@@ -338,10 +487,13 @@ def doctor_repository(
             classification="verified",
             subject_id=result.repository.id,
             location=STATE_LOCATION,
-            problem="Managed provenance state is malformed, unsupported, oversized, or unsafe.",
+            problem="The generated ownership and provenance record for AGENTS.md could not be validated.",
             effect="Doctor cannot rely on managed ownership or compare recorded repository knowledge.",
-            remediation="Inspect the state and regenerate it only through a reviewed initialization flow.",
+            remediation=_invalid_state_remediation(root, invalid_state_category, fresh_guidance),
             evidence_ids=(state_evidence,),
+            disposition="problem",
+            category=invalid_state_category,
+            safety_rationale="Doctor is read-only; only the separately invoked mutating init workflow may apply a bounded recovery.",
         )
         completion = "partial"
     elif recorded is None:
@@ -362,6 +514,7 @@ def doctor_repository(
             effect="Doctor cannot establish whether the guidance reflects current repository knowledge.",
             remediation="Leave human-owned guidance unchanged or adopt it through a reviewed initialization flow.",
             evidence_ids=(guidance_evidence,),
+            disposition="notice",
         )
     else:
         current_state = state_from_scan(
@@ -394,6 +547,7 @@ def doctor_repository(
                 effect="Managed guidance may no longer describe the repository component boundaries.",
                 remediation="Review component boundaries and regenerate managed guidance after confirmation.",
                 evidence_ids=(comparison,),
+                disposition="problem",
             )
         if tooling_drift:
             comparison = _comparison_evidence(
@@ -413,6 +567,7 @@ def doctor_repository(
                 effect="Managed workflow guidance may no longer identify the current tooling contract.",
                 remediation="Confirm the authoritative workflow and regenerate managed guidance after review.",
                 evidence_ids=(comparison,),
+                disposition="problem",
             )
         for item in path_diagnostics:
             path_evidence = _comparison_evidence(
@@ -433,6 +588,7 @@ def doctor_repository(
                 effect="Related repository knowledge cannot be relied upon without review.",
                 remediation="Restore the path, update the declaration, or retire the reference.",
                 evidence_ids=(*item.evidence_ids, path_evidence),
+                disposition="problem",
             )
         missing_locations = {
             item.location
@@ -458,6 +614,7 @@ def doctor_repository(
                 effect="Dependent managed knowledge cannot be reverified from current repository evidence.",
                 remediation="Restore or replace the evidence, update configuration, or retire the dependent claim.",
                 evidence_ids=(missing_evidence,),
+                disposition="problem",
             )
         for command_input in _command_became_unverifiable(recorded, current_state, result):
             command_evidence = _comparison_evidence(
@@ -478,6 +635,7 @@ def doctor_repository(
                 effect="Managed command knowledge cannot be relied upon without manual review.",
                 remediation="Use a literal supported declaration where practical or verify the command manually in an authorized environment.",
                 evidence_ids=(command_evidence,),
+                disposition="limitation",
             )
         recorded_artifact = next(
             (item for item in recorded.artifacts if item.location == AGENTS_FILENAME), None
@@ -501,63 +659,115 @@ def doctor_repository(
                 effect="Doctor cannot establish whether the guidance reflects current repository knowledge.",
                 remediation="Leave human-owned guidance unchanged or adopt it through a reviewed initialization flow.",
                 evidence_ids=(guidance_evidence,),
+                disposition="notice",
             )
         else:
-            current_digest = _safe_digest(root, AGENTS_FILENAME)
-            fresh_digest = hashlib.sha256(
-                generate_agents_document(
-                    result,
-                    max_bytes=execution.configuration.max_agents_bytes,
-                    max_component_entries=execution.configuration.max_component_entries,
-                ).markdown.encode("utf-8")
-            ).hexdigest()
+            fresh_guidance = generate_agents_document(
+                result,
+                max_bytes=execution.configuration.max_agents_bytes,
+                max_component_entries=execution.configuration.max_component_entries,
+            ).markdown
             artifact_evidence = _comparison_evidence(
                 evidence,
                 kind="managed-artifact",
                 location=AGENTS_FILENAME,
                 observation="Recorded, current, and freshly generated managed artifact bytes were compared.",
             )
-            if current_digest is None:
-                _append_diagnostic(
-                    diagnostics,
-                    code="doctor.artifact.missing",
-                    severity="error",
-                    classification="verified",
-                    subject_id=result.repository.id,
-                    location=AGENTS_FILENAME,
-                    problem="A managed root guidance artifact is missing or not a safe regular file.",
-                    effect="The managed-artifact contract cannot be relied upon.",
-                    remediation="Review a dry-run and explicitly recreate or retire managed ownership.",
-                    evidence_ids=(artifact_evidence,),
-                )
-            elif current_digest == recorded_artifact.sha256 and fresh_digest != current_digest:
-                _append_diagnostic(
-                    diagnostics,
-                    code="doctor.artifact.stale",
-                    severity="warning",
-                    classification="verified",
-                    subject_id=result.repository.id,
-                    location=AGENTS_FILENAME,
-                    problem="Managed root guidance matches recorded bytes but differs from fresh generation.",
-                    effect="The managed artifact is stale relative to current repository evidence.",
-                    remediation="Review fresh generation and explicitly regenerate the artifact if accepted.",
-                    evidence_ids=(artifact_evidence,),
-                )
-            elif current_digest not in {recorded_artifact.sha256, fresh_digest}:
-                _append_diagnostic(
-                    diagnostics,
-                    code="doctor.artifact.diverged",
-                    severity="warning",
-                    classification="unknown",
-                    subject_id=result.repository.id,
-                    location=AGENTS_FILENAME,
-                    problem="Managed root guidance differs from both recorded and freshly generated bytes.",
-                    effect="The content may be a human edit and cannot be classified automatically.",
-                    remediation="Preserve the file, review a dry-run or diff, and replace only with explicit authorization.",
-                    evidence_ids=(artifact_evidence,),
-                )
-            elif current_digest == fresh_digest and current_digest != recorded_artifact.sha256:
-                artifact_state_stale = True
+            if recorded_artifact.ownership == "section":
+                current_section = _safe_managed_section(root)
+                fresh_section = render_managed_section(fresh_guidance)
+                if current_section is None:
+                    _append_diagnostic(
+                        diagnostics,
+                        code="doctor.artifact.missing",
+                        severity="error",
+                        classification="verified",
+                        subject_id=result.repository.id,
+                        location=AGENTS_FILENAME,
+                        problem="A managed Slygentify guidance section is missing or malformed.",
+                        effect="The managed guidance contract cannot be relied upon.",
+                        remediation="Restore the visible markers or review a dry-run before adopting again.",
+                        evidence_ids=(artifact_evidence,),
+                        disposition="problem",
+                    )
+                elif section_digest(current_section) == recorded_artifact.sha256:
+                    if current_section != fresh_section:
+                        _append_diagnostic(
+                            diagnostics,
+                            code="doctor.artifact.stale",
+                            severity="warning",
+                            classification="verified",
+                            subject_id=result.repository.id,
+                            location=AGENTS_FILENAME,
+                            problem="Managed guidance matches recorded bytes but differs from fresh generation.",
+                            effect="The managed artifact is stale relative to current repository evidence.",
+                            remediation="Review fresh generation and explicitly regenerate the artifact if accepted.",
+                            evidence_ids=(artifact_evidence,),
+                            disposition="problem",
+                        )
+                elif current_section != fresh_section:
+                    _append_diagnostic(
+                        diagnostics,
+                        code="doctor.artifact.diverged",
+                        severity="warning",
+                        classification="unknown",
+                        subject_id=result.repository.id,
+                        location=AGENTS_FILENAME,
+                        problem="Managed guidance differs from both recorded and freshly generated bytes.",
+                        effect="The section may be a human edit and cannot be classified automatically.",
+                        remediation="Preserve the file and review the visible managed section before replacing it.",
+                        evidence_ids=(artifact_evidence,),
+                        disposition="problem",
+                    )
+                else:
+                    artifact_state_stale = True
+            else:
+                current_digest = _safe_digest(root, AGENTS_FILENAME)
+                fresh_digest = hashlib.sha256(fresh_guidance.encode("utf-8")).hexdigest()
+                if current_digest is None:
+                    _append_diagnostic(
+                        diagnostics,
+                        code="doctor.artifact.missing",
+                        severity="error",
+                        classification="verified",
+                        subject_id=result.repository.id,
+                        location=AGENTS_FILENAME,
+                        problem="A managed root guidance artifact is missing or not a safe regular file.",
+                        effect="The managed-artifact contract cannot be relied upon.",
+                        remediation="Review a dry-run and explicitly recreate or retire managed ownership.",
+                        evidence_ids=(artifact_evidence,),
+                        disposition="problem",
+                    )
+                elif current_digest == recorded_artifact.sha256 and fresh_digest != current_digest:
+                    _append_diagnostic(
+                        diagnostics,
+                        code="doctor.artifact.stale",
+                        severity="warning",
+                        classification="verified",
+                        subject_id=result.repository.id,
+                        location=AGENTS_FILENAME,
+                        problem="Managed root guidance matches recorded bytes but differs from fresh generation.",
+                        effect="The managed artifact is stale relative to current repository evidence.",
+                        remediation="Review fresh generation and explicitly regenerate the artifact if accepted.",
+                        evidence_ids=(artifact_evidence,),
+                        disposition="problem",
+                    )
+                elif current_digest not in {recorded_artifact.sha256, fresh_digest}:
+                    _append_diagnostic(
+                        diagnostics,
+                        code="doctor.artifact.diverged",
+                        severity="warning",
+                        classification="unknown",
+                        subject_id=result.repository.id,
+                        location=AGENTS_FILENAME,
+                        problem="Managed root guidance differs from both recorded and freshly generated bytes.",
+                        effect="The content may be a human edit and cannot be classified automatically.",
+                        remediation="Preserve the file, review a dry-run or diff, and replace only with explicit authorization.",
+                        evidence_ids=(artifact_evidence,),
+                        disposition="problem",
+                    )
+                elif current_digest == fresh_digest and current_digest != recorded_artifact.sha256:
+                    artifact_state_stale = True
         specific_codes = {item.code for item in diagnostics}
         if (_state_changed(recorded, current_state) or artifact_state_stale) and not specific_codes:
             stale_evidence = _comparison_evidence(
@@ -577,27 +787,41 @@ def doctor_repository(
                 effect="Refreshing provenance is useful, but current normalized knowledge and guidance agree.",
                 remediation="Review the changed evidence and regenerate state if the normalized result remains acceptable.",
                 evidence_ids=(stale_evidence,),
+                disposition="notice",
             )
 
     if result.completion == "partial":
-        partial_evidence = _comparison_evidence(
-            evidence,
-            kind="partial-inspection",
-            location=".",
-            observation="Fresh inspection reached a documented safety, policy, or resource boundary.",
-        )
-        _append_diagnostic(
-            diagnostics,
-            code="doctor.inspection.partial",
-            severity="warning",
-            classification="unknown",
-            subject_id=result.repository.id,
-            location=".",
-            problem="Fresh repository inspection is partial.",
-            effect="Doctor cannot claim exhaustive drift absence outside the reported inspection boundary.",
-            remediation="Inspect omitted boundaries or explicitly raise the applicable limit and rerun doctor.",
-            evidence_ids=(partial_evidence,),
-        )
+        component_ids = {item.path: item.id for item in result.components}
+        causes = execution.partial_causes
+        if not causes:
+            raise DoctorOperationalError(
+                "fresh inspection was partial without structured causal accounting"
+            )
+        for cause in causes:
+            partial_evidence = _comparison_evidence(
+                evidence,
+                kind="partial-inspection",
+                location=cause.location,
+                locator=cause.source_code,
+                observation=f"Fresh scan reported {cause.source_code} as a partial cause.",
+            )
+            _append_diagnostic(
+                diagnostics,
+                code="doctor.inspection.partial",
+                severity="warning",
+                classification="unknown",
+                subject_id=component_ids.get(cause.subject_path or "", result.repository.id),
+                location=cause.location,
+                problem=_doctor_sentence(cause.problem),
+                effect=_doctor_sentence(
+                    f"{cause.effect.rstrip('.')}. Doctor cannot claim drift absence for this boundary"
+                ),
+                remediation=(
+                    _doctor_sentence(cause.recovery) if cause.recovery is not None else None
+                ),
+                evidence_ids=(*cause.evidence_ids, partial_evidence),
+                disposition=cause.disposition,
+            )
         completion = "partial"
 
     return DoctorResult(

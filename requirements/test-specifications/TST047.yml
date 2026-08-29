@@ -4,16 +4,20 @@ header: |
   Static doctor core tests
 level: 1.48
 links:
-- REQ047: gdVCOB28vF9YiOLjwxJxyhZq7Zj0otb_J6fd3UNFjQE=
+- REQ047: SWY_Ok8NQfedS6MDfLWZD_vK4bGVdVWTnMZyAUAyGr4=
 normative: true
 ref: ''
 references:
 - keyword: TST047
   path: tests/test_doctor.py
   type: file
-reviewed: n4EZQllZ90WNkzEtYc46dLNOTI8sXCplEcU9emWnbEY=
+reviewed: WrTRDpc-b_szpzIeeZ8RFDxR2W3tz-QOmZhJtr5KxN0=
 text: |
   Verify immutable doctor models, deterministic clean and partial results, invalid
   configuration and state handling, provenance and artifact drift diagnostics,
-  unmanaged guidance, static command uncertainty, safe error isolation, and the absence
-  of doctor repository writes or discovered command execution.
+  cause-specific and de-duplicated partial inspection diagnostics for malformed input,
+  unavailable Git tracking, unreadable or unsafe paths, unresolved references, and
+  resource limits, unmanaged guidance, static command uncertainty, safe error isolation, and the absence
+  of doctor repository writes or discovered command execution. Verify notice, limitation,
+  and problem assignments plus originating partial-cause disposition propagation without
+  changing severity, completion, or exit outcomes.

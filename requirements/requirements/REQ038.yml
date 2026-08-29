@@ -13,11 +13,12 @@ references:
 - keyword: REQ038
   path: src/slygentify/initialization.py
   type: file
-reviewed: o9q7_MP79sHAeEZOIFFQWoJ0aD3LIIX7RizRXJJ4w_s=
+reviewed: Bj9-Ro3kO97xcnrY0WXYh9MSgK93XaxMv5vHXFSJSCs=
 text: |
   Slygentify shall generate a concise deterministic root AGENTS.md as stable bootstrap
   guidance rather than a serialization of scan findings. It shall explain fresh map use,
-  classification and evidence interpretation, and separate-effect safety; include a
+  classification and evidence interpretation, separate-effect safety, and the read-only
+  doctor-to-reviewed-regeneration maintenance loop; include a
   root-first breadth-first micro-index of primary components with one canonical evidence
   path each; summarize partial scans and omitted component counts without enumerating
   skipped paths; and exclude commands, CI bodies, runtime matrices, diagnostics,

@@ -4,7 +4,7 @@ header: |
   Interactive scan explorer tests
 level: 1.33
 links:
-- REQ033: s8BvJmGGVchlcMjCCcwE0LW-12qR-MGz53k8DaAwlpQ=
+- REQ033: Qx0tctNLiXLCVkwb13hKecGM5AVNvLYoPlSsW84Z9hE=
 normative: true
 ref: ''
 references:
@@ -14,7 +14,7 @@ references:
 - keyword: TST033
   path: tests/test_scan_cli.py
   type: file
-reviewed: 7zo7mwe8iiMQA8Nk2z6lzU76Zz5nwTmbaKAIBAIRqqw=
+reviewed: J1iO455gfwC2VWo3_AnCGfPlYK6F0ZNWWrFqBSMhrvc=
 text: |
   Exercise the explorer headlessly at narrow and wide terminal sizes. Verify that the
   scanning state renders before a controlled scan completes and that scan failures restore
@@ -25,5 +25,6 @@ text: |
   empty structural groups without expand controls, record leaves without disclosure icons,
   a collapsed provenance area, matching descendants retain their ancestors, collapsed
   high-cardinality groups are populated lazily, and non-TTY invocation fails before scan
-  work. Confirm the explorer preserves the unchanged normalized result and does not add
+  work. Confirm disposition routing, detail, search, filtering, pairing, counts, and lazy
+  grouping match the static report. Confirm the explorer preserves the unchanged normalized result and does not add
   repository writes, discovered-command execution, or network effects.

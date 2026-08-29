@@ -30,6 +30,7 @@ from slygentify._scan.detectors._support import strict_yaml_document as _yaml_do
 from slygentify._scan.paths import descendant_paths as _descendant_paths
 from slygentify._scan.paths import nearest_ancestor as _nearest_ancestor
 from slygentify._scan.paths import safe_member as _safe_member
+from slygentify.models import DiagnosticDisposition
 from slygentify.traceability import implements
 
 _RULE_ID = "javascript.inspect.v1"
@@ -329,13 +330,41 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
     def add_diagnostic(
         code: str,
         location: str,
-        message: str,
+        message: str | None,
         *,
+        disposition: DiagnosticDisposition,
         partial: bool,
         root: str | None = None,
         keys: tuple[EvidenceKey, ...] = (),
+        problem: str | None = None,
+        effect: str | None = None,
+        recovery: str | None = None,
     ) -> None:
-        diagnostics.append(DiagnosticCandidate(code, location, message, partial, root, keys))
+        if problem is None:
+            assert message is not None
+            candidate = DiagnosticCandidate(
+                code,
+                location,
+                message,
+                partial,
+                root,
+                keys,
+                disposition=disposition,
+            )
+        else:
+            assert message is None and effect is not None
+            candidate = DiagnosticCandidate(
+                code,
+                location,
+                partial=partial,
+                subject_path=root,
+                evidence_keys=keys,
+                problem=problem,
+                effect=effect,
+                recovery=recovery,
+                disposition=disposition,
+            )
+        diagnostics.append(candidate)
 
     def record_tool(root: str, name: str, path: str, locator: str | None, strength: str) -> None:
         item = _evidence(
@@ -436,10 +465,16 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
             add_diagnostic(
                 "javascript.invalid-manifest",
                 path,
-                f"JavaScript manifest {path} is not a unique-key UTF-8 JSON object. "
-                "Next: correct its JSON syntax, encoding, duplicate keys, or top-level shape.",
+                None,
+                disposition="problem",
                 partial=True,
                 keys=(key,),
+                problem=f"JavaScript manifest {path} is not a unique-key UTF-8 JSON object",
+                effect=f"The package boundary and declarations from {path} were omitted",
+                recovery=(
+                    "correct its JSON syntax, encoding, duplicate keys, or top-level shape, or "
+                    "intentionally exclude the file if it is outside the intended scan scope"
+                ),
             )
             continue
         package = cast(dict[str, object], document)
@@ -477,6 +512,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                     path,
                     f"package.json field {locator} has an unsupported type. "
                     "Next: use the documented package.json scalar type.",
+                    disposition="problem",
                     partial=True,
                     root=root,
                 )
@@ -508,6 +544,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                     path,
                     f"package.json field {_pointer(field_name)} is not an object. "
                     "Next: declare package names as object keys with string specifications.",
+                    disposition="problem",
                     partial=True,
                     root=root,
                 )
@@ -521,6 +558,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                         path,
                         f"Dependency at {path} [{locator}] is not a supported npm declaration. "
                         "Next: use a valid npm package name and string specification.",
+                        disposition="problem",
                         partial=True,
                         root=root,
                     )
@@ -559,6 +597,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                     "javascript.invalid-scripts",
                     path,
                     "package.json scripts is not an object. Next: use string-valued script entries.",
+                    disposition="problem",
                     partial=True,
                     root=root,
                 )
@@ -570,6 +609,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                             "javascript.invalid-script",
                             path,
                             f"Script at {path} [{locator}] is not a string declaration.",
+                            disposition="problem",
                             partial=True,
                             root=root,
                         )
@@ -598,6 +638,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                             "text, so its value was withheld. Next: review whether the text is "
                             "intentional test data; if sensitive, replace it with an authorized "
                             "secret reference.",
+                            disposition="notice",
                             partial=False,
                             root=root,
                             keys=(key,),
@@ -625,6 +666,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                         path,
                         "A package bin entry is not a string mapping. "
                         "Next: use a string or string-valued object.",
+                        disposition="problem",
                         partial=True,
                         root=root,
                     )
@@ -633,6 +675,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                 "javascript.invalid-bin",
                 path,
                 "package.json bin has an unsupported type. Next: use a string or object.",
+                disposition="problem",
                 partial=True,
                 root=root,
             )
@@ -660,6 +703,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                     f"Package bin target at {path} [{locator}] is not a safe in-root relative "
                     "path, so its value was withheld. Next: use a package-relative file path or "
                     "inspect the declaration manually.",
+                    disposition="problem",
                     partial=False,
                     root=root,
                     keys=(key,),
@@ -679,6 +723,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                 "javascript.invalid-runtime",
                 path,
                 "package.json engines is not an object. Next: use string-valued engine ranges.",
+                disposition="problem",
                 partial=True,
                 root=root,
             )
@@ -692,6 +737,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                         "javascript.invalid-runtime",
                         path,
                         f"Engine declaration {_pointer('engines', name)} is not a string.",
+                        disposition="problem",
                         partial=True,
                         root=root,
                     )
@@ -706,6 +752,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                     path,
                     "packageManager does not identify npm, pnpm, or Yarn. "
                     "Next: use a supported Corepack manager declaration.",
+                    disposition="problem",
                     partial=True,
                     root=root,
                 )
@@ -738,6 +785,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                     "javascript.invalid-manager-selection",
                     path,
                     f"Manager selection at {path} [{locator}] is unsupported.",
+                    disposition="problem",
                     partial=True,
                     root=root,
                 )
@@ -761,6 +809,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                     "javascript.invalid-workspace",
                     path,
                     "package.json workspaces must be a list of literal package patterns.",
+                    disposition="problem",
                     partial=True,
                     root=root,
                 )
@@ -824,6 +873,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                     path,
                     "Yarn configuration could not be parsed safely. "
                     "Next: correct its UTF-8 YAML syntax or unsupported structure.",
+                    disposition="problem",
                     partial=True,
                     root=root,
                 )
@@ -842,12 +892,13 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                     isinstance(value, str) for value in raw_patterns
                 ):
                     raise _StaticStructureError("packages must be a list of strings")
-            except (UnicodeError, yaml.YAMLError, _StaticStructureError) as error:
+            except (UnicodeError, yaml.YAMLError, _StaticStructureError):
                 add_diagnostic(
                     "javascript.invalid-workspace",
                     path,
-                    f"pnpm workspace configuration could not be parsed safely ({error}). "
+                    "pnpm workspace configuration is not supported static YAML. "
                     "Next: use a UTF-8 YAML packages list without aliases or custom tags.",
+                    disposition="problem",
                     partial=True,
                     root=root,
                 )
@@ -886,6 +937,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                     path,
                     f"Node selection file {path} does not contain one UTF-8 value. "
                     "Next: record one literal Node version or alias.",
+                    disposition="problem",
                     partial=True,
                     root=root,
                 )
@@ -912,6 +964,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                 "javascript.unsupported-tooling",
                 path,
                 f"{name} was not interpreted. Next: inspect it manually when its semantics are needed.",
+                disposition="limitation",
                 partial=False,
                 root=root,
                 keys=(key,),
@@ -978,6 +1031,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                     f"TypeScript configuration {path} is not strict unique-key JSON. "
                     "It may use JSON-with-comments or be malformed, so it was not expanded. "
                     "Next: inspect it manually when extends or project references are needed.",
+                    disposition="limitation",
                     partial=True,
                     root=root,
                     keys=(key,),
@@ -1047,6 +1101,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
             f"{count} TypeScript reference{'s' if count != 1 else ''} in component "
             f"{_quoted(diagnostic_root)} {cause_message}. Next: verify the targets manually or use "
             "strict safe in-root JSON configuration files.",
+            disposition="problem",
             partial=False,
             root=diagnostic_root,
             keys=tuple(sorted(unresolved_keys)),
@@ -1069,6 +1124,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                     declaration_key[1],
                     f"Workspace pattern at {declaration_key[1]} [{locator}] is unsafe or uses "
                     "unsupported dynamic syntax. Next: use an in-root literal glob pattern.",
+                    disposition="problem",
                     partial=True,
                     root=workspace_root,
                     keys=(declaration_key,),
@@ -1098,6 +1154,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                     declaration_key[1],
                     f"Workspace pattern at {declaration_key[1]} [{locator}] matched no valid "
                     "package.json member. Next: correct the pattern or add the missing manifest.",
+                    disposition="problem",
                     partial=True,
                     root=workspace_root,
                     keys=(declaration_key,),
@@ -1136,6 +1193,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                 f"Package {_quoted(member)} matches multiple workspace roots: "
                 f"{', '.join(_quoted(root) for root in sorted(roots))}. No owner was selected. "
                 "Next: add exclusions or narrow the workspace patterns.",
+                disposition="problem",
                 partial=False,
                 root=member,
                 keys=tuple(dict.fromkeys(keys)),
@@ -1201,6 +1259,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                 f"A CI command at {path} [{locator}] contains credential-shaped literal text, "
                 "so its value was withheld. Next: review whether it is intentional test data; "
                 "if sensitive, replace it with an authorized CI secret reference.",
+                disposition="notice",
                 partial=False,
                 root=subject,
                 keys=(key,),
@@ -1236,6 +1295,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
             path,
             f"A CI run value at {path} [{locator}] consists only of a workflow expression. "
             "Next: inspect the expression inputs when the concrete command is needed.",
+            disposition="limitation",
             partial=False,
             root=subject,
             keys=(key,),
@@ -1256,12 +1316,13 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
             workflow = _yaml_document(data)
             if not isinstance(workflow, dict):
                 raise _StaticStructureError("workflow is not a mapping")
-        except (UnicodeError, yaml.YAMLError, _StaticStructureError) as error:
+        except (UnicodeError, yaml.YAMLError, _StaticStructureError):
             add_diagnostic(
                 "javascript.invalid-ci-workflow",
                 path,
-                f"CI workflow YAML could not be parsed safely ({error}). "
+                "CI workflow content is not supported static YAML. "
                 "Next: correct its syntax or unsupported structure.",
+                disposition="problem",
                 partial=True,
             )
             continue
@@ -1377,6 +1438,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                             f"A dynamic or unsupported setup-node expression at {path} [{locator}] "
                             "was not evaluated. Next: use a literal version, a direct static matrix "
                             "property, or inspect the expression manually.",
+                            disposition="limitation",
                             partial=False,
                             root=subject,
                             keys=(key,),
@@ -1392,6 +1454,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                     path,
                     "A GitLab local include cycle was not expanded. "
                     "Next: remove the cycle or inspect the repeated include manually.",
+                    disposition="problem",
                     partial=False,
                     root=".",
                 )
@@ -1402,6 +1465,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                     path,
                     "GitLab local include nesting exceeded the supported bound. "
                     "Next: reduce the include depth or inspect the remaining files manually.",
+                    disposition="limitation",
                     partial=True,
                     root=".",
                 )
@@ -1414,12 +1478,13 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                 document = _yaml_document(data)
                 if not isinstance(document, dict):
                     raise _StaticStructureError("GitLab document is not a mapping")
-            except (UnicodeError, yaml.YAMLError, _StaticStructureError) as error:
+            except (UnicodeError, yaml.YAMLError, _StaticStructureError):
                 add_diagnostic(
                     "javascript.invalid-ci-workflow",
                     path,
-                    f"GitLab CI YAML could not be parsed safely ({error}). "
+                    "GitLab CI content is not supported static YAML. "
                     "Next: correct its syntax or unsupported structure.",
+                    disposition="problem",
                     partial=True,
                     root=".",
                 )
@@ -1442,6 +1507,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                             path,
                             f"GitLab local include at {path} [{_pointer('include', index)}] is "
                             "missing or escapes the repository. Next: use an existing in-root file.",
+                            disposition="problem",
                             partial=True,
                             root=".",
                         )
@@ -1469,6 +1535,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                         path,
                         "External, component, project, template, and dynamic includes are not "
                         "fetched. Next: inspect the external source separately if needed.",
+                        disposition="limitation",
                         partial=False,
                         root=".",
                         keys=(key,),
@@ -1527,6 +1594,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                 f"{_quoted(root)}: {details}. No manager preference was selected. Next: keep the "
                 "families only if coexistence is intentional; otherwise remove or regenerate stale "
                 "locks and align explicit manager selections.",
+                disposition="problem",
                 partial=False,
                 root=root,
                 keys=conflict_keys,
@@ -1555,6 +1623,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                 "Both package-lock.json and npm-shrinkwrap.json are present. Their documented "
                 "precedence was retained without selecting npm as the preferred workflow. "
                 "Next: confirm that keeping both files is intentional.",
+                disposition="notice",
                 partial=False,
                 root=root,
                 keys=keys,
@@ -1580,6 +1649,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                         f"{_quoted(runtime_constraint[0])}. The exact selection is outside the supported "
                         "range. Next: select a compatible Node version or intentionally update the "
                         "engines.node range.",
+                        disposition="problem",
                         partial=False,
                         root=root,
                         keys=runtime_keys,
@@ -1594,6 +1664,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                         f"[{runtime_constraint[2]}] could not be determined without broader "
                         "package-manager semantics. Both declarations were retained. Next: compare "
                         "them with the project's selected package manager.",
+                        disposition="limitation",
                         partial=False,
                         root=root,
                         keys=runtime_keys,
@@ -1609,6 +1680,7 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
                     f"Multiple {tool_name} evidence locations are present for component "
                     f"{_quoted(root)}; none was selected. Next: confirm their scopes or remove "
                     "obsolete configuration.",
+                    disposition="problem",
                     partial=False,
                     root=root,
                     keys=tuple(tool_keys),

@@ -4,16 +4,19 @@ header: |
   Static doctor lifecycle and effect-boundary acceptance tests
 level: 1.492
 links:
-- REQ047: gdVCOB28vF9YiOLjwxJxyhZq7Zj0otb_J6fd3UNFjQE=
-- REQ048: rgK0ldgn_ETs1sjHFMjymVSqGAROgkxVkaCIVMIErGo=
-- REQ049: eYHBVa9LGtMI0ECO3ZltttOjqVdWlWtxU7LW6ZwY890=
+- REQ047: SWY_Ok8NQfedS6MDfLWZD_vK4bGVdVWTnMZyAUAyGr4=
+- REQ048: _LO5ktPc2_7PBwOh6R4z3ICam4aXE0PvOgBDgV4qFZs=
+- REQ049: 78CjidCpUh9qaLHnM1ZNNg3pDWJW9eDk9n9CEiMaRQE=
 normative: true
 ref: ''
-reviewed: Jpx70Nbb1MKNQT4y13n0X6L75DlJmNPK1LPxujy1n-s=
+reviewed: fEE4-byLd0gB5HF5NzsGnx5lP6KsUEBwJai4U703Urs=
 text: |
   Verify realistic managed Python and JavaScript repository lifecycles across clean,
-  stale, malformed, unmanaged, ambiguous, partial, and recovered states; every static
+  stale, malformed, unmanaged, ambiguous, simultaneous cause-specific partial, and
+  recovered states; every static
   doctor diagnostic's positive and clean-control behavior; deterministic Python, JSON,
-  human, CLI, stream, and exit contracts; portable repository-relative locations; and
+  human, CLI, stream, and exit contracts; problem, limitation, and notice assignments
+  with partial-cause propagation independent of severity and exit; portable
+  repository-relative locations; and
   the absence of repository writes, project-command execution, network access, ambient
   credential access, unsafe-link traversal, or repository-content disclosure.
