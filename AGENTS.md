@@ -105,8 +105,6 @@ network audit separately.
 
 ### Bootstrap component index
 
-> Warning: this index was generated from a partial scan; request the map's `boundaries` section before relying on completeness.
-
 - `.` — kind: `package`; ecosystems: `python`; evidence: `pyproject.toml`.
 
 ### Safety

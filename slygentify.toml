@@ -1,0 +1,5 @@
+# This tracked malformed tutorial fixture is outside the parent repository's operating-map scope.
+schema_version = 1
+
+[scan]
+ignore = ["docs/examples/tutorial-repository/packages/broken/package.json"]
