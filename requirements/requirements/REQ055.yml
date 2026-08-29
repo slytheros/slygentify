@@ -1,0 +1,26 @@
+active: true
+derived: false
+header: |
+  Stable provenance for volatile skipped scopes
+level: 1.55
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ055
+  path: src/slygentify/_doctor.py
+  type: file
+- keyword: REQ055
+  path: src/slygentify/_provenance.py
+  type: file
+- keyword: REQ055
+  path: src/slygentify/initialization.py
+  type: file
+reviewed: v4qNpcaFgz_-km0eQqi-RfMj7-X6-1HO0FrwEBqBRTs=
+text: |
+  Generated provenance state shall omit skipped-scope observations caused by checked-out
+  Gitignore rules or built-in convenience exclusions while retaining every other skipped
+  scope. Scan, map, and doctor results shall continue to expose the complete fresh
+  skipped-scope accounting. Existing supported sidecars containing the omitted records
+  shall remain valid, may produce the existing informational stale-state notice until
+  explicit initialization regenerates them, and shall require no schema migration.

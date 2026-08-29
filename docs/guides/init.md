@@ -85,9 +85,12 @@ the sidecar write fails.
 ## Generated state JSON
 
 The v2 sidecar records safe relative locations, hashes, effective limits, derivations,
-artifacts, completion, and skipped scopes. It contains no timestamps, host paths, source
-bodies, environment values, or credentials. It reads legacy v1 full-document ownership;
-v2 can also own only a visible managed section. See the schema-valid
+artifacts, completion, and durable skipped scopes. It omits fresh observations caused
+only by checked-out Gitignore rules or built-in cache and dependency exclusions, so
+ordinary workspace caches do not create state changes. Scan, map, and doctor results
+still report those observed exclusions. The sidecar contains no timestamps, host paths,
+source bodies, environment values, or credentials. It reads legacy v1 full-document
+ownership; v2 can also own only a visible managed section. See the schema-valid
 [state shape example](../examples/state.json) and the
 [configuration/state reference](../configuration-and-provenance.md).
 
