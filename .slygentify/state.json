@@ -1742,44 +1742,14 @@
   "completion": "complete",
   "skipped_scopes": [
     {
-      "scope": ".coverage",
-      "reason": "gitignore",
-      "omitted_scope": ".coverage"
-    },
-    {
-      "scope": ".mypy_cache",
-      "reason": "built_in_exclusion",
-      "omitted_scope": ".mypy_cache"
-    },
-    {
-      "scope": ".pytest_cache",
-      "reason": "built_in_exclusion",
-      "omitted_scope": ".pytest_cache"
-    },
-    {
-      "scope": ".ruff_cache",
-      "reason": "built_in_exclusion",
-      "omitted_scope": ".ruff_cache"
-    },
-    {
       "scope": ".venv",
       "reason": "built_in_exclusion",
       "omitted_scope": ".venv"
     },
     {
-      "scope": "dist",
-      "reason": "gitignore",
-      "omitted_scope": "dist"
-    },
-    {
       "scope": "docs/examples/tutorial-repository/packages/broken/package.json",
       "reason": "configuration",
       "omitted_scope": "docs/examples/tutorial-repository/packages/broken/package.json"
-    },
-    {
-      "scope": "site",
-      "reason": "gitignore",
-      "omitted_scope": "site"
     },
     {
       "scope": "src/slygentify/__pycache__",
@@ -1795,26 +1765,6 @@
       "scope": "src/slygentify/_scan/detectors/__pycache__",
       "reason": "built_in_exclusion",
       "omitted_scope": "src/slygentify/_scan/detectors/__pycache__"
-    },
-    {
-      "scope": "tests/__pycache__",
-      "reason": "built_in_exclusion",
-      "omitted_scope": "tests/__pycache__"
-    },
-    {
-      "scope": "tmp",
-      "reason": "gitignore",
-      "omitted_scope": "tmp"
-    },
-    {
-      "scope": "tools/__pycache__",
-      "reason": "built_in_exclusion",
-      "omitted_scope": "tools/__pycache__"
-    },
-    {
-      "scope": "tools/support/__pycache__",
-      "reason": "built_in_exclusion",
-      "omitted_scope": "tools/support/__pycache__"
     }
   ]
 }
