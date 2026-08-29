@@ -6,6 +6,9 @@ major versions are independent compatibility surfaces.
 
 ## Unreleased
 
+- Fix clean release runners so every release helper invocation can import the project
+  after the documented locked tooling installation step.
+
 ## [1.0.0rc1] - 2026-08-29
 
 - Add first-class state-v1 upgrades and bounded invalid-state rebuilds to `init`, using

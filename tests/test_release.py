@@ -480,6 +480,7 @@ def test_release_workflows_are_distinct_human_gated_and_least_privilege() -> Non
         assert "verify-source-checks check-runs.json" in text
         assert "python -m tools.release smoke-tool" in text
         assert '--installer "${{ matrix.installer }}"' in text
+        assert "--no-install-project" not in text
         assert "pull_request_target" not in text
         assert "secrets." not in text
         assert "gh release" not in text
@@ -488,6 +489,17 @@ def test_release_workflows_are_distinct_human_gated_and_least_privilege() -> Non
             if "uses:" in line:
                 reference = line.split("uses:", maxsplit=1)[1].strip().split()[0]
                 assert re.fullmatch(r"[^@\s]+@[0-9a-f]{40}", reference)
+
+    for document in (production, testpypi):
+        for job in document["jobs"].values():
+            steps = job.get("steps", [])
+            if any("python -m tools.release" in step.get("run", "") for step in steps):
+                installs = [
+                    step.get("run")
+                    for step in steps
+                    if step.get("run", "").startswith("uv sync --locked")
+                ]
+                assert installs == ["uv sync --locked --all-groups"]
 
     assert "environment:\n      name: pypi" in production_text
     assert "repository-url: https://test.pypi.org/legacy/" in test_text

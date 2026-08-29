@@ -131,7 +131,7 @@
       "source_kind": "ci-command",
       "location": ".github/workflows/release-testpypi.yml",
       "locator": "/jobs/build/steps/7/run",
-      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "sha256": "2622e037af97f67964b86719ff6ced2a0e8e56633ff2193a33eccadc9684967b",
       "rule_id": "ci-command",
       "rule_version": 1
     },
@@ -140,7 +140,16 @@
       "source_kind": "ci-command",
       "location": ".github/workflows/release-testpypi.yml",
       "locator": "/jobs/build/steps/4/run",
-      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "sha256": "2622e037af97f67964b86719ff6ced2a0e8e56633ff2193a33eccadc9684967b",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_11a9c27e805df9520ebab395bd4c178320af8a486ea130bdd44b9f5ad0f8ec79",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release-testpypi.yml",
+      "locator": "/jobs/verify-testpypi/steps/2/run",
+      "sha256": "2622e037af97f67964b86719ff6ced2a0e8e56633ff2193a33eccadc9684967b",
       "rule_id": "ci-command",
       "rule_version": 1
     },
@@ -149,7 +158,16 @@
       "source_kind": "ci-command",
       "location": ".github/workflows/release.yml",
       "locator": "/jobs/verify-pypi/steps/5/run",
-      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "sha256": "4dba633a6a13e147be0aa5f092d1dc00ae97774a926bad2d4cf9a91534bff552",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_19eae7e71e5d507d22cedad64144808201ceffb3c1fc0b8a1add1884fda90f08",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release.yml",
+      "locator": "/jobs/build/steps/3/run",
+      "sha256": "4dba633a6a13e147be0aa5f092d1dc00ae97774a926bad2d4cf9a91534bff552",
       "rule_id": "ci-command",
       "rule_version": 1
     },
@@ -158,7 +176,7 @@
       "source_kind": "ci-command",
       "location": ".github/workflows/release-testpypi.yml",
       "locator": "/jobs/build/steps/8/run",
-      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "sha256": "2622e037af97f67964b86719ff6ced2a0e8e56633ff2193a33eccadc9684967b",
       "rule_id": "ci-command",
       "rule_version": 1
     },
@@ -167,7 +185,7 @@
       "source_kind": "ci-command",
       "location": ".github/workflows/release-testpypi.yml",
       "locator": "/jobs/verify-testpypi/steps/5/run",
-      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "sha256": "2622e037af97f67964b86719ff6ced2a0e8e56633ff2193a33eccadc9684967b",
       "rule_id": "ci-command",
       "rule_version": 1
     },
@@ -194,7 +212,7 @@
       "source_kind": "ci-command",
       "location": ".github/workflows/release.yml",
       "locator": "/jobs/build/steps/4/run",
-      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "sha256": "4dba633a6a13e147be0aa5f092d1dc00ae97774a926bad2d4cf9a91534bff552",
       "rule_id": "ci-command",
       "rule_version": 1
     },
@@ -203,7 +221,7 @@
       "source_kind": "ci-command",
       "location": ".github/workflows/release.yml",
       "locator": "/jobs/build/steps/6/run",
-      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "sha256": "4dba633a6a13e147be0aa5f092d1dc00ae97774a926bad2d4cf9a91534bff552",
       "rule_id": "ci-command",
       "rule_version": 1
     },
@@ -244,15 +262,6 @@
       "rule_version": 1
     },
     {
-      "id": "python-inspect-v1_33f42088bda6ed64c1afb44273c69df4f2b87aa8deac929b2e9211174af4aa0b",
-      "source_kind": "ci-command",
-      "location": ".github/workflows/release.yml",
-      "locator": "/jobs/verify-pypi/steps/2/run",
-      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
-      "rule_id": "ci-command",
-      "rule_version": 1
-    },
-    {
       "id": "python-inspect-v1_343842a89b9d43e7ca835d30f19e0f7435e94ff01f6e25e85f1221ee636095a1",
       "source_kind": "ci-command",
       "location": ".github/workflows/quality.yml",
@@ -262,20 +271,20 @@
       "rule_version": 1
     },
     {
+      "id": "python-inspect-v1_37188bb1542d5fb4bc2abd230ec5040947f653bdca026fb200e05cbe746c986d",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release.yml",
+      "locator": "/jobs/preflight/steps/2/run",
+      "sha256": "4dba633a6a13e147be0aa5f092d1dc00ae97774a926bad2d4cf9a91534bff552",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
       "id": "python-inspect-v1_37f08786a64b61d94664acf333f66ecfcee1d3d51503a56018dd6dbe0a442afc",
       "source_kind": "ci-command",
       "location": ".github/workflows/quality.yml",
       "locator": "/jobs/quality/steps/6/run",
       "sha256": "bfa9832f73f16d1a27728f7e04eaea4d74113bf7001bfe8286bf4488022e3a48",
-      "rule_id": "ci-command",
-      "rule_version": 1
-    },
-    {
-      "id": "python-inspect-v1_3ac0df9701e270e8e2365b8b288830aa4d5528f1887f38358e6ff840352c169d",
-      "source_kind": "ci-command",
-      "location": ".github/workflows/release-testpypi.yml",
-      "locator": "/jobs/preflight/steps/2/run",
-      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
       "rule_id": "ci-command",
       "rule_version": 1
     },
@@ -320,7 +329,7 @@
       "source_kind": "ci-command",
       "location": ".github/workflows/release.yml",
       "locator": "/jobs/build/steps/5/run",
-      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "sha256": "4dba633a6a13e147be0aa5f092d1dc00ae97774a926bad2d4cf9a91534bff552",
       "rule_id": "ci-command",
       "rule_version": 1
     },
@@ -379,29 +388,11 @@
       "rule_version": 1
     },
     {
-      "id": "python-inspect-v1_5710e73b659ac8397fa7fe92f1f027d5223632a4e2417bed255eb916623226d7",
-      "source_kind": "ci-command",
-      "location": ".github/workflows/release-testpypi.yml",
-      "locator": "/jobs/install-artifacts/steps/2/run",
-      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
-      "rule_id": "ci-command",
-      "rule_version": 1
-    },
-    {
-      "id": "python-inspect-v1_5776cdb5092a0c5d4d41ff42a4180403780fe47c219ad428b172696567603414",
-      "source_kind": "ci-command",
-      "location": ".github/workflows/release.yml",
-      "locator": "/jobs/preflight/steps/2/run",
-      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
-      "rule_id": "ci-command",
-      "rule_version": 1
-    },
-    {
       "id": "python-inspect-v1_5c433e278f3cf393f1f15684d91e7995cb1b53ea7b690d2e0f6498785d622a48",
       "source_kind": "ci-command",
       "location": ".github/workflows/release-testpypi.yml",
       "locator": "/jobs/build/steps/5/run",
-      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "sha256": "2622e037af97f67964b86719ff6ced2a0e8e56633ff2193a33eccadc9684967b",
       "rule_id": "ci-command",
       "rule_version": 1
     },
@@ -410,16 +401,7 @@
       "source_kind": "ci-command",
       "location": ".github/workflows/release.yml",
       "locator": "/jobs/build/steps/1/run",
-      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
-      "rule_id": "ci-command",
-      "rule_version": 1
-    },
-    {
-      "id": "python-inspect-v1_64dbdf8a4ca13ab8bb573039141b066a823ea6fd57ededbb072a07f696b5d41c",
-      "source_kind": "ci-command",
-      "location": ".github/workflows/release-testpypi.yml",
-      "locator": "/jobs/build/steps/3/run",
-      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "sha256": "4dba633a6a13e147be0aa5f092d1dc00ae97774a926bad2d4cf9a91534bff552",
       "rule_id": "ci-command",
       "rule_version": 1
     },
@@ -428,7 +410,7 @@
       "source_kind": "ci-command",
       "location": ".github/workflows/release-testpypi.yml",
       "locator": "/jobs/install-artifacts/steps/4/run",
-      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "sha256": "2622e037af97f67964b86719ff6ced2a0e8e56633ff2193a33eccadc9684967b",
       "rule_id": "ci-command",
       "rule_version": 1
     },
@@ -487,11 +469,20 @@
       "rule_version": 1
     },
     {
+      "id": "python-inspect-v1_788cac6515172fd140b3827ee3d41fe55e3d748e9196004e311cbe801d8295a4",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release.yml",
+      "locator": "/jobs/install-pypi/steps/2/run",
+      "sha256": "4dba633a6a13e147be0aa5f092d1dc00ae97774a926bad2d4cf9a91534bff552",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
       "id": "python-inspect-v1_7b36f84d113fd02deff80d458948b8a325636635f9224614711fdbbdd9123382",
       "source_kind": "ci-command",
       "location": ".github/workflows/release.yml",
       "locator": "/jobs/attest/steps/2/run",
-      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "sha256": "4dba633a6a13e147be0aa5f092d1dc00ae97774a926bad2d4cf9a91534bff552",
       "rule_id": "ci-command",
       "rule_version": 1
     },
@@ -502,15 +493,6 @@
       "locator": "dependency-groups.dev[5]",
       "sha256": "1e3f33d3dee5ee93df987f01085732aacb9efdf47e78b481ebd9a65e269b53d8",
       "rule_id": "dependency",
-      "rule_version": 1
-    },
-    {
-      "id": "python-inspect-v1_7e1555eb2faf567a5eb241f85163c27db25953c41ad8bfb151e78e91cdef01ce",
-      "source_kind": "ci-command",
-      "location": ".github/workflows/release.yml",
-      "locator": "/jobs/install-pypi/steps/2/run",
-      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
-      "rule_id": "ci-command",
       "rule_version": 1
     },
     {
@@ -545,7 +527,7 @@
       "source_kind": "ci-command",
       "location": ".github/workflows/release.yml",
       "locator": "/jobs/build/steps/8/run",
-      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "sha256": "4dba633a6a13e147be0aa5f092d1dc00ae97774a926bad2d4cf9a91534bff552",
       "rule_id": "ci-command",
       "rule_version": 1
     },
@@ -563,7 +545,7 @@
       "source_kind": "ci-command",
       "location": ".github/workflows/release-testpypi.yml",
       "locator": "/jobs/install-testpypi/steps/4/run",
-      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "sha256": "2622e037af97f67964b86719ff6ced2a0e8e56633ff2193a33eccadc9684967b",
       "rule_id": "ci-command",
       "rule_version": 1
     },
@@ -572,16 +554,25 @@
       "source_kind": "ci-command",
       "location": ".github/workflows/release.yml",
       "locator": "/jobs/build/steps/7/run",
-      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "sha256": "4dba633a6a13e147be0aa5f092d1dc00ae97774a926bad2d4cf9a91534bff552",
       "rule_id": "ci-command",
       "rule_version": 1
     },
     {
-      "id": "python-inspect-v1_9404b034fd4539b9658d1f98e33c88b9413f2edd344af9f4c0b3fbd592d61436",
+      "id": "python-inspect-v1_9c7cf5a5d024e4624f2c15f60c839c5eaf6afda646c8a02d78833e85296089e0",
       "source_kind": "ci-command",
       "location": ".github/workflows/release-testpypi.yml",
-      "locator": "/jobs/verify-testpypi/steps/2/run",
-      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "locator": "/jobs/install-testpypi/steps/2/run",
+      "sha256": "2622e037af97f67964b86719ff6ced2a0e8e56633ff2193a33eccadc9684967b",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_9df221bc9772ccd68a85228b42a02a147670d0eebaffb2cc3c7104ea611c0588",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release-testpypi.yml",
+      "locator": "/jobs/install-artifacts/steps/2/run",
+      "sha256": "2622e037af97f67964b86719ff6ced2a0e8e56633ff2193a33eccadc9684967b",
       "rule_id": "ci-command",
       "rule_version": 1
     },
@@ -617,7 +608,16 @@
       "source_kind": "ci-command",
       "location": ".github/workflows/release-testpypi.yml",
       "locator": "/jobs/build/steps/1/run",
-      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "sha256": "2622e037af97f67964b86719ff6ced2a0e8e56633ff2193a33eccadc9684967b",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_a7912de8420cc8d2c2103f0bc7c2bc56e7a5a04d3f3074e7f4e168e34cfb35a3",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release-testpypi.yml",
+      "locator": "/jobs/preflight/steps/2/run",
+      "sha256": "2622e037af97f67964b86719ff6ced2a0e8e56633ff2193a33eccadc9684967b",
       "rule_id": "ci-command",
       "rule_version": 1
     },
@@ -653,7 +653,7 @@
       "source_kind": "ci-command",
       "location": ".github/workflows/release-testpypi.yml",
       "locator": "/jobs/attest/steps/2/run",
-      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "sha256": "2622e037af97f67964b86719ff6ced2a0e8e56633ff2193a33eccadc9684967b",
       "rule_id": "ci-command",
       "rule_version": 1
     },
@@ -688,7 +688,7 @@
       "source_kind": "ci-command",
       "location": ".github/workflows/release-testpypi.yml",
       "locator": "/jobs/verify-testpypi/steps/4/run",
-      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "sha256": "2622e037af97f67964b86719ff6ced2a0e8e56633ff2193a33eccadc9684967b",
       "rule_id": "ci-command",
       "rule_version": 1
     },
@@ -702,6 +702,15 @@
       "rule_version": 1
     },
     {
+      "id": "python-inspect-v1_bed116ea5949e001459858da03b499febe06d5eaf3e0d2d464ba01946b95128c",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release-testpypi.yml",
+      "locator": "/jobs/build/steps/3/run",
+      "sha256": "2622e037af97f67964b86719ff6ced2a0e8e56633ff2193a33eccadc9684967b",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
       "id": "python-inspect-v1_c34a8e43d6ae0c7dc93a8abb1895dcca09133783cc184d9b0bf5ddac3ac7552e",
       "source_kind": "dependency",
       "location": "pyproject.toml",
@@ -711,29 +720,29 @@
       "rule_version": 1
     },
     {
+      "id": "python-inspect-v1_c826cb0bb745288ed6b22acbce7f1daf14a4eeb1bfef9c6ca6a4218ea56b4c5e",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release.yml",
+      "locator": "/jobs/install-artifacts/steps/2/run",
+      "sha256": "4dba633a6a13e147be0aa5f092d1dc00ae97774a926bad2d4cf9a91534bff552",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_c8ab41361b0481d3720417ac2b39836bb6cf568af48e7bc1925f856884ea3e2c",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release.yml",
+      "locator": "/jobs/verify-pypi/steps/2/run",
+      "sha256": "4dba633a6a13e147be0aa5f092d1dc00ae97774a926bad2d4cf9a91534bff552",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
       "id": "python-inspect-v1_caae39f75d58f3bb785279ab75f1464f7d37fdaf0c2e5878c7c978d101685659",
       "source_kind": "ci-command",
       "location": ".github/workflows/release.yml",
       "locator": "/jobs/install-pypi/steps/4/run",
-      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
-      "rule_id": "ci-command",
-      "rule_version": 1
-    },
-    {
-      "id": "python-inspect-v1_ce7c6d7b2d9a1a6c9e15847770ea9dbfdd3175095cf4dfaa24b5e3ab767657ff",
-      "source_kind": "ci-command",
-      "location": ".github/workflows/release.yml",
-      "locator": "/jobs/install-artifacts/steps/2/run",
-      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
-      "rule_id": "ci-command",
-      "rule_version": 1
-    },
-    {
-      "id": "python-inspect-v1_ce884c6e1edcbb0295264daa1de397dade079f8f465e35ab5a4c3d1bb5a56da5",
-      "source_kind": "ci-command",
-      "location": ".github/workflows/release-testpypi.yml",
-      "locator": "/jobs/install-testpypi/steps/2/run",
-      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "sha256": "4dba633a6a13e147be0aa5f092d1dc00ae97774a926bad2d4cf9a91534bff552",
       "rule_id": "ci-command",
       "rule_version": 1
     },
@@ -742,7 +751,7 @@
       "source_kind": "ci-command",
       "location": ".github/workflows/release-testpypi.yml",
       "locator": "/jobs/preflight/steps/4/run",
-      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "sha256": "2622e037af97f67964b86719ff6ced2a0e8e56633ff2193a33eccadc9684967b",
       "rule_id": "ci-command",
       "rule_version": 1
     },
@@ -810,20 +819,11 @@
       "rule_version": 1
     },
     {
-      "id": "python-inspect-v1_ea4727fa911f414034eb80c3e9d3dfcd00e78804954646be8e9f6287544b14b8",
-      "source_kind": "ci-command",
-      "location": ".github/workflows/release.yml",
-      "locator": "/jobs/build/steps/3/run",
-      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
-      "rule_id": "ci-command",
-      "rule_version": 1
-    },
-    {
       "id": "python-inspect-v1_ecad69f6754570ded430e776b1a006ba6ce0205c08cbdf38442405d83eaff146",
       "source_kind": "ci-command",
       "location": ".github/workflows/release.yml",
       "locator": "/jobs/preflight/steps/4/run",
-      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "sha256": "4dba633a6a13e147be0aa5f092d1dc00ae97774a926bad2d4cf9a91534bff552",
       "rule_id": "ci-command",
       "rule_version": 1
     },
@@ -886,7 +886,7 @@
       "source_kind": "ci-command",
       "location": ".github/workflows/release.yml",
       "locator": "/jobs/install-artifacts/steps/4/run",
-      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "sha256": "4dba633a6a13e147be0aa5f092d1dc00ae97774a926bad2d4cf9a91534bff552",
       "rule_id": "ci-command",
       "rule_version": 1
     },
@@ -904,7 +904,7 @@
       "source_kind": "ci-command",
       "location": ".github/workflows/release-testpypi.yml",
       "locator": "/jobs/build/steps/6/run",
-      "sha256": "48d8ad89028790343b89d75085fcf2f9668c7b3cc0b53cbf92f2a34ef87ae7fa",
+      "sha256": "2622e037af97f67964b86719ff6ced2a0e8e56633ff2193a33eccadc9684967b",
       "rule_id": "ci-command",
       "rule_version": 1
     },
@@ -913,7 +913,7 @@
       "source_kind": "ci-command",
       "location": ".github/workflows/release.yml",
       "locator": "/jobs/verify-pypi/steps/4/run",
-      "sha256": "31189f30ab85e3b9aec09d98f50c531a9a4f28a1dab918d740feb1adb7b2a58e",
+      "sha256": "4dba633a6a13e147be0aa5f092d1dc00ae97774a926bad2d4cf9a91534bff552",
       "rule_id": "ci-command",
       "rule_version": 1
     }
@@ -1028,7 +1028,23 @@
       "claim_code": "python.ci.command",
       "classification": "verified",
       "evidence_ids": [
+        "python-inspect-v1_11a9c27e805df9520ebab395bd4c178320af8a486ea130bdd44b9f5ad0f8ec79"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
         "python-inspect-v1_11b87c5f01e3ab3c520e4a6ff74bfcf9f596f43f7056b837afa0212ebb9a887b"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_19eae7e71e5d507d22cedad64144808201ceffb3c1fc0b8a1add1884fda90f08"
       ]
     },
     {
@@ -1092,14 +1108,6 @@
       "claim_code": "python.ci.command",
       "classification": "verified",
       "evidence_ids": [
-        "python-inspect-v1_33f42088bda6ed64c1afb44273c69df4f2b87aa8deac929b2e9211174af4aa0b"
-      ]
-    },
-    {
-      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
-      "claim_code": "python.ci.command",
-      "classification": "verified",
-      "evidence_ids": [
         "python-inspect-v1_343842a89b9d43e7ca835d30f19e0f7435e94ff01f6e25e85f1221ee636095a1"
       ]
     },
@@ -1108,7 +1116,7 @@
       "claim_code": "python.ci.command",
       "classification": "verified",
       "evidence_ids": [
-        "python-inspect-v1_37f08786a64b61d94664acf333f66ecfcee1d3d51503a56018dd6dbe0a442afc"
+        "python-inspect-v1_37188bb1542d5fb4bc2abd230ec5040947f653bdca026fb200e05cbe746c986d"
       ]
     },
     {
@@ -1116,7 +1124,7 @@
       "claim_code": "python.ci.command",
       "classification": "verified",
       "evidence_ids": [
-        "python-inspect-v1_3ac0df9701e270e8e2365b8b288830aa4d5528f1887f38358e6ff840352c169d"
+        "python-inspect-v1_37f08786a64b61d94664acf333f66ecfcee1d3d51503a56018dd6dbe0a442afc"
       ]
     },
     {
@@ -1140,22 +1148,6 @@
       "claim_code": "python.ci.command",
       "classification": "verified",
       "evidence_ids": [
-        "python-inspect-v1_5710e73b659ac8397fa7fe92f1f027d5223632a4e2417bed255eb916623226d7"
-      ]
-    },
-    {
-      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
-      "claim_code": "python.ci.command",
-      "classification": "verified",
-      "evidence_ids": [
-        "python-inspect-v1_5776cdb5092a0c5d4d41ff42a4180403780fe47c219ad428b172696567603414"
-      ]
-    },
-    {
-      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
-      "claim_code": "python.ci.command",
-      "classification": "verified",
-      "evidence_ids": [
         "python-inspect-v1_5c433e278f3cf393f1f15684d91e7995cb1b53ea7b690d2e0f6498785d622a48"
       ]
     },
@@ -1165,14 +1157,6 @@
       "classification": "verified",
       "evidence_ids": [
         "python-inspect-v1_6241df104c41884b97d6b6764a8d453d36f550d4164662645cf55eb45d28af7b"
-      ]
-    },
-    {
-      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
-      "claim_code": "python.ci.command",
-      "classification": "verified",
-      "evidence_ids": [
-        "python-inspect-v1_64dbdf8a4ca13ab8bb573039141b066a823ea6fd57ededbb072a07f696b5d41c"
       ]
     },
     {
@@ -1212,7 +1196,7 @@
       "claim_code": "python.ci.command",
       "classification": "verified",
       "evidence_ids": [
-        "python-inspect-v1_7b36f84d113fd02deff80d458948b8a325636635f9224614711fdbbdd9123382"
+        "python-inspect-v1_788cac6515172fd140b3827ee3d41fe55e3d748e9196004e311cbe801d8295a4"
       ]
     },
     {
@@ -1220,7 +1204,7 @@
       "claim_code": "python.ci.command",
       "classification": "verified",
       "evidence_ids": [
-        "python-inspect-v1_7e1555eb2faf567a5eb241f85163c27db25953c41ad8bfb151e78e91cdef01ce"
+        "python-inspect-v1_7b36f84d113fd02deff80d458948b8a325636635f9224614711fdbbdd9123382"
       ]
     },
     {
@@ -1260,7 +1244,15 @@
       "claim_code": "python.ci.command",
       "classification": "verified",
       "evidence_ids": [
-        "python-inspect-v1_9404b034fd4539b9658d1f98e33c88b9413f2edd344af9f4c0b3fbd592d61436"
+        "python-inspect-v1_9c7cf5a5d024e4624f2c15f60c839c5eaf6afda646c8a02d78833e85296089e0"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_9df221bc9772ccd68a85228b42a02a147670d0eebaffb2cc3c7104ea611c0588"
       ]
     },
     {
@@ -1284,6 +1276,14 @@
       "claim_code": "python.ci.command",
       "classification": "verified",
       "evidence_ids": [
+        "python-inspect-v1_a7912de8420cc8d2c2103f0bc7c2bc56e7a5a04d3f3074e7f4e168e34cfb35a3"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
         "python-inspect-v1_b1147735b31804e5b09ddca1e7e97d06b59ef238fb7d209f4d4648db045c1b89"
       ]
     },
@@ -1300,23 +1300,31 @@
       "claim_code": "python.ci.command",
       "classification": "verified",
       "evidence_ids": [
+        "python-inspect-v1_bed116ea5949e001459858da03b499febe06d5eaf3e0d2d464ba01946b95128c"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_c826cb0bb745288ed6b22acbce7f1daf14a4eeb1bfef9c6ca6a4218ea56b4c5e"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_c8ab41361b0481d3720417ac2b39836bb6cf568af48e7bc1925f856884ea3e2c"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
         "python-inspect-v1_caae39f75d58f3bb785279ab75f1464f7d37fdaf0c2e5878c7c978d101685659"
-      ]
-    },
-    {
-      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
-      "claim_code": "python.ci.command",
-      "classification": "verified",
-      "evidence_ids": [
-        "python-inspect-v1_ce7c6d7b2d9a1a6c9e15847770ea9dbfdd3175095cf4dfaa24b5e3ab767657ff"
-      ]
-    },
-    {
-      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
-      "claim_code": "python.ci.command",
-      "classification": "verified",
-      "evidence_ids": [
-        "python-inspect-v1_ce884c6e1edcbb0295264daa1de397dade079f8f465e35ab5a4c3d1bb5a56da5"
       ]
     },
     {
@@ -1333,14 +1341,6 @@
       "classification": "verified",
       "evidence_ids": [
         "python-inspect-v1_ea1ae7fc1282f189563f036eb341b1e7fb54ddaf4f33d9b15cf57db6ac309be0"
-      ]
-    },
-    {
-      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
-      "claim_code": "python.ci.command",
-      "classification": "verified",
-      "evidence_ids": [
-        "python-inspect-v1_ea4727fa911f414034eb80c3e9d3dfcd00e78804954646be8e9f6287544b14b8"
       ]
     },
     {
