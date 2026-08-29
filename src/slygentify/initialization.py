@@ -255,6 +255,7 @@ def plan_initialization(
     blocked_state = False
     agents_source_sha256: str | None = None
     state_source_sha256: str | None = None
+    unsafe_target = AGENTS_FILENAME
     try:
         if adopt and replace:
             raise InitializationError(
@@ -262,9 +263,11 @@ def plan_initialization(
             )
         if os.path.lexists(agents) and not _regular(agents):
             raise OSError("AGENTS.md is unsafe")
+        unsafe_target = ".slygentify"
         parent = state_target.parent
         if os.path.lexists(parent) and (not parent.is_dir() or parent.is_symlink()):
             raise OSError("provenance directory is unsafe")
+        unsafe_target = ".slygentify/state.json"
         if os.path.lexists(state_target):
             try:
                 raw_state = read_state_bytes(state_target)
@@ -291,6 +294,7 @@ def plan_initialization(
                 state_recovery = "state-rebuild"
                 state_write_recovery = True
             else:
+                unsafe_target = AGENTS_FILENAME
                 current = agents.read_bytes()
                 try:
                     current_section = extract_managed_section(current)
@@ -327,6 +331,7 @@ def plan_initialization(
         elif existing_state is None and not os.path.lexists(agents):
             ownership = "new"
         elif existing_state is None:
+            unsafe_target = AGENTS_FILENAME
             current = agents.read_bytes()
             if current == generated_data:
                 agents_data = current
@@ -348,6 +353,7 @@ def plan_initialization(
             elif not os.path.lexists(agents):
                 ownership = "missing-managed-artifact"
             else:
+                unsafe_target = AGENTS_FILENAME
                 current = agents.read_bytes()
                 if recorded.ownership == "section":
                     try:
@@ -393,7 +399,9 @@ def plan_initialization(
             artifacts=(artifact,),
         )
         state_data = dump_state_json(state)
+        unsafe_target = AGENTS_FILENAME
         agents_action = _action(agents, agents_data)
+        unsafe_target = ".slygentify/state.json"
         state_action = (
             "replace"
             if blocked_state and os.path.lexists(state_target)
@@ -403,6 +411,7 @@ def plan_initialization(
         )
         if existing_state is not None and existing_state.schema_version == 1:
             state_recovery = "schema-upgrade"
+        unsafe_target = AGENTS_FILENAME
         agents_source_sha256 = (
             hashlib.sha256(agents.read_bytes()).hexdigest()
             if os.path.lexists(agents) and _regular(agents)
@@ -418,7 +427,13 @@ def plan_initialization(
         ownership = "unsafe-entry"
         agents_action = "replace" if os.path.lexists(agents) else "create"
         state_action = "replace" if os.path.lexists(state_target) else "create"
-        state_error = StateError(category="state.unsafe-entry")
+        state_error = StateError(
+            category=(
+                "artifact.unsafe-entry"
+                if unsafe_target == AGENTS_FILENAME
+                else "state.unsafe-entry"
+            )
+        )
 
     if blocked_state and state_error is not None:
         category = state_error.category
@@ -444,6 +459,12 @@ def plan_initialization(
                 "name, then rerun slygentify init . --dry-run."
             )
             rationale = "Unreadable state cannot receive digest-based concurrency revalidation."
+        elif category == "artifact.unsafe-entry":
+            recovery = (
+                "Make AGENTS.md readable if it is a regular file, or move or replace the "
+                "unsafe AGENTS.md entry manually, then rerun slygentify init . --dry-run."
+            )
+            rationale = "Following or replacing an unsafe AGENTS.md entry could escape repository containment or discard human guidance."
         elif category == "state.unsafe-entry":
             recovery = (
                 "Replace the unsafe entry manually with a safe regular file or move it to a new "
@@ -461,13 +482,21 @@ def plan_initialization(
                 "or use --replace --dry-run only if the whole document may be discarded."
             )
             rationale = "Invalid state and the current artifact do not establish a safe automatic ownership boundary."
+        diagnostic_target = (
+            unsafe_target if ownership == "unsafe-entry" else ".slygentify/state.json"
+        )
+        problem = (
+            "AGENTS.md could not be read as a safe regular file."
+            if category == "artifact.unsafe-entry"
+            else "The generated ownership and provenance record for AGENTS.md could not be safely recovered."
+        )
         diagnostics.append(
             _diagnostic(
                 "initialization.invalid-state"
                 if ownership != "unsafe-entry"
                 else "initialization.unsafe-entry",
-                ".slygentify/state.json",
-                "The generated ownership and provenance record for AGENTS.md could not be safely recovered.",
+                diagnostic_target,
+                problem,
                 "Initialization preserved AGENTS.md and provenance state, and no files were changed.",
                 recovery,
                 category=category,
@@ -590,7 +619,10 @@ def apply_initialization(plan: InitializationPlan) -> InitializationResult:
         raise InitializationError(
             "initialization.concurrent-change", "Repository state changed after planning."
         ) from error
-    if state_plan.action != current.state_action:
+    if (
+        state_plan.action != current.state_action
+        or state_plan.sha256 != current.state_source_sha256
+    ):
         raise InitializationError(
             "initialization.concurrent-change", "Provenance state changed after planning."
         )

@@ -534,6 +534,9 @@ def test_unsafe_and_concurrent_state_are_refused(tmp_path: Path) -> None:
     assert unsafe.ownership == "unsafe-entry"
     assert not unsafe.can_apply
     assert {item.disposition for item in unsafe.diagnostics} == {"problem"}
+    assert unsafe.diagnostics[0].target == "AGENTS.md"
+    assert unsafe.diagnostics[0].category == "artifact.unsafe-entry"
+    assert "unsafe AGENTS.md entry" in unsafe.diagnostics[0].recovery
     (root / "AGENTS.md").rmdir()
 
     plan = plan_initialization(root)
@@ -628,6 +631,39 @@ def test_apply_revalidates_agents_digest_for_state_only_recovery(
 
     assert agents.read_bytes().endswith(b"concurrent human guidance\n")
     assert state.read_text(encoding="utf-8") == "{}"
+
+
+@pytest.mark.verifies("TST039", "TST055")
+def test_apply_rejects_invalid_state_change_during_final_write_planning(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _repository(tmp_path)
+    state = root / ".slygentify" / "state.json"
+    state.parent.mkdir()
+    state.write_text("{}", encoding="utf-8")
+    plan = plan_initialization(root)
+    original_plan_state_write = cast(
+        Callable[..., StateWritePlan], initialization.__dict__["plan_state_write"]
+    )
+    plan_calls = 0
+
+    def change_before_final_state_plan(
+        root_arg: Path, state_arg: StateDocument, *, replace_invalid: bool = False
+    ) -> StateWritePlan:
+        nonlocal plan_calls
+        plan_calls += 1
+        if plan_calls == 2:
+            state.write_text('{"concurrent":true}', encoding="utf-8")
+        return original_plan_state_write(root_arg, state_arg, replace_invalid=replace_invalid)
+
+    monkeypatch.setattr(initialization, "plan_state_write", change_before_final_state_plan)
+
+    with pytest.raises(InitializationError, match="Provenance state changed"):
+        apply_initialization(plan)
+
+    assert plan_calls == 2
+    assert not (root / "AGENTS.md").exists()
+    assert state.read_text(encoding="utf-8") == '{"concurrent":true}'
 
 
 @pytest.mark.verifies("TST044")
