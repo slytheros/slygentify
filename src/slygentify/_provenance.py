@@ -222,9 +222,10 @@ def _document(value: object) -> StateDocument:
     }
     schema_version = item.get("schema_version")
     if (
-        isinstance(schema_version, int)
-        and not isinstance(schema_version, bool)
+        not isinstance(schema_version, bool)
+        and isinstance(schema_version, (int, float))
         and schema_version > 2
+        and (isinstance(schema_version, int) or schema_version.is_integer())
     ):
         raise _error(
             "provenance state schema version is unsupported", category="state.unsupported-schema"

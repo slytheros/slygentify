@@ -174,12 +174,29 @@ def test_state_v2_artifact_ownership_is_validated() -> None:
 
 
 @pytest.mark.verifies("TST036")
-def test_state_loader_rejects_version_order_digest_and_path_violations() -> None:
-    document = json.loads(dump_state_json(_state()))
-    document["schema_version"] = 3
-    with pytest.raises(StateError, match="schema version"):
-        load_state_json(json.dumps(document))
+@pytest.mark.parametrize(
+    ("encoded_version", "category"),
+    [
+        ("3", "state.unsupported-schema"),
+        ("3.0", "state.unsupported-schema"),
+        ("3e0", "state.unsupported-schema"),
+        ("3.5", "state.invalid-structure"),
+        ("2.0", "state.invalid-structure"),
+        ("true", "state.invalid-structure"),
+        ('"3"', "state.invalid-structure"),
+    ],
+)
+def test_state_loader_classifies_schema_version_numbers(
+    encoded_version: str, category: str
+) -> None:
+    with pytest.raises(StateError) as captured:
+        load_state_json('{"schema_version":' + encoded_version + "}")
 
+    assert captured.value.category == category
+
+
+@pytest.mark.verifies("TST036")
+def test_state_loader_rejects_order_digest_and_path_violations() -> None:
     document = json.loads(dump_state_json(_state()))
     document["inputs"][0]["sha256"] = "UPPER"
     with pytest.raises(StateError):

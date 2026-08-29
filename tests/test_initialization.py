@@ -352,15 +352,16 @@ def test_invalid_state_recovery_creation_adoption_replacement_and_forward_refusa
     future_root = _repository(tmp_path / "future")
     future_state = future_root / ".slygentify" / "state.json"
     future_state.parent.mkdir()
-    future_state.write_text('{"schema_version": 3}', encoding="utf-8")
-    for future in (
-        plan_initialization(future_root),
-        plan_initialization(future_root, replace=True),
-    ):
-        assert not future.can_apply
-        assert future.state_recovery == "none"
-        assert future.diagnostics[0].category == "state.unsupported-schema"
-        assert "does not authorize a downgrade" in future.diagnostics[0].recovery
+    for encoded_version in ("3", "3.0", "3e0"):
+        future_state.write_text('{"schema_version":' + encoded_version + "}", encoding="utf-8")
+        for future in (
+            plan_initialization(future_root),
+            plan_initialization(future_root, replace=True),
+        ):
+            assert not future.can_apply
+            assert future.state_recovery == "none"
+            assert future.diagnostics[0].category == "state.unsupported-schema"
+            assert "does not authorize a downgrade" in future.diagnostics[0].recovery
 
 
 @pytest.mark.verifies("TST039", "TST055")
