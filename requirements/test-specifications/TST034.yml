@@ -11,7 +11,7 @@ references:
 - keyword: TST034
   path: tests/test_acceptance.py
   type: file
-reviewed: NDY-3DlXWETK7rNy1ooWIpvVxo1Zt8lmAihCBowgcEI=
+reviewed: TRC23ko4xZSLK5j6ODgouNeBGqdW1sSN0Ee7sVmigH0=
 text: |
   Verify deterministic candidate generation, duplicate-key evidence coalescing, successful
   promotion to reviewed formal scoring, and reviewed-matrix loading. Verify that unexpected

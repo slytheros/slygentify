@@ -11,7 +11,7 @@ references:
 - keyword: TST020
   path: tests/test_python_inspection.py
   type: file
-reviewed: EGIjsbYV1KhJP287JQieeJqKmIpSaj5rxKECKqA8ha8=
+reviewed: r3AMhO6VfxQm52s4m03gPC54DpN9ii0nstzmmsRbb00=
 text: |
   Verify approved pyproject.toml and setup.cfg component evidence, metadata, dependency
   scopes, requirements inline comments, syntax-significant dynamic TOML key locators,

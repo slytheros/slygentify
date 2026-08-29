@@ -10,7 +10,7 @@ references:
 - keyword: REQ034
   path: tools/support/acceptance.py
   type: file
-reviewed: 3HFaZl1aGP362QRYXtG7c1xdbKUutZmbsbQwylvxiXc=
+reviewed: zlGlwiGBEtHPJal9xhuElmByPx5KqgH0etpb8Lly7NE=
 text: |
   Slygentify shall provide deterministic developer tooling to compare every factual
   component, Verified finding, and Verified relationship emitted for an approved public

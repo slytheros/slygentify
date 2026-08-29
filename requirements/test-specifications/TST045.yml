@@ -11,7 +11,7 @@ references:
 - keyword: TST045
   path: tests/test_initialization_review.py
   type: file
-reviewed: 5HBbVV5jvyt9W_3JQDFR9Dkdn2xBT31qLraiIMijkUA=
+reviewed: 3BKAzjAQrtUgmWDUQ1aIctQ0ggqthoAx-jwJt5wRvvI=
 text: |
   Verify deterministic digest-only AGENTS.md and root-projection records, exact canonical
   UTF-8/LF AGENTS.md review bytes and digests across platform newline conventions,
