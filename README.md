@@ -14,7 +14,7 @@ instead of guessing from conventions or executing discovered project commands.
 First-class ecosystem inspection covers Python and JavaScript/TypeScript repositories,
 including mixed repositories and workspaces.
 
-Slygentify is a public 1.0 release candidate (`1.0.0rc1`). It is not yet published on
+Slygentify is a public 1.0 release candidate (`1.0.0rc2`). It is not yet published on
 PyPI.
 
 ## What Slygentify helps with
