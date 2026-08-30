@@ -35,10 +35,11 @@ gh workflow run release-testpypi.yml --ref vX.Y.Z-rc.N -f mode=publish
 Review the workflow before approving `testpypi`. The run must build exactly one wheel and
 one source distribution, attest them, install each local file in all 12 supported contexts,
 verify TestPyPI filenames, hashes, and Trusted Publisher provenance, and install the
-published version through both `uv tool` and `pipx` in 24 fresh installer contexts. The
-TestPyPI project is the source for Slygentify itself; PyPI is used only as the dependency
-fallback, and every installation pins the exact candidate version. Record the run URL and
-the `release-manifest.json` and `SHA256SUMS` evidence for the release-candidate issue.
+published version through both `uv tool` and `pipx` in 24 fresh installer contexts. Each
+tool manager receives the exact hash-bound wheel URL advertised by TestPyPI after its
+filename, size, and digest match the release manifest. PyPI is then the sole dependency
+index; TestPyPI never participates in dependency resolution. Record the run URL and the
+`release-manifest.json` and `SHA256SUMS` evidence for the release-candidate issue.
 
 TestPyPI and PyPI have separate accounts, pending publisher records, workflow filenames,
 and GitHub environments. A successful rehearsal cannot authorize production publication.
