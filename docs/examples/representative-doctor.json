@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "producer_version": "1.0.0rc2",
+  "producer_version": "1.0.0rc3",
   "completion": "partial",
   "repository": {
     "id": "repository_c140010bf267fcd92f5cf59a9250459d63078cb45b41e6451fef20e19c9fd170",

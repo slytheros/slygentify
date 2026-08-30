@@ -1,6 +1,6 @@
 # Migration and compatibility guidance
 
-Slygentify is currently `1.0.0rc2` and has no production PyPI release history. There is no
+Slygentify is currently `1.0.0rc3` and has no production PyPI release history. There is no
 released-version migration to perform yet. Future changes will be recorded in the root
 changelog without recreating private development chronology.
 
