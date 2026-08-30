@@ -236,6 +236,8 @@ def test_registry_query_and_provenance_are_bounded_and_fail_closed(
         {
             "filename": item.filename,
             "digests": {"sha256": item.sha256},
+            "size": item.size,
+            "url": f"https://files.example/{item.filename}",
             "yanked": False,
         }
         for item in manifest.artifacts
@@ -262,6 +264,86 @@ def test_registry_query_and_provenance_are_bounded_and_fail_closed(
 
     monkeypatch.setattr(urllib.request, "urlopen", not_found)
     assert release._read_registry_files("https://index.example", manifest) == {}  # noqa: SLF001
+
+
+@pytest.mark.verifies("TST053")
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        ({"size": 0}, "incomplete"),
+        ({"url": "http://files.example/slygentify-1.2.3-py3-none-any.whl"}, "unsafe"),
+        (
+            {"url": "https://user:secret@files.example/slygentify-1.2.3-py3-none-any.whl"},
+            "unsafe",
+        ),
+        ({"url": "https://files.example/other.whl"}, "unsafe"),
+        (
+            {"url": "https://files.example/slygentify-1.2.3-py3-none-any.whl#untrusted"},
+            "unsafe",
+        ),
+        ({"url": "https://[invalid/slygentify-1.2.3-py3-none-any.whl"}, "unsafe"),
+    ],
+)
+def test_registry_query_rejects_incomplete_or_unsafe_artifact_metadata(
+    change: dict[str, object],
+    message: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manifest = release.verify_release_bundle(_bundle(tmp_path), "v1.2.3")
+    wheel = manifest.artifacts[0]
+    record: dict[str, object] = {
+        "filename": wheel.filename,
+        "digests": {"sha256": wheel.sha256},
+        "size": wheel.size,
+        "url": f"https://files.example/{wheel.filename}",
+        "yanked": False,
+    }
+    record.update(change)
+    monkeypatch.setattr(
+        urllib.request,
+        "urlopen",
+        lambda _request, timeout: _Response({"urls": [record]}),
+    )
+
+    with pytest.raises(release.ReleaseError, match=message):
+        release._read_registry_artifacts(  # noqa: SLF001
+            "https://index.example", manifest
+        )
+
+
+@pytest.mark.verifies("TST053")
+def test_published_wheel_requirement_is_hash_bound_and_rejects_unsafe_metadata(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest = release.verify_release_bundle(_bundle(tmp_path), "v1.2.3")
+    records = {
+        item.filename: release.RegistryArtifact(
+            item.filename,
+            item.sha256,
+            item.size,
+            f"https://files.example/{item.filename}",
+        )
+        for item in manifest.artifacts
+    }
+    monkeypatch.setattr(release, "_read_registry_artifacts", lambda _root, _manifest: records)
+
+    wheel = manifest.artifacts[0]
+    assert (
+        release._published_wheel_requirement(  # noqa: SLF001
+            "https://index.example", manifest
+        )
+        == f"https://files.example/{wheel.filename}#sha256={wheel.sha256}"
+    )
+
+    records[wheel.filename] = release.RegistryArtifact(
+        wheel.filename,
+        wheel.sha256,
+        wheel.size + 1,
+        records[wheel.filename].url,
+    )
+    with pytest.raises(release.ReleaseError, match="size does not match"):
+        release._published_wheel_requirement("https://index.example", manifest)  # noqa: SLF001
 
 
 @pytest.mark.verifies("TST053")
@@ -297,6 +379,9 @@ def test_published_tool_install_is_exact_isolated_and_executable(
 ) -> None:
     bundle = _bundle(tmp_path, "v1.0.0-rc.1")
     calls: list[tuple[list[str], dict[str, str]]] = []
+    published_wheel = (
+        "https://files.example/slygentify-1.0.0rc1-py3-none-any.whl#sha256=" + "a" * 64
+    )
 
     def run(command: list[str], *, check: bool, env: dict[str, str]) -> None:
         assert check is True
@@ -317,6 +402,11 @@ def test_published_tool_install_is_exact_isolated_and_executable(
 
     monkeypatch.setattr(subprocess, "run", run)
     monkeypatch.setattr(
+        release,
+        "_published_wheel_requirement",
+        lambda _root, _manifest: published_wheel,
+    )
+    monkeypatch.setattr(
         shutil,
         "which",
         lambda name, *, path: str(Path(path.split(os.pathsep)[0]) / name),
@@ -332,23 +422,22 @@ def test_published_tool_install_is_exact_isolated_and_executable(
 
     assert len(calls) == 2
     install, environment = calls[0]
-    assert install[-1] == "slygentify==1.0.0rc1"
+    assert install[-1] == published_wheel
     assert environment["PATH"].split(os.pathsep)[0]
     for name in ("PIP_INDEX_URL", "PIP_EXTRA_INDEX_URL", "UV_INDEX_URL"):
         assert name not in environment
     if installer == "uv-tool":
         assert install[:3] == ["uv", "tool", "install"]
-        assert install[install.index("--index") + 1] == "https://test.pypi.org/simple"
         assert install[install.index("--default-index") + 1] == "https://pypi.org/simple"
+        assert "--index" not in install
         assert environment["UV_TOOL_BIN_DIR"] == environment["PATH"].split(os.pathsep)[0]
         assert environment["UV_CACHE_DIR"].endswith("cache")
     else:
         assert install[:4] == [sys.executable, "-m", "pipx", "install"]
         assert install[install.index("--backend") + 1] == "pip"
-        assert install[install.index("--index-url") + 1] == "https://test.pypi.org/simple"
-        assert install[install.index("--pip-args") + 1] == (
-            "--isolated --extra-index-url https://pypi.org/simple"
-        )
+        assert install[install.index("--index-url") + 1] == "https://pypi.org/simple"
+        assert "--pip-args=--isolated" in install
+        assert "--extra-index-url" not in install
         assert environment["PIPX_BIN_DIR"] == environment["PATH"].split(os.pathsep)[0]
         assert environment["PIPX_MAN_DIR"].endswith("man")
         assert environment["PIP_CACHE_DIR"].endswith("cache")
@@ -360,6 +449,11 @@ def test_published_tool_install_fails_closed_on_missing_or_wrong_install(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     bundle = _bundle(tmp_path, "v1.0.0-rc.1")
+    monkeypatch.setattr(
+        release,
+        "_published_wheel_requirement",
+        lambda _root, _manifest: "https://files.example/slygentify.whl#sha256=digest",
+    )
 
     def install_wrong_version(_command: list[str], *, check: bool, env: dict[str, str]) -> None:
         assert check is True
@@ -402,6 +496,11 @@ def test_published_tool_install_propagates_subprocess_failure(
 ) -> None:
     bundle = _bundle(tmp_path, "v1.0.0-rc.1")
     calls = 0
+    monkeypatch.setattr(
+        release,
+        "_published_wheel_requirement",
+        lambda _root, _manifest: "https://files.example/slygentify.whl#sha256=digest",
+    )
 
     def fail(command: list[str], *, check: bool, env: dict[str, str]) -> None:
         nonlocal calls
