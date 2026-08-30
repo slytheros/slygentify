@@ -1,8 +1,10 @@
 # Migration and compatibility guidance
 
-Slygentify is currently `1.0.0rc3` and has no production PyPI release history. There is no
-released-version migration to perform yet. Future changes will be recorded in the root
-changelog without recreating private development chronology.
+Slygentify `1.0.0` is the first production PyPI release. Users of a release candidate can
+install the exact stable version without a JSON Schema or initialization-state migration;
+the stable release preserves the RC3 product behavior and compatibility surfaces. Future
+changes will be recorded in the root changelog without recreating private development
+chronology.
 
 ## Package versions
 
