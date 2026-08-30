@@ -6,6 +6,12 @@ major versions are independent compatibility surfaces.
 
 ## Unreleased
 
+## [1.0.0] - 2026-08-30
+
+- Promote the fully verified `1.0.0rc3` product and compatibility surfaces to the first
+  stable release with no further runtime, API, CLI, schema, dependency, or workflow
+  changes.
+
 ## [1.0.0rc3] - 2026-08-30
 
 - Fix published tool-manager verification to install the exact hash-bound candidate wheel
@@ -51,5 +57,5 @@ major versions are independent compatibility surfaces.
 - Adopt SPDX package metadata and public project links for the forthcoming GitHub
   repository.
 
-Slygentify has not yet published a public PyPI release. This changelog does not invent
-historical releases, tags, dates, or private development chronology.
+`1.0.0` is the first production PyPI release. The preceding RC sections retain the
+public prerelease history without inventing private development chronology.

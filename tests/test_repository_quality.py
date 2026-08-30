@@ -49,9 +49,9 @@ def test_distribution_artifacts_are_contained_and_preserve_runtime_contract(tmp_
     }
     assert first_hashes == second_hashes
 
-    sdist = output / "slygentify-1.0.0rc3.tar.gz"
-    wheel = output / "slygentify-1.0.0rc3-py3-none-any.whl"
-    prefix = "slygentify-1.0.0rc3/"
+    sdist = output / "slygentify-1.0.0.tar.gz"
+    wheel = output / "slygentify-1.0.0-py3-none-any.whl"
+    prefix = "slygentify-1.0.0/"
     source_files = sorted(
         path.relative_to(repository_root).as_posix()
         for path in (repository_root / "src" / "slygentify").rglob("*")
@@ -72,14 +72,12 @@ def test_distribution_artifacts_are_contained_and_preserve_runtime_contract(tmp_
 
     with zipfile.ZipFile(wheel) as archive:
         members = set(archive.namelist())
-        metadata = archive.read("slygentify-1.0.0rc3.dist-info/METADATA").decode("utf-8")
-        entry_points = archive.read("slygentify-1.0.0rc3.dist-info/entry_points.txt").decode(
-            "utf-8"
-        )
+        metadata = archive.read("slygentify-1.0.0.dist-info/METADATA").decode("utf-8")
+        entry_points = archive.read("slygentify-1.0.0.dist-info/entry_points.txt").decode("utf-8")
     assert "slygentify/_acceptance.py" not in members
     assert "slygentify/_initialization_acceptance.py" not in members
     assert "slygentify/schemas/scan-v1.schema.json" in members
-    assert "Version: 1.0.0rc3" in metadata
+    assert "Version: 1.0.0" in metadata
     assert "License-Expression: Apache-2.0" in metadata
     assert "slygentify = slygentify.cli:app" in entry_points
 
