@@ -61,7 +61,7 @@ def test_public_package_metadata_and_documentation_dependencies_are_exact() -> N
 
     assert metadata["dynamic"] == ["version"]
     assert project["tool"]["hatch"]["version"] == {"path": "src/slygentify/_version.py"}
-    assert slygentify.__version__ == "1.0.0rc3"
+    assert slygentify.__version__ == "1.0.0"
     assert metadata["license"] == "Apache-2.0"
     assert metadata["license-files"] == ["LICENSE"]
     assert metadata["urls"] == {
@@ -72,7 +72,7 @@ def test_public_package_metadata_and_documentation_dependencies_are_exact() -> N
         "Changelog": "https://github.com/slytheros/slygentify/blob/develop/CHANGELOG.md",
     }
     assert {
-        "Development Status :: 4 - Beta",
+        "Development Status :: 5 - Production/Stable",
         "Environment :: Console",
         "Intended Audience :: Developers",
         "Operating System :: OS Independent",
@@ -84,6 +84,16 @@ def test_public_package_metadata_and_documentation_dependencies_are_exact() -> N
         "mkdocs>=1.6.1,<2",
         "mkdocstrings-python>=2.0.5,<3",
     ]
+    installation = (DOCS / "installation.md").read_text(encoding="utf-8")
+    for command in (
+        "python -m pip install slygentify==1.0.0",
+        "pipx install slygentify==1.0.0",
+        "uv tool install slygentify==1.0.0",
+        "uvx --from slygentify==1.0.0 slygentify --help",
+    ):
+        assert command in installation
+    assert "not yet published" not in installation
+    assert "has no PyPI release" not in installation
     configuration = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
     assert "favicon: assets/logo.png" in configuration
     assert "custom_dir: overrides" in configuration

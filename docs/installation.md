@@ -2,14 +2,14 @@
 
 ## Current availability
 
-Slygentify `1.0.0rc3` is not yet published on production PyPI. Begin from an existing reviewed source checkout;
-the commands in the later [post-publication section](#after-a-genuine-pypi-publication)
-are examples of approved future installation paths, not currently available downloads.
+Slygentify `1.0.0` is the first stable release on production PyPI. Prefer an exact
+version for reproducible installation, and verify the published provenance and SHA-256
+hashes against the corresponding GitHub release before use in a sensitive environment.
 
 | Area | Current status |
 | --- | --- |
-| Maturity | Public 1.0 release candidate `1.0.0rc3` |
-| Distribution | Reviewed source checkout only; no PyPI release |
+| Maturity | Stable public release `1.0.0` |
+| Distribution | PyPI wheel and source distribution with Trusted Publisher provenance |
 | Python | CPython 3.11 through 3.14 |
 | Platforms | Ubuntu 24.04 x64, Windows 2025 x64, and macOS 15 arm64 |
 | Repository | A selected target must be inside a local Git repository |
@@ -19,6 +19,30 @@ are examples of approved future installation paths, not currently available down
 See the repository
 [support policy](https://github.com/slytheros/slygentify/blob/develop/SUPPORT.md) for
 maintenance and reporting terms.
+
+## Install from PyPI
+
+For an isolated command installation:
+
+```console
+pipx install slygentify==1.0.0
+```
+
+Or with uv:
+
+```console
+uv tool install slygentify==1.0.0
+```
+
+For a virtual environment managed with pip:
+
+```console
+python -m pip install slygentify==1.0.0
+```
+
+Package installation executes the build and installation tooling and resolves declared
+dependencies. Use a trusted package index and review the selected artifacts and
+provenance for high-trust environments.
 
 ## Development checkout
 
@@ -69,21 +93,10 @@ lookup may be unavailable and the result can be partial. Selecting
 `--git-executable PATH` authorizes that exact file as trusted, unsandboxed code; it can
 have arbitrary effects.
 
-## After a genuine PyPI publication
+## One-shot execution
 
-!!! warning "Future installation only — do not run these commands yet"
+Run the exact stable version without retaining a tool installation:
 
-    Slygentify has no PyPI release. Do not use the following commands until a release
-    exists and its provenance has been verified on PyPI. A placeholder package or name
-    reservation is not a Slygentify release.
-
-    ```console
-    git clone https://github.com/slytheros/slygentify.git
-    python -m pip install slygentify
-    pipx install slygentify
-    uv tool install slygentify
-    uvx slygentify --help
-    ```
-
-Release documentation will replace this warning with the exact verified version and
-artifact hashes after the supported installation matrix passes.
+```console
+uvx --from slygentify==1.0.0 slygentify --help
+```

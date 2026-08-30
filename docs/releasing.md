@@ -1,8 +1,8 @@
 # Human-gated release process
 
 This is the maintainer runbook for preparing, rehearsing, publishing, verifying, and
-recovering a Slygentify package release. Slygentify has not yet published a public PyPI
-release. Do not use this procedure to reserve the name or publish a placeholder.
+recovering a Slygentify package release. Use it only for genuine reviewed releases;
+never use it to reserve a name or publish a placeholder.
 
 Publication has four distinct human boundaries: a reviewed promotion from `develop` to
 `main`, creation of an immutable release tag, approval of the selected package-index

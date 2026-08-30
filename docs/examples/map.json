@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source_scan_schema_version": 1,
-  "producer_version": "1.0.0rc3",
+  "producer_version": "1.0.0",
   "source_scan_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
   "source_completion": "complete",
   "scope": {

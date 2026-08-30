@@ -14,8 +14,8 @@ instead of guessing from conventions or executing discovered project commands.
 First-class ecosystem inspection covers Python and JavaScript/TypeScript repositories,
 including mixed repositories and workspaces.
 
-Slygentify is a public 1.0 release candidate (`1.0.0rc3`). It is not yet published on
-PyPI.
+Slygentify `1.0.0` is the first stable public release. Install the exact release from
+PyPI or use a reviewed source checkout.
 
 ## What Slygentify helps with
 
@@ -94,9 +94,10 @@ GitLab, or their runners, and it does not verify that a declared workflow succee
 
 ## Quickstart
 
-Install Slygentify from a reviewed source checkout as described in the
-[installation guide](docs/installation.md). Every command accepts a directory inside a
-local Git repository.
+Install the exact stable release with `pipx install slygentify==1.0.0` or
+`uv tool install slygentify==1.0.0`. The [installation guide](docs/installation.md)
+also covers pip and reviewed source checkouts. Every command accepts a directory inside
+a local Git repository.
 
 Start with the complete human-readable scan report:
 
