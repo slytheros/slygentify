@@ -6,6 +6,11 @@ major versions are independent compatibility surfaces.
 
 ## Unreleased
 
+## [1.0.0rc3] - 2026-08-30
+
+- Fix published tool-manager verification to install the exact hash-bound candidate wheel
+  while resolving dependencies only from the production package index.
+
 ## [1.0.0rc2] - 2026-08-30
 
 - Fix clean release runners so every release helper invocation can import the project

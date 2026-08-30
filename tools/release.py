@@ -13,6 +13,7 @@ import sys
 import tarfile
 import tempfile
 import urllib.error
+import urllib.parse
 import urllib.request
 import zipfile
 from dataclasses import dataclass
@@ -79,6 +80,16 @@ class RegistryPlan:
     mode: RegistryMode
     upload: tuple[str, ...]
     existing: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class RegistryArtifact:
+    """One published distribution advertised by a package registry."""
+
+    filename: str
+    sha256: str
+    size: int
+    url: str
 
 
 def _fail(message: str) -> NoReturn:
@@ -301,7 +312,9 @@ def verify_release_bundle(bundle: Path, tag: str) -> ReleaseManifest:
     return manifest
 
 
-def _read_registry_files(index_root: str, manifest: ReleaseManifest) -> dict[str, str]:
+def _read_registry_artifacts(
+    index_root: str, manifest: ReleaseManifest
+) -> dict[str, RegistryArtifact]:
     url = f"{index_root.rstrip('/')}/pypi/{PROJECT_NAME}/{manifest.version}/json"
     request = urllib.request.Request(url, headers={"Accept": "application/json"})
     try:
@@ -315,23 +328,70 @@ def _read_registry_files(index_root: str, manifest: ReleaseManifest) -> dict[str
         raise ReleaseError(f"registry query failed: {error}") from error
     if not isinstance(document, dict) or not isinstance(document.get("urls"), list):
         _fail("registry returned an invalid release document")
-    remote: dict[str, str] = {}
+    remote: dict[str, RegistryArtifact] = {}
     for item in document["urls"]:
         if not isinstance(item, dict):
             _fail("registry returned an invalid file record")
         filename = item.get("filename")
         digests = item.get("digests")
+        size = item.get("size")
+        artifact_url = item.get("url")
         if (
             not isinstance(filename, str)
             or not isinstance(digests, dict)
             or not isinstance(digests.get("sha256"), str)
+            or not isinstance(size, int)
+            or isinstance(size, bool)
+            or size <= 0
+            or not isinstance(artifact_url, str)
             or item.get("yanked") is not False
         ):
             _fail("registry file record is incomplete or yanked")
+        try:
+            parsed_url = urllib.parse.urlsplit(artifact_url)
+            hostname = parsed_url.hostname
+        except ValueError:
+            _fail(f"registry returned an unsafe artifact URL for {filename!r}")
+        if (
+            parsed_url.scheme != "https"
+            or hostname is None
+            or parsed_url.username is not None
+            or parsed_url.password is not None
+            or parsed_url.fragment
+            or PurePosixPath(urllib.parse.unquote(parsed_url.path)).name != filename
+        ):
+            _fail(f"registry returned an unsafe artifact URL for {filename!r}")
         if filename in remote:
             _fail(f"registry returned duplicate filename {filename!r}")
-        remote[filename] = cast(str, digests["sha256"])
+        remote[filename] = RegistryArtifact(
+            filename,
+            cast(str, digests["sha256"]),
+            size,
+            artifact_url,
+        )
     return remote
+
+
+def _read_registry_files(index_root: str, manifest: ReleaseManifest) -> dict[str, str]:
+    return {
+        filename: artifact.sha256
+        for filename, artifact in _read_registry_artifacts(index_root, manifest).items()
+    }
+
+
+def _published_wheel_requirement(index_root: str, manifest: ReleaseManifest) -> str:
+    remote = _read_registry_artifacts(index_root, manifest)
+    classify_registry_state(
+        manifest,
+        {filename: artifact.sha256 for filename, artifact in remote.items()},
+        "verify-only",
+    )
+    for expected in manifest.artifacts:
+        published = remote[expected.filename]
+        if published.size != expected.size:
+            _fail(f"registry size does not match the release manifest for {expected.filename!r}")
+    wheel = next(artifact for artifact in manifest.artifacts if artifact.filename.endswith(".whl"))
+    return f"{remote[wheel.filename].url}#sha256={wheel.sha256}"
 
 
 @implements("REQ052")
@@ -470,9 +530,10 @@ def smoke_install_published_tool(
 ) -> None:
     """Install and execute the exact published version with one isolated tool manager."""
     manifest = verify_release_bundle(bundle, tag)
-    package = f"{PROJECT_NAME}=={manifest.version}"
     index = _simple_index_url(index_root)
     dependency = _simple_index_url(dependency_index) if dependency_index is not None else None
+    package = _published_wheel_requirement(index_root, manifest)
+    package_index = dependency if dependency is not None else index
 
     with tempfile.TemporaryDirectory(prefix=f"{PROJECT_NAME}-{installer}-") as temporary:
         root = Path(temporary)
@@ -505,11 +566,9 @@ def smoke_install_published_tool(
                 PROJECT_NAME,
                 "--python",
                 sys.executable,
+                "--default-index",
+                package_index,
             ]
-            if dependency is None:
-                command.extend(("--default-index", index))
-            else:
-                command.extend(("--index", index, "--default-index", dependency))
         elif installer == "pipx":
             environment["PIPX_HOME"] = str(tool_home)
             environment["PIPX_BIN_DIR"] = str(bin_directory)
@@ -526,12 +585,9 @@ def smoke_install_published_tool(
                 "--python",
                 sys.executable,
                 "--index-url",
-                index,
+                package_index,
+                "--pip-args=--isolated",
             ]
-            pip_arguments = ["--isolated"]
-            if dependency is not None:
-                pip_arguments.extend(("--extra-index-url", dependency))
-            command.extend(("--pip-args", " ".join(pip_arguments)))
         else:
             _fail(f"unsupported tool installer {installer!r}")
 

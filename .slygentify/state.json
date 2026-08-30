@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "producer_version": "1.0.0rc2",
+  "producer_version": "1.0.0rc3",
   "configuration": {
     "location": "slygentify.toml",
     "sha256": "018885bd6046f46135bc46f04ecc1ef2ae37515ff2f2d6d324b6bd58e5e5353b"
