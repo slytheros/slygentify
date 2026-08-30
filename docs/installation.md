@@ -2,13 +2,13 @@
 
 ## Current availability
 
-Slygentify `1.0.0rc2` is not yet published on production PyPI. Begin from an existing reviewed source checkout;
+Slygentify `1.0.0rc3` is not yet published on production PyPI. Begin from an existing reviewed source checkout;
 the commands in the later [post-publication section](#after-a-genuine-pypi-publication)
 are examples of approved future installation paths, not currently available downloads.
 
 | Area | Current status |
 | --- | --- |
-| Maturity | Public 1.0 release candidate `1.0.0rc2` |
+| Maturity | Public 1.0 release candidate `1.0.0rc3` |
 | Distribution | Reviewed source checkout only; no PyPI release |
 | Python | CPython 3.11 through 3.14 |
 | Platforms | Ubuntu 24.04 x64, Windows 2025 x64, and macOS 15 arm64 |

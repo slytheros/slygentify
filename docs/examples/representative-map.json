@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "source_scan_schema_version": 1,
-  "producer_version": "1.0.0rc2",
-  "source_scan_sha256": "f67f8b4b6854422a26da3e0ad8daf87726e904a6886e61a5a5aac00941ac8062",
+  "producer_version": "1.0.0rc3",
+  "source_scan_sha256": "269dddb7c5cbf5f3ddf6ac49ec3fe8b18ae4a6173f6a3302d20ffb6678b7ddd7",
   "source_completion": "partial",
   "scope": {
     "requested_path": "packages/web/src/app.ts",

@@ -61,7 +61,7 @@ def test_public_package_metadata_and_documentation_dependencies_are_exact() -> N
 
     assert metadata["dynamic"] == ["version"]
     assert project["tool"]["hatch"]["version"] == {"path": "src/slygentify/_version.py"}
-    assert slygentify.__version__ == "1.0.0rc2"
+    assert slygentify.__version__ == "1.0.0rc3"
     assert metadata["license"] == "Apache-2.0"
     assert metadata["license-files"] == ["LICENSE"]
     assert metadata["urls"] == {
