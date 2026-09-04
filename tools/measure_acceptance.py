@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import stat
 import subprocess
@@ -26,6 +27,82 @@ from tools.support.acceptance import (
 
 class CorpusError(RuntimeError):
     """Raised when a selected local corpus input is unsuitable for measurement."""
+
+
+def _is_link_or_reparse(metadata: os.stat_result) -> bool:
+    reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+    return stat.S_ISLNK(metadata.st_mode) or bool(
+        getattr(metadata, "st_file_attributes", 0) & reparse_flag
+    )
+
+
+def _git_environment() -> dict[str, str]:
+    environment = {
+        key: value for key, value in os.environ.items() if not key.upper().startswith("GIT_")
+    }
+    environment.update(
+        {
+            "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_NO_LAZY_FETCH": "1",
+            "GIT_OPTIONAL_LOCKS": "0",
+            "GIT_PAGER": "cat",
+            "GIT_TERMINAL_PROMPT": "0",
+        }
+    )
+    return environment
+
+
+def _validate_checkout_entries(path: Path) -> None:
+    """Reject metadata that could redirect Git outside a formal checkout."""
+    pending = [path]
+    git_directory = path / ".git"
+    while pending:
+        directory = pending.pop()
+        try:
+            entries = tuple(os.scandir(directory))
+        except OSError as error:
+            raise CorpusError(
+                f"formal checkout contains unreadable metadata: {path.name}"
+            ) from error
+        for entry in entries:
+            try:
+                metadata = entry.stat(follow_symlinks=False)
+            except OSError as error:
+                raise CorpusError(
+                    f"formal checkout contains an unsafe filesystem entry: {path.name}"
+                ) from error
+            entry_path = Path(entry.path)
+            try:
+                in_git_directory = entry_path.is_relative_to(git_directory)
+            except ValueError:
+                in_git_directory = False
+            is_link = stat.S_ISLNK(metadata.st_mode)
+            if _is_link_or_reparse(metadata):
+                if in_git_directory or not is_link:
+                    raise CorpusError(f"formal checkout contains unsafe Git metadata: {path.name}")
+                continue
+            if stat.S_ISDIR(metadata.st_mode):
+                pending.append(entry_path)
+            elif not stat.S_ISREG(metadata.st_mode):
+                raise CorpusError(
+                    f"formal checkout contains an unsupported filesystem entry: {path.name}"
+                )
+
+
+def _require_direct_checkout(path: Path) -> Path:
+    try:
+        metadata = path.lstat()
+        marker_metadata = (path / ".git").lstat()
+        resolved = path.resolve(strict=True)
+    except OSError as error:
+        raise CorpusError(f"formal checkout is unsafe: {path.name}") from error
+    if _is_link_or_reparse(metadata) or not stat.S_ISDIR(metadata.st_mode):
+        raise CorpusError(f"formal checkout is not a direct directory: {path.name}")
+    if _is_link_or_reparse(marker_metadata) or not stat.S_ISDIR(marker_metadata.st_mode):
+        raise CorpusError(f"formal checkout is not a standalone Git checkout: {path.name}")
+    _validate_checkout_entries(path)
+    return resolved
 
 
 def _load_corpus(path: Path) -> tuple[dict[str, object], ...]:
@@ -69,6 +146,7 @@ def _git(path: Path, hooks_directory: Path, *arguments: str) -> str:
             capture_output=True,
             check=False,
             text=True,
+            env=_git_environment(),
         )
     except OSError as error:
         raise CorpusError(f"could not run Git for {path.name}: {error}") from error
@@ -82,20 +160,19 @@ def _verify_formal_checkout(root: Path, entry: dict[str, object], hooks_director
     identifier = str(entry["id"])
     checkout = root / identifier
     try:
-        metadata = checkout.lstat()
         corpus_root = root.resolve(strict=True)
     except OSError as error:
         raise CorpusError(f"formal checkout is unsafe: {identifier}") from error
-    reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
-    if (
-        stat.S_ISLNK(metadata.st_mode)
-        or bool(getattr(metadata, "st_file_attributes", 0) & reparse_flag)
-        or not stat.S_ISDIR(metadata.st_mode)
-        or checkout.parent.resolve() != corpus_root
-    ):
+    checkout = _require_direct_checkout(checkout)
+    if checkout.parent != corpus_root:
         raise CorpusError(f"formal checkout is not a direct corpus directory: {identifier}")
-    if not checkout.is_dir():
-        raise CorpusError(f"formal checkout is missing: {identifier}")
+    git_root = _git(checkout, hooks_directory, "rev-parse", "--show-toplevel")
+    try:
+        resolved_git_root = Path(git_root).resolve(strict=True)
+    except OSError as error:
+        raise CorpusError(f"Git reported an unsafe worktree root: {identifier}") from error
+    if resolved_git_root != checkout:
+        raise CorpusError(f"Git worktree escapes the formal checkout: {identifier}")
     if _git(checkout, hooks_directory, "rev-parse", "HEAD") != entry["commit"]:
         raise CorpusError(f"formal checkout is not at its approved commit: {identifier}")
     if _git(checkout, hooks_directory, "remote", "get-url", "origin") != entry["source_url"]:
@@ -113,10 +190,19 @@ def _snapshot(checkout: Path, commit: str, destination: Path, hooks_directory: P
         raise CorpusError(
             f"could not create disposable snapshot for {checkout.name}: {error}"
         ) from error
-    _git(destination, hooks_directory, "clean", "--force", "-d", "-x", "--quiet")
-    if _git(destination, hooks_directory, "checkout", "--quiet", "--detach", commit) != "":
+    snapshot = _require_direct_checkout(destination)
+    git_root = _git(snapshot, hooks_directory, "rev-parse", "--show-toplevel")
+    try:
+        resolved_git_root = Path(git_root).resolve(strict=True)
+    except OSError as error:
+        raise CorpusError(f"copied Git worktree is unsafe: {checkout.name}") from error
+    if resolved_git_root != snapshot:
+        raise CorpusError(f"copied Git worktree escapes its snapshot: {checkout.name}")
+    if _git(snapshot, hooks_directory, "clean", "--force", "-d", "-x", "--quiet") != "":
+        raise CorpusError(f"could not clean the copied checkout: {checkout.name}")
+    if _git(snapshot, hooks_directory, "checkout", "--quiet", "--detach", commit) != "":
         raise CorpusError(f"could not select approved commit for {checkout.name}")
-    return destination
+    return snapshot
 
 
 def _scan_twice(identifier: str, checkout: Path) -> tuple[AcceptanceClaim, ...]:

@@ -7,6 +7,7 @@ import os
 import shlex
 import subprocess
 from pathlib import Path
+from types import SimpleNamespace
 from typing import cast
 
 import pytest
@@ -335,7 +336,9 @@ def test_path_identity_rejects_missing_or_non_directory_roots(tmp_path: Path) ->
 
 
 @pytest.mark.verifies("TST057")
-def test_path_identity_excludes_mutable_git_metadata(tmp_path: Path) -> None:
+def test_path_identity_excludes_mutable_git_metadata(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     corpus = tmp_path / "corpus"
     corpus.mkdir()
     source = corpus / "source.txt"
@@ -344,11 +347,49 @@ def test_path_identity_excludes_mutable_git_metadata(tmp_path: Path) -> None:
     git_metadata.mkdir()
     fetch_head = git_metadata / "FETCH_HEAD"
     fetch_head.write_text("first", encoding="utf-8")
+    monkeypatch.setattr(
+        release_checklist,
+        "_discover_tracked_paths",
+        lambda *_args, **_kwargs: SimpleNamespace(available=True, files=frozenset({b"source.txt"})),
+    )
 
     initial = release_checklist._path_identity(corpus)  # noqa: SLF001
     fetch_head.write_text("second", encoding="utf-8")
 
     assert release_checklist._path_identity(corpus) == initial  # noqa: SLF001
+
+
+@pytest.mark.verifies("TST057")
+def test_path_identity_includes_tracked_path_state(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    corpus = tmp_path / "corpus"
+    corpus.mkdir()
+    (corpus / ".git").mkdir()
+    (corpus / "ignored-manifest.toml").write_text("stable", encoding="utf-8")
+    tracked = SimpleNamespace(available=True, files=frozenset({b"source.txt"}))
+    monkeypatch.setattr(
+        release_checklist, "_discover_tracked_paths", lambda *_args, **_kwargs: tracked
+    )
+
+    initial = release_checklist._path_identity(corpus)  # noqa: SLF001
+    tracked.files = frozenset({b"source.txt", b"ignored-manifest.toml"})
+
+    assert release_checklist._path_identity(corpus) != initial  # noqa: SLF001
+
+
+@pytest.mark.verifies("TST057")
+def test_path_identity_enforces_entry_limit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    corpus = tmp_path / "corpus"
+    corpus.mkdir()
+    (corpus / "first.txt").write_text("one", encoding="utf-8")
+    (corpus / "second.txt").write_text("two", encoding="utf-8")
+    monkeypatch.setattr(release_checklist, "IDENTITY_MAX_ENTRIES", 1)
+
+    with pytest.raises(release_checklist.ChecklistError, match="entry limit"):
+        release_checklist._path_identity(corpus)  # noqa: SLF001
 
 
 @pytest.mark.verifies("TST057")
@@ -525,11 +566,37 @@ def test_release_git_checks_clear_inherited_git_environment(
 
 
 @pytest.mark.verifies("TST057")
+def test_formal_measurement_git_checks_clear_inherited_git_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    captured: dict[str, str] = {}
+
+    class Completed:
+        returncode = 0
+        stdout = "verified\n"
+        stderr = ""
+
+    def fake_run(_command: list[str], **kwargs: object) -> Completed:
+        captured.update(cast(dict[str, str], kwargs["env"]))
+        return Completed()
+
+    monkeypatch.setenv("GIT_DIR", "outside")
+    monkeypatch.setenv("GIT_WORK_TREE", "outside")
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    assert measure_acceptance._git(tmp_path, tmp_path, "rev-parse", "HEAD") == "verified"  # noqa: SLF001
+    assert "GIT_DIR" not in captured
+    assert "GIT_WORK_TREE" not in captured
+    assert captured["GIT_CONFIG_GLOBAL"] == os.devnull
+
+
+@pytest.mark.verifies("TST057")
 def test_formal_snapshot_preserves_links_without_reading_targets(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     checkout = tmp_path / "checkout"
     checkout.mkdir()
+    (checkout / ".git").mkdir()
     outside = tmp_path / "outside-secret.txt"
     outside.write_text("must not be copied", encoding="utf-8")
     link = checkout / "linked-secret.txt"
@@ -537,7 +604,13 @@ def test_formal_snapshot_preserves_links_without_reading_targets(
         link.symlink_to(outside)
     except OSError:
         pytest.skip("symlink creation is unavailable on this Windows host")
-    monkeypatch.setattr(measure_acceptance, "_git", lambda *_args: "")
+    monkeypatch.setattr(
+        measure_acceptance,
+        "_git",
+        lambda path, _hooks, *arguments: (
+            str(path) if arguments == ("rev-parse", "--show-toplevel") else ""
+        ),
+    )
     hooks_directory = tmp_path / "disabled-hooks"
     hooks_directory.mkdir()
 
@@ -549,6 +622,33 @@ def test_formal_snapshot_preserves_links_without_reading_targets(
     assert copied_link.is_symlink()
     assert os.readlink(copied_link) == os.readlink(link)
     assert not (snapshot / "outside-secret.txt").exists()
+
+
+@pytest.mark.verifies("TST057")
+@pytest.mark.parametrize("marker_kind", ["file", "linked-entry"])
+def test_formal_measurement_rejects_indirect_git_metadata(tmp_path: Path, marker_kind: str) -> None:
+    checkout = tmp_path / "example"
+    checkout.mkdir()
+    marker = checkout / ".git"
+    if marker_kind == "file":
+        marker.write_text("gitdir: ../outside", encoding="utf-8")
+    else:
+        marker.mkdir()
+        target = tmp_path / "outside"
+        target.write_text("must not be read", encoding="utf-8")
+        try:
+            (marker / "linked").symlink_to(target)
+        except OSError:
+            pytest.skip("symlink creation is unavailable on this Windows host")
+    hooks_directory = tmp_path / "disabled-hooks"
+    hooks_directory.mkdir()
+
+    with pytest.raises(measure_acceptance.CorpusError, match="standalone|unsafe Git metadata"):
+        measure_acceptance._verify_formal_checkout(  # noqa: SLF001
+            tmp_path,
+            {"id": "example", "commit": "a" * 40, "source_url": "https://example.invalid/repo"},
+            hooks_directory,
+        )
 
 
 @pytest.mark.verifies("TST057")
@@ -990,6 +1090,7 @@ def test_hosted_verification_requires_matching_tag_ref(
         )
 
     monkeypatch.setattr(release_checklist, "_git", lambda *_args: "b" * 40)
+    monkeypatch.setattr(release_checklist, "_remote_tag_commit", lambda *_args: "b" * 40)
     monkeypatch.setattr(subprocess, "run", lambda *_args, **_kwargs: Completed())
     with pytest.raises(release_checklist.ChecklistError, match="immutable tag"):
         release_checklist._verify_hosted_phase(  # noqa: SLF001
@@ -1028,6 +1129,7 @@ def test_testpypi_verification_requires_post_gate_publication_job(
         return result
 
     monkeypatch.setattr(release_checklist, "_git", lambda *_args: "b" * 40)
+    monkeypatch.setattr(release_checklist, "_remote_tag_commit", lambda *_args: "b" * 40)
     monkeypatch.setattr(subprocess, "run", fake_run)
 
     with pytest.raises(release_checklist.ChecklistError, match="publication job"):
@@ -1085,6 +1187,7 @@ def test_testpypi_verification_accepts_an_older_qualifying_publication(
         return result
 
     monkeypatch.setattr(release_checklist, "_git", lambda *_args: "b" * 40)
+    monkeypatch.setattr(release_checklist, "_remote_tag_commit", lambda *_args: "b" * 40)
     monkeypatch.setattr(subprocess, "run", fake_run)
 
     result = release_checklist._verify_hosted_phase(  # noqa: SLF001
@@ -1155,6 +1258,7 @@ def test_pypi_verification_accepts_a_verify_only_recovery_run(
         return result
 
     monkeypatch.setattr(release_checklist, "_git", lambda *_args: "b" * 40)
+    monkeypatch.setattr(release_checklist, "_remote_tag_commit", lambda *_args: "b" * 40)
     monkeypatch.setattr(subprocess, "run", fake_run)
 
     result = release_checklist._verify_hosted_phase(  # noqa: SLF001
@@ -1163,6 +1267,24 @@ def test_pypi_verification_accepts_a_verify_only_recovery_run(
 
     assert result["workflow_run_id"] == 2
     assert result["publication_run_id"] == 1
+
+
+@pytest.mark.verifies("TST057")
+def test_hosted_verification_rejects_a_moved_remote_tag(
+    inputs: release_checklist.Inputs, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(release_checklist, "_git", lambda *_args: "b" * 40)
+    monkeypatch.setattr(release_checklist, "_remote_tag_commit", lambda *_args: "c" * 40)
+
+    class Completed:
+        returncode = 0
+        stdout = "[]"
+
+    monkeypatch.setattr(subprocess, "run", lambda *_args, **_kwargs: Completed())
+    with pytest.raises(release_checklist.ChecklistError, match="remote release tag"):
+        release_checklist._verify_hosted_phase(  # noqa: SLF001
+            tmp_path, inputs, "verify-testpypi", "2026-01-01T00:00:00Z"
+        )
 
 
 @pytest.mark.verifies("TST057")

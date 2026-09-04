@@ -18,6 +18,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import time
 from collections.abc import Sequence
 from contextlib import suppress
 from dataclasses import dataclass
@@ -25,12 +26,17 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from slygentify._git_tracking import _discover_tracked_paths
 from slygentify._scan.kernel import _sensitive
 from slygentify.traceability import implements
 from tools.release import release_version_from_tag, verify_release_bundle
 
 SCHEMA_VERSION = 1
-DEFINITION_VERSION = 2
+DEFINITION_VERSION = 3
+IDENTITY_MAX_DEPTH = 256
+IDENTITY_MAX_ENTRIES = 1_000_000
+IDENTITY_MAX_BYTES = 16 * 1024 * 1024 * 1024
+IDENTITY_MAX_ELAPSED_SECONDS = 30 * 60
 PHASES = (
     "preflight",
     "formal-corpus",
@@ -131,16 +137,22 @@ def _digest(document: object) -> str:
     return hashlib.sha256(_canonical(document)).hexdigest()
 
 
-def _file_digest(path: Path) -> bytes:
+def _file_digest(path: Path, remaining: int, deadline: float) -> tuple[bytes, int]:
     """Hash a regular corpus file without retaining its contents in memory."""
     digest = hashlib.sha256()
+    consumed = 0
     try:
         with path.open("rb") as source:
             while chunk := source.read(1024 * 1024):
+                if time.monotonic() >= deadline:
+                    raise ChecklistError("corpus identity exceeded its elapsed-time limit")
+                consumed += len(chunk)
+                if consumed > remaining:
+                    raise ChecklistError("corpus identity exceeded its byte-read limit")
                 digest.update(chunk)
     except OSError as error:
         raise ChecklistError(f"could not read corpus entry: {path.name}") from error
-    return digest.digest()
+    return digest.digest(), consumed
 
 
 def _path_identity(path: Path | None) -> str | None:
@@ -151,14 +163,22 @@ def _path_identity(path: Path | None) -> str | None:
         raise ChecklistError(f"corpus root must be an existing directory: {path}")
     root = path.resolve()
     entries_to_hash: list[tuple[Path, Path, os.stat_result, str]] = []
-    pending = [root]
+    pending = [(root, 0)]
+    started = time.monotonic()
+    deadline = started + IDENTITY_MAX_ELAPSED_SECONDS
+    entries_seen = 0
     while pending:
-        directory = pending.pop()
+        if time.monotonic() >= deadline:
+            raise ChecklistError("corpus identity exceeded its elapsed-time limit")
+        directory, depth = pending.pop()
         try:
             entries = tuple(os.scandir(directory))
         except OSError as error:
             raise ChecklistError(f"could not inspect corpus tree: {path}") from error
         for entry in entries:
+            entries_seen += 1
+            if entries_seen > IDENTITY_MAX_ENTRIES:
+                raise ChecklistError("corpus identity exceeded its entry limit")
             candidate = Path(entry.path)
             relative = candidate.relative_to(root)
             try:
@@ -179,22 +199,52 @@ def _path_identity(path: Path | None) -> str | None:
                 kind = "sensitive" if _sensitive(relative.as_posix()) else "file"
                 entries_to_hash.append((relative, candidate, metadata, kind))
             elif stat.S_ISDIR(metadata.st_mode):
+                if depth + 1 > IDENTITY_MAX_DEPTH:
+                    raise ChecklistError("corpus identity exceeded its depth limit")
                 entries_to_hash.append((relative, candidate, metadata, "directory"))
-                pending.append(candidate)
+                pending.append((candidate, depth + 1))
             else:
                 entries_to_hash.append((relative, candidate, metadata, "special"))
     digest = hashlib.sha256()
+    bytes_read = 0
     for relative, candidate, metadata, kind in sorted(
         entries_to_hash, key=lambda item: item[0].as_posix()
     ):
         digest.update(relative.as_posix().encode("utf-8"))
         digest.update(b"\0")
         if kind == "file":
-            digest.update(_file_digest(candidate))
+            content_digest, consumed = _file_digest(
+                candidate, IDENTITY_MAX_BYTES - bytes_read, deadline
+            )
+            bytes_read += consumed
+            digest.update(content_digest)
         else:
             digest.update(kind.encode("ascii"))
             digest.update(b"\0")
             digest.update(str(stat.S_IFMT(metadata.st_mode)).encode("ascii"))
+    marker = root / ".git"
+    try:
+        has_git_marker = marker.lstat() is not None
+    except FileNotFoundError:
+        has_git_marker = False
+    except OSError as error:
+        raise ChecklistError("could not inspect corpus Git metadata") from error
+    if has_git_marker:
+        tracked = _discover_tracked_paths(
+            root,
+            git_executable=None,
+            max_total_bytes=IDENTITY_MAX_BYTES,
+            max_memory_bytes=IDENTITY_MAX_BYTES,
+            max_elapsed_seconds=IDENTITY_MAX_ELAPSED_SECONDS,
+            started=started,
+            clock=time.monotonic,
+        )
+        if not tracked.available:
+            raise ChecklistError("could not derive a bounded tracked-path identity")
+        digest.update(b"\0tracked-paths\0")
+        for tracked_path in sorted(tracked.files):
+            digest.update(tracked_path)
+            digest.update(b"\0")
     return digest.hexdigest()
 
 
@@ -860,6 +910,47 @@ def _phase_writes(phase: str) -> tuple[str, ...]:
     return tuple(writes)
 
 
+def _remote_tag_commit(tag: str) -> str:
+    """Return the current commit target of a remote annotated release tag."""
+    remote_ref = subprocess.run(
+        ["gh", "api", f"repos/{GITHUB_REPOSITORY}/git/ref/tags/{tag}"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    try:
+        remote_object = json.loads(remote_ref.stdout)["object"]
+        remote_tag_id = remote_object["sha"]
+    except (KeyError, TypeError, json.JSONDecodeError) as error:
+        raise ChecklistError("could not inspect the remote immutable release tag") from error
+    if (
+        remote_ref.returncode
+        or not isinstance(remote_object, dict)
+        or remote_object.get("type") != "tag"
+        or not isinstance(remote_tag_id, str)
+    ):
+        raise ChecklistError("remote release tag must be annotated")
+    remote_tag = subprocess.run(
+        ["gh", "api", f"repos/{GITHUB_REPOSITORY}/git/tags/{remote_tag_id}"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    try:
+        remote_target = json.loads(remote_tag.stdout)["object"]
+    except (KeyError, TypeError, json.JSONDecodeError) as error:
+        raise ChecklistError("could not dereference the remote immutable release tag") from error
+    remote_target_sha = remote_target.get("sha") if isinstance(remote_target, dict) else None
+    if (
+        remote_tag.returncode
+        or not isinstance(remote_target, dict)
+        or remote_target.get("type") != "commit"
+        or not isinstance(remote_target_sha, str)
+    ):
+        raise ChecklistError("remote release tag does not identify a commit")
+    return remote_target_sha
+
+
 def _verify_gitflow(
     root: Path, inputs: Inputs, promotion_gate_verified_at: str | None
 ) -> dict[str, object]:
@@ -887,38 +978,7 @@ def _verify_gitflow(
         root, "rev-parse", f"{tagged}^{{tree}}"
     ):
         raise ChecklistError("promotion tree does not match the frozen candidate")
-    remote_ref = subprocess.run(
-        ["gh", "api", f"repos/{GITHUB_REPOSITORY}/git/ref/tags/{inputs.tag}"],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    try:
-        remote_object = json.loads(remote_ref.stdout)["object"]
-        remote_tag_id = remote_object["sha"]
-    except (KeyError, TypeError, json.JSONDecodeError) as error:
-        raise ChecklistError("could not inspect the remote immutable release tag") from error
-    if (
-        remote_ref.returncode
-        or remote_object.get("type") != "tag"
-        or not isinstance(remote_tag_id, str)
-    ):
-        raise ChecklistError("remote release tag must be annotated")
-    remote_tag = subprocess.run(
-        ["gh", "api", f"repos/{GITHUB_REPOSITORY}/git/tags/{remote_tag_id}"],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    try:
-        remote_target = json.loads(remote_tag.stdout)["object"]
-    except (KeyError, TypeError, json.JSONDecodeError) as error:
-        raise ChecklistError("could not dereference the remote immutable release tag") from error
-    if (
-        remote_tag.returncode
-        or remote_target.get("type") != "commit"
-        or remote_target.get("sha") != tagged
-    ):
+    if _remote_tag_commit(inputs.tag) != tagged:
         raise ChecklistError("remote release tag does not dereference to the promotion commit")
     frozen = subprocess.run(
         ["git", "-C", str(root), "merge-base", "--is-ancestor", inputs.freeze_commit, tagged],
@@ -1216,6 +1276,8 @@ def _verify_hosted_phase(
     except json.JSONDecodeError as error:
         raise ChecklistError(f"{workflow} returned invalid workflow data") from error
     tagged = _git(root, "rev-list", "-n", "1", inputs.tag)
+    if _remote_tag_commit(inputs.tag) != tagged:
+        raise ChecklistError("remote release tag does not dereference to the local immutable tag")
     matching = (
         [
             run

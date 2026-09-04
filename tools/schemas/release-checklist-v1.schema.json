@@ -24,7 +24,7 @@
             "additionalProperties": false,
             "properties": {
                 "composed_root_id": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
-                "definition_version": {"const": 2},
+                "definition_version": {"const": 3},
                 "formal_root_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
                 "freeze_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
                 "github_issue": {"type": ["integer", "null"], "minimum": 1},
