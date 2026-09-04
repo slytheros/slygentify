@@ -36,6 +36,8 @@ PHASES = (
     "github-release",
 )
 NETWORK_PHASES = frozenset({"testpypi", "pypi", "github-release"})
+GITHUB_REPOSITORY = "slytheros/slygentify"
+RELEASE_MAINTAINER = "slytheros"
 GATES = {
     "formal-corpus": "semantic-corpus",
     "initialization-review": "initialization-usefulness",
@@ -66,6 +68,7 @@ class Inputs:
         return {
             "definition_version": DEFINITION_VERSION,
             "freeze_commit": self.freeze_commit,
+            "github_issue": self.github_issue,
             "source_date_epoch": self.source_date_epoch,
             "tag": self.tag,
             "version": self.version,
@@ -184,16 +187,26 @@ def verify_human_gate(inputs: Inputs, evidence_directory: Path, phase: str) -> d
     if inputs.github_issue is None or inputs.github_issue <= 0:
         raise ChecklistError("--github-issue is required to verify a human gate")
     root = _repository_root()
-    evidence = _safe_external(
-        evidence_directory, (root, inputs.formal_root, inputs.supplemental_root)
-    )
+    roots: tuple[Path, ...] = (root, inputs.formal_root, inputs.supplemental_root)
+    if inputs.composed_root is not None:
+        roots += (inputs.composed_root,)
+    evidence = _safe_external(evidence_directory, roots)
     state_path = evidence / "release-checklist-state.json"
     state = _load_state(state_path, inputs)
     completed = state["phases"].get(phase)
     if not isinstance(completed, dict) or not isinstance(completed.get("digest"), str):
         raise ChecklistError(f"phase {phase!r} has no evidence to approve")
     expected = _gate_comment(GATES[phase], completed["digest"])
-    command = ["gh", "issue", "view", str(inputs.github_issue), "--json", "comments"]
+    command = [
+        "gh",
+        "issue",
+        "view",
+        str(inputs.github_issue),
+        "--repo",
+        GITHUB_REPOSITORY,
+        "--json",
+        "comments",
+    ]
     result = subprocess.run(command, capture_output=True, check=False, text=True)
     if result.returncode:
         raise ChecklistError("could not read the GitHub release issue")
@@ -203,7 +216,11 @@ def verify_human_gate(inputs: Inputs, evidence_directory: Path, phase: str) -> d
     except (KeyError, TypeError, json.JSONDecodeError) as error:
         raise ChecklistError("GitHub release issue returned invalid comments") from error
     if not isinstance(comments, list) or not any(
-        isinstance(comment, dict) and expected in comment.get("body", "") for comment in comments
+        isinstance(comment, dict)
+        and expected in comment.get("body", "")
+        and isinstance(comment.get("author"), dict)
+        and comment["author"].get("login") == RELEASE_MAINTAINER
+        for comment in comments
     ):
         raise ChecklistError(
             "GitHub issue does not contain the required approval record: " + expected
@@ -311,9 +328,10 @@ def run_checklist(
     if phase in NETWORK_PHASES and not allow_network:
         raise ChecklistError(f"phase {phase!r} requires --allow-network")
     root = _repository_root()
-    evidence = _safe_external(
-        evidence_directory, (root, inputs.formal_root, inputs.supplemental_root)
-    )
+    roots: tuple[Path, ...] = (root, inputs.formal_root, inputs.supplemental_root)
+    if inputs.composed_root is not None:
+        roots += (inputs.composed_root,)
+    evidence = _safe_external(evidence_directory, roots)
     state_path = evidence / "release-checklist-state.json"
     state = _load_state(state_path, inputs)
     _require_predecessors(state, phase)

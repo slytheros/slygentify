@@ -118,7 +118,14 @@ def test_human_gate_reads_issue_without_writing(
     class Completed:
         returncode = 0
         stdout = json.dumps(
-            {"comments": [{"body": release_checklist._gate_comment("semantic-corpus", digest)}]}  # noqa: SLF001
+            {
+                "comments": [
+                    {
+                        "author": {"login": release_checklist.RELEASE_MAINTAINER},
+                        "body": release_checklist._gate_comment("semantic-corpus", digest),  # noqa: SLF001
+                    }
+                ]
+            }
         )
 
     monkeypatch.setattr(subprocess, "run", lambda *_args, **_kwargs: Completed())
@@ -127,6 +134,67 @@ def test_human_gate_reads_issue_without_writing(
     assert result == {"phase": "formal-corpus", "gate": "semantic-corpus", "status": "approved"}
     state = json.loads((evidence / "release-checklist-state.json").read_text(encoding="utf-8"))
     assert state["phases"]["formal-corpus"]["gate_verified"] is True
+
+
+@pytest.mark.verifies("TST057")
+def test_human_gate_rejects_an_untrusted_commenter(
+    inputs: release_checklist.Inputs, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    monkeypatch.setattr(release_checklist, "_repository_root", lambda: repository)
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    digest = "b" * 64
+    release_checklist._write(  # noqa: SLF001
+        evidence / "release-checklist-state.json",
+        {
+            "schema_version": 1,
+            "inputs": inputs.public(),
+            "phases": {"formal-corpus": {"digest": digest}},
+        },
+    )
+
+    class Completed:
+        returncode = 0
+        stdout = json.dumps(
+            {
+                "comments": [
+                    {
+                        "author": {"login": "untrusted"},
+                        "body": release_checklist._gate_comment("semantic-corpus", digest),  # noqa: SLF001
+                    }
+                ]
+            }
+        )
+
+    monkeypatch.setattr(subprocess, "run", lambda *_args, **_kwargs: Completed())
+    with pytest.raises(release_checklist.ChecklistError, match="does not contain"):
+        release_checklist.verify_human_gate(inputs, evidence, "formal-corpus")
+
+
+@pytest.mark.verifies("TST057")
+def test_composed_corpus_is_protected_from_evidence_writes(
+    inputs: release_checklist.Inputs, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    composed = tmp_path / "composed"
+    monkeypatch.setattr(release_checklist, "_repository_root", lambda: repository)
+    protected = release_checklist.Inputs(
+        inputs.version,
+        inputs.tag,
+        inputs.freeze_commit,
+        inputs.source_date_epoch,
+        inputs.formal_root,
+        inputs.supplemental_root,
+        composed,
+        inputs.github_issue,
+    )
+    with pytest.raises(release_checklist.ChecklistError, match="outside"):
+        release_checklist.run_checklist(
+            protected, composed / "evidence", "preflight", dry_run=True, allow_network=False
+        )
 
 
 @pytest.mark.verifies("TST057")
