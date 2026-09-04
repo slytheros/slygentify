@@ -48,5 +48,6 @@ Each packet states one permitted decision, the evidence digest, acceptance/rejec
 criteria, recovery, and the exact resume command. The maintainer records the packet's
 exact standalone machine-readable approval line in a GitHub issue comment, with any
 identity, date, and notes on separate lines. The runner must verify that line in an
-explicit forge phase before accepting the next dependent phase. It never merges a PR,
+explicit forge phase before accepting the next dependent phase; edited approval comments
+are rejected. It never merges a PR,
 tags, approves `testpypi` or `pypi`, uploads, or creates a GitHub Release.

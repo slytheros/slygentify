@@ -12,6 +12,7 @@ import argparse
 import hashlib
 import json
 import os
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -357,16 +358,19 @@ def _gate_packet(
         "acceptance": "The phase passed and its evidence digest matches this packet.",
         "rejection": "Record rejection with a reason; correct the release candidate or evidence, then rerun.",
         "consequence": "Approval permits only the next checklist phase; it does not merge, tag, publish, or approve an environment.",
-        "resume": " ".join(
-            part
-            for part in (
-                "python -m tools.release_checklist --resume",
-                f"--resume-context {resume_context}",
-                f"--phase {next_phase}",
-                "--promotion-commit <merged-main-sha>" if phase == "promotion-gate" else None,
+        "resume": shlex.join(
+            [
+                "python",
+                "-m",
+                "tools.release_checklist",
+                "--resume",
+                "--resume-context",
+                str(resume_context),
+                "--phase",
+                next_phase,
+                *(["--promotion-commit", "<merged-main-sha>"] if phase == "promotion-gate" else []),
                 "--allow-network",
-            )
-            if part is not None
+            ]
         ),
     }
 
@@ -444,6 +448,7 @@ def verify_human_gate(inputs: Inputs, evidence_directory: Path, phase: str) -> d
                 and isinstance(comment.get("author"), dict)
                 and comment["author"].get("login") == RELEASE_MAINTAINER
                 and isinstance(comment.get("createdAt"), str)
+                and comment.get("updatedAt") == comment["createdAt"]
             ),
             None,
         )
@@ -782,51 +787,55 @@ def _verify_hosted_phase(
         raise ChecklistError(f"{workflow} returned invalid workflow data") from error
     tagged = _git(root, "rev-list", "-n", "1", inputs.tag)
     matching = (
-        next(
-            (
-                run
-                for run in runs
-                if isinstance(run, dict)
-                and run.get("headSha") == tagged
-                and run.get("headBranch") == inputs.tag
-                and run.get("status") == "completed"
-                and run.get("conclusion") == "success"
-                and isinstance(run.get("createdAt"), str)
-                and (phase == "verify-pypi" or _postdates(run["createdAt"], gate_time))
-            ),
-            None,
-        )
+        [
+            run
+            for run in runs
+            if isinstance(run, dict)
+            and run.get("headSha") == tagged
+            and run.get("headBranch") == inputs.tag
+            and run.get("status") == "completed"
+            and run.get("conclusion") == "success"
+            and isinstance(run.get("createdAt"), str)
+            and (phase == "verify-pypi" or _postdates(run["createdAt"], gate_time))
+        ]
         if isinstance(runs, list)
-        else None
+        else []
     )
-    if matching is None:
+    if not matching:
         raise ChecklistError(f"no successful {workflow} run exists for the immutable tag")
     if phase in {"verify-testpypi", "verify-pypi"}:
-        run_id = matching.get("databaseId")
-        if not isinstance(run_id, int):
-            raise ChecklistError(f"{workflow} run has no stable identifier")
-        published = subprocess.run(
-            ["gh", "run", "view", str(run_id), "--repo", GITHUB_REPOSITORY, "--json", "jobs"],
-            check=False,
-            capture_output=True,
-            text=True,
-        )
-        try:
-            jobs = json.loads(published.stdout)["jobs"]
-        except (KeyError, TypeError, json.JSONDecodeError) as error:
-            raise ChecklistError("PyPI workflow jobs are unavailable") from error
         publication = (
             "Publish approved files to TestPyPI"
             if phase == "verify-testpypi"
             else "Publish approved files to PyPI"
         )
-        if published.returncode or not any(
-            isinstance(job, dict)
-            and job.get("name") == publication
-            and isinstance(job.get("startedAt"), str)
-            and _postdates(job["startedAt"], gate_time)
-            for job in jobs
-        ):
+        for candidate in matching:
+            run_id = candidate.get("databaseId")
+            if not isinstance(run_id, int):
+                continue
+            published = subprocess.run(
+                ["gh", "run", "view", str(run_id), "--repo", GITHUB_REPOSITORY, "--json", "jobs"],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            try:
+                jobs = json.loads(published.stdout)["jobs"]
+            except (KeyError, TypeError, json.JSONDecodeError):
+                continue
+            if (
+                not published.returncode
+                and isinstance(jobs, list)
+                and any(
+                    isinstance(job, dict)
+                    and job.get("name") == publication
+                    and isinstance(job.get("startedAt"), str)
+                    and _postdates(job["startedAt"], gate_time)
+                    for job in jobs
+                )
+            ):
+                break
+        else:
             raise ChecklistError(
                 f"{workflow} publication job did not start after the approval record"
             )

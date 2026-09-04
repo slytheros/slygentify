@@ -16,6 +16,7 @@ text: |
   Verify release-checklist input validation, ordered phase execution, dry-run effect
   reporting, canonical evidence, external-output boundaries, immutable-state matching,
   deterministic reruns, missing prerequisites, existing corpus roots, required scaling
-  inputs, safe artifact publication, bounded exact human-gate approval records, and a
-  post-promotion commit and build-epoch binding before package construction, without
-  invoking network or publication effects.
+  inputs, safe artifact publication, bounded unedited exact human-gate approval records,
+  quoted resume commands, post-promotion commit and build-epoch binding before package
+  construction, and qualifying hosted publication recovery, without invoking network or
+  publication effects.

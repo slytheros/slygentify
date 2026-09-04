@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shlex
 import subprocess
 from pathlib import Path
 from typing import cast
@@ -149,6 +150,7 @@ def test_human_gate_reads_issue_without_writing(
                         "author": {"login": release_checklist.RELEASE_MAINTAINER},
                         "body": release_checklist._gate_comment("semantic-corpus", digest),  # noqa: SLF001
                         "createdAt": "2026-01-01T00:00:00Z",
+                        "updatedAt": "2026-01-01T00:00:00Z",
                     }
                 ]
             }
@@ -312,6 +314,65 @@ def test_human_gate_rejects_embedded_approval_record(
     monkeypatch.setattr(subprocess, "run", lambda *_args, **_kwargs: Completed())
     with pytest.raises(release_checklist.ChecklistError, match="does not contain"):
         release_checklist.verify_human_gate(inputs, evidence, "formal-corpus")
+
+
+@pytest.mark.verifies("TST057")
+def test_human_gate_rejects_an_edited_approval_record(
+    inputs: release_checklist.Inputs, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    monkeypatch.setattr(release_checklist, "_repository_root", lambda: repository)
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    digest = "b" * 64
+    release_checklist._write(  # noqa: SLF001
+        evidence / "release-checklist-state.json",
+        {
+            "schema_version": 1,
+            "inputs": inputs.public(),
+            "phases": {"formal-corpus": {"digest": digest}},
+        },
+    )
+
+    class Completed:
+        returncode = 0
+        stdout = json.dumps(
+            {
+                "comments": [
+                    {
+                        "author": {"login": release_checklist.RELEASE_MAINTAINER},
+                        "body": release_checklist._gate_comment("semantic-corpus", digest),
+                        "createdAt": "2026-01-01T00:00:00Z",
+                        "updatedAt": "2026-01-01T00:00:01Z",
+                    }
+                ]
+            }
+        )
+
+    monkeypatch.setattr(subprocess, "run", lambda *_args, **_kwargs: Completed())
+    with pytest.raises(release_checklist.ChecklistError, match="does not contain"):
+        release_checklist.verify_human_gate(inputs, evidence, "formal-corpus")
+
+
+@pytest.mark.verifies("TST057")
+def test_gate_packet_quotes_a_resume_context_path(
+    inputs: release_checklist.Inputs, tmp_path: Path
+) -> None:
+    context = tmp_path / "evidence with spaces" / ".release-checklist-resume.json"
+    packet = release_checklist._gate_packet(inputs, "formal-corpus", "a" * 64, context)  # noqa: SLF001
+
+    assert shlex.split(str(packet["resume"])) == [
+        "python",
+        "-m",
+        "tools.release_checklist",
+        "--resume",
+        "--resume-context",
+        str(context),
+        "--phase",
+        "initialization-review",
+        "--allow-network",
+    ]
 
 
 @pytest.mark.verifies("TST057")
@@ -479,6 +540,63 @@ def test_testpypi_verification_requires_post_gate_publication_job(
         release_checklist._verify_hosted_phase(  # noqa: SLF001
             tmp_path, inputs, "verify-testpypi", "2026-01-01T00:00:00Z"
         )
+
+
+@pytest.mark.verifies("TST057")
+def test_testpypi_verification_accepts_an_older_qualifying_publication(
+    inputs: release_checklist.Inputs, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class Completed:
+        returncode = 0
+        stdout = ""
+
+    def fake_run(command: list[str], **_kwargs: object) -> Completed:
+        result = Completed()
+        if command[1:3] == ["run", "list"]:
+            result.stdout = json.dumps(
+                [
+                    {
+                        "databaseId": 2,
+                        "headSha": "b" * 40,
+                        "headBranch": inputs.tag,
+                        "status": "completed",
+                        "conclusion": "success",
+                        "createdAt": "2026-01-01T00:00:02Z",
+                    },
+                    {
+                        "databaseId": 1,
+                        "headSha": "b" * 40,
+                        "headBranch": inputs.tag,
+                        "status": "completed",
+                        "conclusion": "success",
+                        "createdAt": "2026-01-01T00:00:01Z",
+                    },
+                ]
+            )
+        elif command[3] == "1":
+            result.stdout = json.dumps(
+                {
+                    "jobs": [
+                        {
+                            "name": "Publish approved files to TestPyPI",
+                            "startedAt": "2026-01-01T00:00:01Z",
+                        }
+                    ]
+                }
+            )
+        else:
+            result.stdout = json.dumps({"jobs": [{"name": "Verify only"}]})
+        return result
+
+    monkeypatch.setattr(release_checklist, "_git", lambda *_args: "b" * 40)
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    assert (
+        release_checklist._verify_hosted_phase(  # noqa: SLF001
+            tmp_path, inputs, "verify-testpypi", "2026-01-01T00:00:00Z"
+        )["status"]
+        == "passed"
+    )
 
 
 @pytest.mark.verifies("TST057")
