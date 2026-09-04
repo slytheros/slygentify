@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Slygentify release checklist state v1",
+  "type": "object",
+  "required": ["schema_version", "inputs", "phases"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": 1},
+    "inputs": {
+      "type": "object",
+      "required": ["definition_version", "freeze_commit", "source_date_epoch", "tag", "version"],
+      "additionalProperties": false
+    },
+    "phases": {"type": "object", "additionalProperties": {"type": "object", "required": ["digest"]}}
+  }
+}

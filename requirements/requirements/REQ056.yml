@@ -1,0 +1,21 @@
+active: true
+derived: false
+header: |
+  Resumable human-gated release checklist
+level: 1.56
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ056
+  path: tools/release_checklist.py
+  type: file
+reviewed: 7rjK4iWuTskKPwXpMDb7HHQq4LBF0E1D2DAi1oh7LoA=
+text: |
+  For post-1.0 releases, Slygentify shall provide a versioned repository-owned checklist
+  command that validates immutable release inputs, executes only ordered selected checks,
+  writes canonical path-sanitized evidence outside the repository and selected corpora,
+  and fails closed on stale, inconsistent, incomplete, or non-reproducible state. The
+  command shall present dry-run effects and bounded human review packets, but shall not
+  merge pull requests, create or move tags, approve environments, publish packages, create
+  GitHub releases, or record a human decision on the maintainer's behalf.
