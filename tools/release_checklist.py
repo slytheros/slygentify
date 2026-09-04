@@ -586,16 +586,7 @@ def _verify_hosted_phase(
     except ValueError as error:
         raise ChecklistError("human-gate time is invalid") from error
     if phase == "verify-github-release":
-        command = [
-            "gh",
-            "release",
-            "view",
-            inputs.tag,
-            "--repo",
-            GITHUB_REPOSITORY,
-            "--json",
-            "assets,isDraft,publishedAt,tagName",
-        ]
+        command = ["gh", "api", f"repos/{GITHUB_REPOSITORY}/releases/tags/{inputs.tag}"]
         completed = subprocess.run(command, check=False, capture_output=True, text=True)
         if completed.returncode:
             raise ChecklistError("GitHub Release is missing for the immutable tag")
@@ -626,6 +617,7 @@ def _verify_hosted_phase(
             else {}
         )
         expected_sizes: dict[str, int] = {}
+        expected_digests: dict[str, str] = {}
         if evidence is not None:
             try:
                 manifest = json.loads(
@@ -640,18 +632,37 @@ def _verify_hosted_phase(
                     and isinstance(item.get("filename"), str)
                     and isinstance(item.get("size"), int)
                 }
+                expected_digests = {
+                    item["filename"]: item["sha256"]
+                    for item in manifest["artifacts"]
+                    if isinstance(item, dict)
+                    and isinstance(item.get("filename"), str)
+                    and isinstance(item.get("sha256"), str)
+                }
+                checksums = "".join(
+                    f"{item['sha256']}  {item['filename']}\n" for item in manifest["artifacts"]
+                )
+                expected_digests["SHA256SUMS"] = hashlib.sha256(
+                    checksums.encode("utf-8")
+                ).hexdigest()
             except (KeyError, OSError, TypeError, json.JSONDecodeError) as error:
                 raise ChecklistError(
                     "package manifest is unavailable for release-asset validation"
                 ) from error
         if (
             not isinstance(release, dict)
-            or release.get("tagName") != inputs.tag
-            or release.get("isDraft") is not False
-            or not isinstance(release.get("publishedAt"), str)
-            or not _postdates(release["publishedAt"], gate_time)
+            or release.get("tag_name") != inputs.tag
+            or release.get("draft") is not False
+            or not isinstance(release.get("published_at"), str)
+            or not _postdates(release["published_at"], gate_time)
             or names != expected
             or {name: sizes.get(name) for name in expected_sizes} != expected_sizes
+            or {
+                item.get("name"): item.get("digest", "").removeprefix("sha256:")
+                for item in assets
+                if isinstance(item, dict) and isinstance(item.get("name"), str)
+            }
+            != expected_digests
         ):
             raise ChecklistError("GitHub Release does not expose the expected immutable assets")
         return {"release": inputs.tag, "assets": sorted(expected), "status": "passed"}
