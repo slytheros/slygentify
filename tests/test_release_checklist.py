@@ -37,6 +37,9 @@ def test_dry_run_reports_effects_without_writing(
     inputs: release_checklist.Inputs, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(release_checklist, "_repository_root", lambda: tmp_path / "repository")
+    monkeypatch.setattr(
+        release_checklist, "_verify_frozen_checkout", lambda *_args: {"status": "passed"}
+    )
     result = release_checklist.run_checklist(
         inputs, tmp_path / "evidence", "preflight", dry_run=True, allow_network=False
     )
@@ -52,6 +55,9 @@ def test_dry_run_reports_phase_and_command_writes(
     inputs: release_checklist.Inputs, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(release_checklist, "_repository_root", lambda: tmp_path / "repository")
+    monkeypatch.setattr(
+        release_checklist, "_verify_frozen_checkout", lambda *_args: {"status": "passed"}
+    )
 
     preflight = release_checklist.run_checklist(
         inputs, tmp_path / "evidence", "preflight", dry_run=True, allow_network=False
@@ -371,6 +377,47 @@ def test_path_identity_includes_link_entries_without_reading_their_targets(
     link.unlink()
 
     assert release_checklist._path_identity(corpus) != with_link  # noqa: SLF001
+
+
+@pytest.mark.verifies("TST057")
+def test_path_identity_does_not_read_sensitive_files_and_tracks_special_entries(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    corpus = tmp_path / "corpus"
+    corpus.mkdir()
+    secret = corpus / ".env"
+    secret.write_text("SECRET=do-not-read", encoding="utf-8")
+    read_bytes = Path.read_bytes
+
+    def no_secret_read(candidate: Path) -> bytes:
+        if candidate == secret:
+            pytest.fail("corpus identity must not read sensitive content")
+        return read_bytes(candidate)
+
+    monkeypatch.setattr(Path, "read_bytes", no_secret_read)
+    initial = release_checklist._path_identity(corpus)  # noqa: SLF001
+    secret.unlink()
+
+    assert release_checklist._path_identity(corpus) != initial  # noqa: SLF001
+
+
+@pytest.mark.verifies("TST057")
+def test_dry_run_validates_checkout_preconditions(
+    inputs: release_checklist.Inputs, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    monkeypatch.setattr(release_checklist, "_repository_root", lambda: repository)
+    monkeypatch.setattr(
+        release_checklist,
+        "_verify_frozen_checkout",
+        lambda *_args: (_ for _ in ()).throw(release_checklist.ChecklistError("checkout is dirty")),
+    )
+
+    with pytest.raises(release_checklist.ChecklistError, match="checkout is dirty"):
+        release_checklist.run_checklist(
+            inputs, tmp_path / "evidence", "preflight", dry_run=True, allow_network=False
+        )
 
 
 @pytest.mark.verifies("TST057")

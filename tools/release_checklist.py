@@ -25,6 +25,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from slygentify._scan.kernel import _sensitive
 from slygentify.traceability import implements
 from tools.release import release_version_from_tag, verify_release_bundle
 
@@ -137,7 +138,7 @@ def _path_identity(path: Path | None) -> str | None:
     if not path.is_dir():
         raise ChecklistError(f"corpus root must be an existing directory: {path}")
     root = path.resolve()
-    files: list[tuple[Path, Path, os.stat_result]] = []
+    files: list[tuple[Path, Path, os.stat_result, str]] = []
     pending = [root]
     while pending:
         directory = pending.pop()
@@ -158,18 +159,24 @@ def _path_identity(path: Path | None) -> str | None:
             is_link_or_reparse = stat.S_ISLNK(metadata.st_mode) or bool(
                 getattr(metadata, "st_file_attributes", 0) & reparse_flag
             )
-            if is_link_or_reparse or stat.S_ISREG(metadata.st_mode):
-                files.append((relative, candidate, metadata))
+            if is_link_or_reparse:
+                files.append((relative, candidate, metadata, "link_or_reparse"))
+            elif stat.S_ISREG(metadata.st_mode):
+                kind = "sensitive" if _sensitive(relative.as_posix()) else "file"
+                files.append((relative, candidate, metadata, kind))
             elif stat.S_ISDIR(metadata.st_mode):
                 pending.append(candidate)
+            else:
+                files.append((relative, candidate, metadata, "special"))
     digest = hashlib.sha256()
-    for relative, candidate, metadata in sorted(files, key=lambda item: item[0].as_posix()):
+    for relative, candidate, metadata, kind in sorted(files, key=lambda item: item[0].as_posix()):
         digest.update(relative.as_posix().encode("utf-8"))
         digest.update(b"\0")
-        if stat.S_ISREG(metadata.st_mode):
+        if kind == "file":
             digest.update(hashlib.sha256(candidate.read_bytes()).digest())
         else:
-            digest.update(b"link_or_reparse\0")
+            digest.update(kind.encode("ascii"))
+            digest.update(b"\0")
             digest.update(str(stat.S_IFMT(metadata.st_mode)).encode("ascii"))
     return digest.hexdigest()
 
@@ -1137,6 +1144,10 @@ def run_checklist(
     stored = state["phases"].get(phase)
     plan = _phase_commands(inputs, phase, evidence)
     if dry_run:
+        if phase in PHASES[: PHASES.index("promotion-gate")]:
+            _verify_frozen_checkout(root, inputs)
+        elif phase == "package":
+            _verify_promoted_checkout(root, inputs)
         return {
             "phase": phase,
             "effects": {
