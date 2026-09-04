@@ -131,6 +131,18 @@ def _digest(document: object) -> str:
     return hashlib.sha256(_canonical(document)).hexdigest()
 
 
+def _file_digest(path: Path) -> bytes:
+    """Hash a regular corpus file without retaining its contents in memory."""
+    digest = hashlib.sha256()
+    try:
+        with path.open("rb") as source:
+            while chunk := source.read(1024 * 1024):
+                digest.update(chunk)
+    except OSError as error:
+        raise ChecklistError(f"could not read corpus entry: {path.name}") from error
+    return digest.digest()
+
+
 def _path_identity(path: Path | None) -> str | None:
     """Return a path-sanitized identity derived from a corpus tree's contents."""
     if path is None:
@@ -149,12 +161,14 @@ def _path_identity(path: Path | None) -> str | None:
         for entry in entries:
             candidate = Path(entry.path)
             relative = candidate.relative_to(root)
-            if ".git" in relative.parts:
-                continue
             try:
                 metadata = entry.stat(follow_symlinks=False)
             except OSError as error:
                 raise ChecklistError(f"could not inspect corpus entry: {relative}") from error
+            if ".git" in relative.parts:
+                if relative.name == ".git":
+                    files.append((relative, candidate, metadata, "git_marker"))
+                continue
             reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
             is_link_or_reparse = stat.S_ISLNK(metadata.st_mode) or bool(
                 getattr(metadata, "st_file_attributes", 0) & reparse_flag
@@ -173,7 +187,7 @@ def _path_identity(path: Path | None) -> str | None:
         digest.update(relative.as_posix().encode("utf-8"))
         digest.update(b"\0")
         if kind == "file":
-            digest.update(hashlib.sha256(candidate.read_bytes()).digest())
+            digest.update(_file_digest(candidate))
         else:
             digest.update(kind.encode("ascii"))
             digest.update(b"\0")
@@ -895,6 +909,56 @@ def _verify_gitflow(
         raise ChecklistError("promotion gate approval time is invalid") from error
     if not _postdates(promotion["mergedAt"], promotion_gate_time):
         raise ChecklistError("promotion merge predates the verified promotion-gate approval")
+    try:
+        promotion_merge_time = datetime.fromisoformat(promotion["mergedAt"].replace("Z", "+00:00"))
+    except ValueError as error:
+        raise ChecklistError("promotion merge time is invalid") from error
+    back_merges = subprocess.run(
+        [
+            "gh",
+            "api",
+            f"repos/{GITHUB_REPOSITORY}/pulls?state=closed&base=develop&head=slytheros:main&per_page=100",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    try:
+        candidates = json.loads(back_merges.stdout)
+    except json.JSONDecodeError as error:
+        raise ChecklistError("could not read reviewed main-to-develop back-merges") from error
+    back_merge = (
+        next(
+            (
+                candidate
+                for candidate in candidates
+                if isinstance(candidate, dict)
+                and isinstance(candidate.get("merged_at"), str)
+                and isinstance(candidate.get("merge_commit_sha"), str)
+                and _postdates(candidate["merged_at"], promotion_merge_time)
+            ),
+            None,
+        )
+        if not back_merges.returncode and isinstance(candidates, list)
+        else None
+    )
+    if back_merge is None:
+        raise ChecklistError(
+            "promotion has not been back-merged to develop through a reviewed pull request"
+        )
+    back_merge_commit = back_merge["merge_commit_sha"]
+    comparison = subprocess.run(
+        ["gh", "api", f"repos/{GITHUB_REPOSITORY}/compare/{tagged}...{back_merge_commit}"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    try:
+        back_merge_comparison = json.loads(comparison.stdout)
+    except json.JSONDecodeError as error:
+        raise ChecklistError("could not verify the reviewed main-to-develop back-merge") from error
+    if comparison.returncode or back_merge_comparison.get("behind_by") != 0:
+        raise ChecklistError("reviewed main-to-develop back-merge does not contain the promotion")
     head = promotion.get("headRefName")
     if not isinstance(head, str) or not head:
         raise ChecklistError("promotion pull request has no temporary release branch")
@@ -1159,10 +1223,15 @@ def run_checklist(
             "status": "planned",
         }
     if stored is not None:
+        digest = _validate_completed_phase(state, phase, evidence)
+        packet = None
+        if phase in GATES:
+            packet = _gate_packet(inputs, phase, digest, _write_resume_context(evidence, inputs))
+            _write(evidence / f"{phase}-review-packet.json", packet)
         return {
             "phase": phase,
-            "digest": _validate_completed_phase(state, phase, evidence),
-            "human_gate": None,
+            "digest": digest,
+            "human_gate": packet,
             "status": "passed",
         }
     with tempfile.TemporaryDirectory(prefix="slygentify-release-checklist-") as temporary:

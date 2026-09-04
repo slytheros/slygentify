@@ -748,6 +748,15 @@ def test_gitflow_requires_a_reviewed_develop_to_main_merge(
         elif any("/git/ref/heads/" in value for value in command):
             result.returncode = 1
             result.stdout = "HTTP/2 404 Not Found\n"
+        elif any("pulls?state=closed" in value for value in command):
+            result.stdout = json.dumps(
+                [
+                    {
+                        "merged_at": "2026-01-01T00:00:01Z",
+                        "merge_commit_sha": "c" * 40,
+                    }
+                ]
+            )
         elif command[:2] == ["gh", "api"]:
             result.stdout = json.dumps({"behind_by": 0})
         return result
