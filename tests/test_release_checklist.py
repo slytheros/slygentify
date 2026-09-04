@@ -62,7 +62,7 @@ def test_dry_run_reports_phase_and_command_writes(
         tuple[str, ...], cast(dict[str, object], preflight["effects"])["writes"]
     )
     assert "repository/.coverage" in preflight_writes
-    assert "evidence/package-dist/" in package_writes
+    assert "evidence/package-dist/" not in package_writes
     assert "evidence/package-bundle/release-manifest.json" in package_writes
 
 
@@ -319,6 +319,23 @@ def test_path_identity_rejects_missing_or_non_directory_roots(tmp_path: Path) ->
 
 
 @pytest.mark.verifies("TST057")
+def test_path_identity_excludes_mutable_git_metadata(tmp_path: Path) -> None:
+    corpus = tmp_path / "corpus"
+    corpus.mkdir()
+    source = corpus / "source.txt"
+    source.write_text("stable", encoding="utf-8")
+    git_metadata = corpus / ".git"
+    git_metadata.mkdir()
+    fetch_head = git_metadata / "FETCH_HEAD"
+    fetch_head.write_text("first", encoding="utf-8")
+
+    initial = release_checklist._path_identity(corpus)  # noqa: SLF001
+    fetch_head.write_text("second", encoding="utf-8")
+
+    assert release_checklist._path_identity(corpus) == initial  # noqa: SLF001
+
+
+@pytest.mark.verifies("TST057")
 def test_human_gate_rejects_embedded_approval_record(
     inputs: release_checklist.Inputs, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -519,6 +536,7 @@ def test_gitflow_requires_a_reviewed_develop_to_main_merge(
         inputs.composed_root,
         inputs.github_issue,
         "b" * 40,
+        37,
     )
 
     def fake_git(_root: Path, *arguments: str) -> str:
@@ -551,7 +569,7 @@ def test_gitflow_requires_a_reviewed_develop_to_main_merge(
                                             "number": 37,
                                             "mergedAt": "2026-01-01T00:00:00Z",
                                             "baseRefName": "main",
-                                            "headRefName": "develop",
+                                            "headRefName": "release/1.2.3",
                                             "mergeCommit": {"oid": "b" * 40},
                                         }
                                     ]
@@ -585,9 +603,10 @@ def test_promotion_binding_derives_the_build_epoch(
     monkeypatch.setattr(release_checklist, "_repository_root", lambda: tmp_path / "repository")
     monkeypatch.setattr(release_checklist, "_git", lambda *_args: "123")
 
-    bound = release_checklist._bind_promotion(inputs, "b" * 40)  # noqa: SLF001
+    bound = release_checklist._bind_promotion(inputs, "b" * 40, 37)  # noqa: SLF001
 
     assert bound.promotion_commit == "b" * 40
+    assert bound.promotion_pull_request == 37
     assert bound.source_date_epoch == 123
     assert bound.initial_public() == inputs.initial_public()
 
@@ -606,6 +625,7 @@ def test_promotion_binding_cannot_change_after_gitflow_verification(
         inputs.composed_root,
         inputs.github_issue,
         "b" * 40,
+        37,
     )
     state = {"promotion": release_checklist._promotion_binding(bound)}  # noqa: SLF001
     replacement = release_checklist.Inputs(
@@ -618,6 +638,7 @@ def test_promotion_binding_cannot_change_after_gitflow_verification(
         inputs.composed_root,
         inputs.github_issue,
         "c" * 40,
+        38,
     )
 
     with pytest.raises(release_checklist.ChecklistError, match="does not match"):

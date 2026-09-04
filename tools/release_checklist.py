@@ -76,6 +76,7 @@ class Inputs:
     composed_root: Path | None
     github_issue: int | None
     promotion_commit: str | None = None
+    promotion_pull_request: int | None = None
 
     def public(self) -> dict[str, object]:
         """Return portable identity values without local paths."""
@@ -84,6 +85,7 @@ class Inputs:
             "composed_root_id": _path_identity(self.composed_root),
             "freeze_commit": self.freeze_commit,
             "promotion_commit": self.promotion_commit,
+            "promotion_pull_request": self.promotion_pull_request,
             "formal_root_id": _path_identity(self.formal_root),
             "github_issue": self.github_issue,
             "source_date_epoch": self.source_date_epoch,
@@ -96,6 +98,7 @@ class Inputs:
         """Return immutable inputs known before the human promotion decision."""
         document = self.public()
         document["promotion_commit"] = None
+        document["promotion_pull_request"] = None
         document["source_date_epoch"] = None
         return document
 
@@ -107,6 +110,7 @@ class Inputs:
             "freeze_commit": self.freeze_commit,
             "github_issue": self.github_issue,
             "promotion_commit": self.promotion_commit,
+            "promotion_pull_request": self.promotion_pull_request,
             "source_date_epoch": self.source_date_epoch,
             "supplemental_root": str(self.supplemental_root),
             "tag": self.tag,
@@ -133,7 +137,9 @@ def _path_identity(path: Path | None) -> str | None:
     digest = hashlib.sha256()
     root = path.resolve()
     for candidate in sorted(
-        item for item in root.rglob("*") if item.is_file() and not item.is_symlink()
+        item
+        for item in root.rglob("*")
+        if item.is_file() and not item.is_symlink() and ".git" not in item.relative_to(root).parts
     ):
         digest.update(candidate.relative_to(root).as_posix().encode("utf-8"))
         digest.update(b"\0")
@@ -215,6 +221,7 @@ def _load_resume_context(path: Path) -> Inputs:
         "composed_root",
         "github_issue",
         "promotion_commit",
+        "promotion_pull_request",
     }
     if set(document) != required or not all(
         isinstance(document.get(field), str)
@@ -225,12 +232,14 @@ def _load_resume_context(path: Path) -> Inputs:
     issue = document["github_issue"]
     composed = document["composed_root"]
     promotion = document["promotion_commit"]
+    promotion_pull_request = document["promotion_pull_request"]
     if (
         not isinstance(epoch, int | None)
         or isinstance(epoch, bool)
         or not isinstance(issue, int | None)
         or not isinstance(composed, str | None)
         or not isinstance(promotion, str | None)
+        or not isinstance(promotion_pull_request, int | None)
     ):
         raise ChecklistError("private resume context is invalid")
     return Inputs(
@@ -243,6 +252,7 @@ def _load_resume_context(path: Path) -> Inputs:
         Path(composed).resolve() if composed is not None else None,
         issue,
         _parse_commit(promotion) if promotion is not None else None,
+        promotion_pull_request,
     )
 
 
@@ -276,10 +286,12 @@ def _parse_commit(value: str) -> str:
     return value
 
 
-def _bind_promotion(inputs: Inputs, promotion_commit: str) -> Inputs:
+def _bind_promotion(inputs: Inputs, promotion_commit: str, promotion_pull_request: int) -> Inputs:
     """Bind the post-gate merge commit and its authoritative build epoch."""
     root = _repository_root()
     promotion = _parse_commit(promotion_commit)
+    if promotion_pull_request <= 0:
+        raise ChecklistError("--promotion-pull-request must be positive")
     try:
         epoch = int(_git(root, "show", "-s", "--format=%ct", promotion))
     except ValueError as error:
@@ -296,6 +308,7 @@ def _bind_promotion(inputs: Inputs, promotion_commit: str) -> Inputs:
         inputs.composed_root,
         inputs.github_issue,
         promotion,
+        promotion_pull_request,
     )
 
 
@@ -324,11 +337,19 @@ def _load_state(path: Path, inputs: Inputs) -> dict[str, Any]:
 
 def _promotion_binding(inputs: Inputs) -> dict[str, object]:
     """Return the one immutable post-gate identity for a promoted release."""
-    if inputs.promotion_commit is None or inputs.source_date_epoch is None:
+    if (
+        inputs.promotion_commit is None
+        or inputs.source_date_epoch is None
+        or inputs.promotion_pull_request is None
+    ):
         raise ChecklistError(
             "promotion commit and build epoch are required after the promotion gate"
         )
-    return {"commit": inputs.promotion_commit, "source_date_epoch": inputs.source_date_epoch}
+    return {
+        "commit": inputs.promotion_commit,
+        "pull_request": inputs.promotion_pull_request,
+        "source_date_epoch": inputs.source_date_epoch,
+    }
 
 
 def _validate_promotion_binding(state: dict[str, Any], inputs: Inputs, phase: str) -> None:
@@ -415,7 +436,16 @@ def _gate_packet(
                 str(resume_context),
                 "--phase",
                 next_phase,
-                *(["--promotion-commit", "<merged-main-sha>"] if phase == "promotion-gate" else []),
+                *(
+                    [
+                        "--promotion-commit",
+                        "<merged-main-sha>",
+                        "--promotion-pull-request",
+                        "<promotion-pr-number>",
+                    ]
+                    if phase == "promotion-gate"
+                    else []
+                ),
                 "--allow-network",
             ]
         ),
@@ -641,8 +671,6 @@ def _phase_writes(phase: str) -> tuple[str, ...]:
     ]
     if phase in GATES:
         writes.append(f"evidence/{phase}-review-packet.json")
-    if phase == "package":
-        writes.extend(("evidence/package-dist/", "evidence/package-bundle/dist/"))
     if phase == "preflight":
         writes.extend(
             (
@@ -660,7 +688,11 @@ def _phase_writes(phase: str) -> tuple[str, ...]:
 def _verify_gitflow(root: Path, inputs: Inputs) -> dict[str, object]:
     if _git(root, "status", "--porcelain", "--untracked-files=all"):
         raise ChecklistError("release checkout is not clean")
-    if inputs.promotion_commit is None or inputs.source_date_epoch is None:
+    if (
+        inputs.promotion_commit is None
+        or inputs.source_date_epoch is None
+        or inputs.promotion_pull_request is None
+    ):
         raise ChecklistError(
             "promotion commit and build epoch are required after the promotion gate"
         )
@@ -731,8 +763,8 @@ def _verify_gitflow(root: Path, inputs: Inputs) -> dict[str, object]:
                 pull_request
                 for pull_request in candidates
                 if isinstance(pull_request, dict)
+                and pull_request.get("number") == inputs.promotion_pull_request
                 and pull_request.get("baseRefName") == "main"
-                and pull_request.get("headRefName") == "develop"
                 and isinstance(pull_request.get("mergedAt"), str)
                 and isinstance(pull_request.get("mergeCommit"), dict)
                 and pull_request["mergeCommit"].get("oid") == inputs.promotion_commit
@@ -747,7 +779,7 @@ def _verify_gitflow(root: Path, inputs: Inputs) -> dict[str, object]:
     return {
         "tag": inputs.tag,
         "tagged_commit": tagged,
-        "promotion_pull_request": promotion["number"],
+        "promotion_pull_request": inputs.promotion_pull_request,
         "status": "passed",
     }
 
@@ -763,7 +795,11 @@ def _verify_frozen_checkout(root: Path, inputs: Inputs) -> dict[str, object]:
 
 def _verify_promoted_checkout(root: Path, inputs: Inputs) -> dict[str, object]:
     """Bind local package construction to the reviewed tagged promotion commit."""
-    if inputs.promotion_commit is None or inputs.source_date_epoch is None:
+    if (
+        inputs.promotion_commit is None
+        or inputs.source_date_epoch is None
+        or inputs.promotion_pull_request is None
+    ):
         raise ChecklistError(
             "promotion commit and build epoch are required for package construction"
         )
@@ -1066,6 +1102,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--composed-root", type=Path)
     parser.add_argument("--github-issue", type=int)
     parser.add_argument("--promotion-commit")
+    parser.add_argument("--promotion-pull-request", type=int)
     parser.add_argument("--resume-context", type=Path)
     parser.add_argument("--phase", choices=PHASES, required=True)
     parser.add_argument("--resume", action="store_true")
@@ -1097,10 +1134,18 @@ def main(arguments: Sequence[str] | None = None) -> int:
         inputs = _load_resume_context(options.resume_context)
         evidence_directory = options.resume_context.resolve().parent
         if options.promotion_commit is not None:
-            inputs = _bind_promotion(inputs, options.promotion_commit)
+            if options.promotion_pull_request is None:
+                raise ChecklistError("--promotion-commit requires --promotion-pull-request")
+            inputs = _bind_promotion(
+                inputs, options.promotion_commit, options.promotion_pull_request
+            )
+        elif options.promotion_pull_request is not None:
+            raise ChecklistError("--promotion-pull-request requires --promotion-commit")
     else:
-        if options.promotion_commit is not None:
-            raise ChecklistError("--promotion-commit is only valid with --resume-context")
+        if options.promotion_commit is not None or options.promotion_pull_request is not None:
+            raise ChecklistError(
+                "--promotion-commit and --promotion-pull-request are only valid with --resume-context"
+            )
         if any(
             value is None
             for value in (
@@ -1139,7 +1184,9 @@ def main(arguments: Sequence[str] | None = None) -> int:
             "--composed-root and --github-issue are required for a resumable release"
         )
     if PHASES.index(options.phase) >= PHASES.index("verify-gitflow") and (
-        inputs.promotion_commit is None or inputs.source_date_epoch is None
+        inputs.promotion_commit is None
+        or inputs.source_date_epoch is None
+        or inputs.promotion_pull_request is None
     ):
         raise ChecklistError("--promotion-commit is required after the promotion gate")
     if options.verify_gate:

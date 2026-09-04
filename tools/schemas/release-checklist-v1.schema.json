@@ -15,6 +15,7 @@
                 "freeze_commit",
                 "github_issue",
                 "promotion_commit",
+                "promotion_pull_request",
                 "source_date_epoch",
                 "supplemental_root_id",
                 "tag",
@@ -28,6 +29,7 @@
                 "freeze_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
                 "github_issue": {"type": ["integer", "null"], "minimum": 1},
                 "promotion_commit": {"type": ["string", "null"], "pattern": "^[0-9a-f]{40}$"},
+                "promotion_pull_request": {"type": ["integer", "null"], "minimum": 1},
                 "source_date_epoch": {"type": ["integer", "null"], "minimum": 1},
                 "supplemental_root_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
                 "tag": {"type": "string", "pattern": "^v"},
@@ -40,10 +42,11 @@
         },
         "promotion": {
             "type": ["object", "null"],
-            "required": ["commit", "source_date_epoch"],
+            "required": ["commit", "pull_request", "source_date_epoch"],
             "additionalProperties": false,
             "properties": {
                 "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+                "pull_request": {"type": "integer", "minimum": 1},
                 "source_date_epoch": {"type": "integer", "minimum": 1},
             },
         },
