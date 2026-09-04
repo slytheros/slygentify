@@ -72,6 +72,7 @@ class Inputs:
     supplemental_root: Path
     composed_root: Path | None
     github_issue: int | None
+    promotion_commit: str | None = None
 
     def public(self) -> dict[str, object]:
         """Return portable identity values without local paths."""
@@ -79,6 +80,7 @@ class Inputs:
             "definition_version": DEFINITION_VERSION,
             "composed_root_id": _path_identity(self.composed_root),
             "freeze_commit": self.freeze_commit,
+            "promotion_commit": self.promotion_commit,
             "formal_root_id": _path_identity(self.formal_root),
             "github_issue": self.github_issue,
             "source_date_epoch": self.source_date_epoch,
@@ -94,6 +96,7 @@ class Inputs:
             "formal_root": str(self.formal_root),
             "freeze_commit": self.freeze_commit,
             "github_issue": self.github_issue,
+            "promotion_commit": self.promotion_commit,
             "source_date_epoch": self.source_date_epoch,
             "supplemental_root": str(self.supplemental_root),
             "tag": self.tag,
@@ -156,6 +159,7 @@ def _load_resume_context(path: Path) -> Inputs:
         "supplemental_root",
         "composed_root",
         "github_issue",
+        "promotion_commit",
     }
     if set(document) != required or not all(
         isinstance(document.get(field), str)
@@ -165,11 +169,13 @@ def _load_resume_context(path: Path) -> Inputs:
     epoch = document["source_date_epoch"]
     issue = document["github_issue"]
     composed = document["composed_root"]
+    promotion = document["promotion_commit"]
     if (
         not isinstance(epoch, int)
         or isinstance(epoch, bool)
         or not isinstance(issue, int | None)
         or not isinstance(composed, str | None)
+        or not isinstance(promotion, str | None)
     ):
         raise ChecklistError("private resume context is invalid")
     return Inputs(
@@ -181,6 +187,7 @@ def _load_resume_context(path: Path) -> Inputs:
         Path(document["supplemental_root"]).resolve(),
         Path(composed).resolve() if composed is not None else None,
         issue,
+        _parse_commit(promotion) if promotion is not None else None,
     )
 
 
@@ -534,6 +541,8 @@ def _verify_gitflow(root: Path, inputs: Inputs) -> dict[str, object]:
     if _git(root, "cat-file", "-t", f"refs/tags/{inputs.tag}") != "tag":
         raise ChecklistError("release tag must exist and be annotated")
     tagged = _git(root, "rev-list", "-n", "1", inputs.tag)
+    if inputs.promotion_commit is None or tagged != inputs.promotion_commit:
+        raise ChecklistError("release tag does not dereference to the expected promotion commit")
     frozen = subprocess.run(
         ["git", "-C", str(root), "merge-base", "--is-ancestor", inputs.freeze_commit, tagged],
         check=False,
@@ -796,6 +805,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--evidence-directory", type=Path)
     parser.add_argument("--composed-root", type=Path)
     parser.add_argument("--github-issue", type=int)
+    parser.add_argument("--promotion-commit")
     parser.add_argument("--resume-context", type=Path)
     parser.add_argument("--phase", choices=PHASES, required=True)
     parser.add_argument("--resume", action="store_true")
@@ -822,6 +832,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
                 options.evidence_directory,
                 options.composed_root,
                 options.github_issue,
+                options.promotion_commit,
             )
         ):
             raise ChecklistError("--resume-context cannot be combined with immutable input options")
@@ -857,14 +868,20 @@ def main(arguments: Sequence[str] | None = None) -> int:
             options.supplemental_root.resolve(),
             options.composed_root.resolve() if options.composed_root else None,
             options.github_issue,
+            _parse_commit(options.promotion_commit) if options.promotion_commit else None,
         )
         evidence_directory = options.evidence_directory
     expected = release_version_from_tag(inputs.tag)
     if inputs.version != expected or inputs.source_date_epoch <= 0:
         raise ChecklistError("release inputs are not canonical")
-    if inputs.composed_root is None or inputs.github_issue is None or inputs.github_issue <= 0:
+    if (
+        inputs.composed_root is None
+        or inputs.github_issue is None
+        or inputs.github_issue <= 0
+        or inputs.promotion_commit is None
+    ):
         raise ChecklistError(
-            "--composed-root and --github-issue are required for a resumable release"
+            "--composed-root, --github-issue, and --promotion-commit are required for a resumable release"
         )
     if options.verify_gate:
         if options.dry_run:

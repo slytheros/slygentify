@@ -1,27 +1,42 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Slygentify release checklist state v1",
-  "type": "object",
-  "required": ["schema_version", "inputs", "phases"],
-  "additionalProperties": false,
-  "properties": {
-    "schema_version": {"const": 1},
-    "inputs": {
-      "type": "object",
-      "required": ["composed_root_id", "definition_version", "formal_root_id", "freeze_commit", "github_issue", "source_date_epoch", "supplemental_root_id", "tag", "version"],
-      "additionalProperties": false,
-      "properties": {
-        "composed_root_id": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
-        "definition_version": {"const": 1},
-        "formal_root_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-        "freeze_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
-        "github_issue": {"type": ["integer", "null"], "minimum": 1},
-        "source_date_epoch": {"type": "integer", "minimum": 1},
-        "supplemental_root_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-        "tag": {"type": "string", "pattern": "^v"},
-        "version": {"type": "string"}
-      }
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Slygentify release checklist state v1",
+    "type": "object",
+    "required": ["schema_version", "inputs", "phases"],
+    "additionalProperties": false,
+    "properties": {
+        "schema_version": {"const": 1},
+        "inputs": {
+            "type": "object",
+            "required": [
+                "composed_root_id",
+                "definition_version",
+                "formal_root_id",
+                "freeze_commit",
+                "github_issue",
+                "promotion_commit",
+                "source_date_epoch",
+                "supplemental_root_id",
+                "tag",
+                "version",
+            ],
+            "additionalProperties": false,
+            "properties": {
+                "composed_root_id": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+                "definition_version": {"const": 1},
+                "formal_root_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                "freeze_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+                "github_issue": {"type": ["integer", "null"], "minimum": 1},
+                "promotion_commit": {"type": ["string", "null"], "pattern": "^[0-9a-f]{40}$"},
+                "source_date_epoch": {"type": "integer", "minimum": 1},
+                "supplemental_root_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                "tag": {"type": "string", "pattern": "^v"},
+                "version": {"type": "string"},
+            },
+        },
+        "phases": {
+            "type": "object",
+            "additionalProperties": {"type": "object", "required": ["digest"]},
+        },
     },
-    "phases": {"type": "object", "additionalProperties": {"type": "object", "required": ["digest"]}}
-  }
 }

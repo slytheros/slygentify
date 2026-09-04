@@ -357,6 +357,8 @@ def test_direct_gate_dry_run_is_side_effect_free(tmp_path: Path) -> None:
                 str(tmp_path / "composed"),
                 "--github-issue",
                 "22",
+                "--promotion-commit",
+                "b" * 40,
                 "--phase",
                 "formal-corpus",
                 "--verify-gate",
