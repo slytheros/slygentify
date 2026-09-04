@@ -138,6 +138,7 @@ def test_human_gate_reads_issue_without_writing(
             "schema_version": 1,
             "inputs": inputs.public(),
             "phases": {"formal-corpus": {"digest": digest}},
+            "promotion": None,
         },
     )
 
@@ -180,6 +181,7 @@ def test_human_gate_rejects_an_untrusted_commenter(
             "schema_version": 1,
             "inputs": inputs.public(),
             "phases": {"formal-corpus": {"digest": digest}},
+            "promotion": None,
         },
     )
 
@@ -293,6 +295,7 @@ def test_human_gate_rejects_embedded_approval_record(
             "schema_version": 1,
             "inputs": inputs.public(),
             "phases": {"formal-corpus": {"digest": digest}},
+            "promotion": None,
         },
     )
 
@@ -332,6 +335,7 @@ def test_human_gate_rejects_an_edited_approval_record(
             "schema_version": 1,
             "inputs": inputs.public(),
             "phases": {"formal-corpus": {"digest": digest}},
+            "promotion": None,
         },
     )
 
@@ -453,6 +457,38 @@ def test_promotion_binding_derives_the_build_epoch(
     assert bound.promotion_commit == "b" * 40
     assert bound.source_date_epoch == 123
     assert bound.initial_public() == inputs.initial_public()
+
+
+@pytest.mark.verifies("TST057")
+def test_promotion_binding_cannot_change_after_gitflow_verification(
+    inputs: release_checklist.Inputs,
+) -> None:
+    bound = release_checklist.Inputs(
+        inputs.version,
+        inputs.tag,
+        inputs.freeze_commit,
+        123,
+        inputs.formal_root,
+        inputs.supplemental_root,
+        inputs.composed_root,
+        inputs.github_issue,
+        "b" * 40,
+    )
+    state = {"promotion": release_checklist._promotion_binding(bound)}  # noqa: SLF001
+    replacement = release_checklist.Inputs(
+        inputs.version,
+        inputs.tag,
+        inputs.freeze_commit,
+        456,
+        inputs.formal_root,
+        inputs.supplemental_root,
+        inputs.composed_root,
+        inputs.github_issue,
+        "c" * 40,
+    )
+
+    with pytest.raises(release_checklist.ChecklistError, match="does not match"):
+        release_checklist._validate_promotion_binding(state, replacement, "package")  # noqa: SLF001
 
 
 @pytest.mark.verifies("TST057")

@@ -7,8 +7,9 @@ than manually reconstructing its state. It writes evidence only to an external d
 
 ```console
 python -m tools.release_checklist --version X.Y.Z --tag vX.Y.Z \
-  --freeze-commit COMMIT --source-date-epoch EPOCH --formal-root FORMAL_ROOT \
-  --supplemental-root SUPPLEMENTAL_ROOT --evidence-directory EVIDENCE \
+  --freeze-commit COMMIT --formal-root FORMAL_ROOT \
+  --supplemental-root SUPPLEMENTAL_ROOT --composed-root COMPOSED_ROOT \
+  --github-issue ISSUE --evidence-directory EVIDENCE \
   --phase preflight --dry-run
 ```
 

@@ -289,16 +289,48 @@ def _bind_promotion(inputs: Inputs, promotion_commit: str) -> Inputs:
 
 def _load_state(path: Path, inputs: Inputs) -> dict[str, Any]:
     if not path.exists():
-        return {"schema_version": SCHEMA_VERSION, "inputs": inputs.initial_public(), "phases": {}}
+        return {
+            "schema_version": SCHEMA_VERSION,
+            "inputs": inputs.initial_public(),
+            "phases": {},
+            "promotion": None,
+        }
     try:
         state = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
         raise ChecklistError(f"could not load checklist state: {error}") from error
     if not isinstance(state, dict) or state.get("schema_version") != SCHEMA_VERSION:
         raise ChecklistError("checklist state has an unsupported schema")
-    if state.get("inputs") != inputs.initial_public() or not isinstance(state.get("phases"), dict):
+    if (
+        state.get("inputs") != inputs.initial_public()
+        or not isinstance(state.get("phases"), dict)
+        or "promotion" not in state
+    ):
         raise ChecklistError("checklist state does not match the immutable release inputs")
     return state
+
+
+def _promotion_binding(inputs: Inputs) -> dict[str, object]:
+    """Return the one immutable post-gate identity for a promoted release."""
+    if inputs.promotion_commit is None or inputs.source_date_epoch is None:
+        raise ChecklistError(
+            "promotion commit and build epoch are required after the promotion gate"
+        )
+    return {"commit": inputs.promotion_commit, "source_date_epoch": inputs.source_date_epoch}
+
+
+def _validate_promotion_binding(state: dict[str, Any], inputs: Inputs, phase: str) -> None:
+    """Reject a resume that attempts to replace a successfully verified promotion."""
+    if PHASES.index(phase) < PHASES.index("verify-gitflow"):
+        return
+    binding = _promotion_binding(inputs)
+    persisted = state["promotion"]
+    if persisted is None:
+        if phase != "verify-gitflow":
+            raise ChecklistError("promotion commit has not been verified")
+        return
+    if persisted != binding:
+        raise ChecklistError("promotion commit does not match the verified release state")
 
 
 def _require_predecessors(state: dict[str, Any], phase: str, evidence: Path) -> None:
@@ -415,6 +447,7 @@ def verify_human_gate(inputs: Inputs, evidence_directory: Path, phase: str) -> d
     evidence = _safe_external(evidence_directory, roots)
     state_path = evidence / "release-checklist-state.json"
     state = _load_state(state_path, inputs)
+    _validate_promotion_binding(state, inputs, phase)
     completed = state["phases"].get(phase)
     if not isinstance(completed, dict) or not isinstance(completed.get("digest"), str):
         raise ChecklistError(f"phase {phase!r} has no evidence to approve")
@@ -938,6 +971,8 @@ def run_checklist(
         if packet is not None:
             _write(evidence / f"{phase}-review-packet.json", packet)
         _write(evidence / f"{phase}.json", record)
+        if phase == "verify-gitflow":
+            state["promotion"] = _promotion_binding(inputs)
         state["phases"][phase] = {"artifacts": artifacts, "digest": digest}
         _write(state_path, state)
         return {"phase": phase, "digest": digest, "human_gate": packet, "status": "passed"}
