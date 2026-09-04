@@ -444,6 +444,87 @@ def test_successor_phases_revalidate_prior_human_gates(
 
 
 @pytest.mark.verifies("TST057")
+def test_dry_run_does_not_revalidate_prior_human_gates(
+    inputs: release_checklist.Inputs, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    promoted = release_checklist.Inputs(
+        inputs.version,
+        inputs.tag,
+        inputs.freeze_commit,
+        123,
+        inputs.formal_root,
+        inputs.supplemental_root,
+        inputs.composed_root,
+        inputs.github_issue,
+        "b" * 40,
+        37,
+    )
+    monkeypatch.setattr(release_checklist, "_repository_root", lambda: repository)
+    monkeypatch.setattr(release_checklist, "_require_predecessors", lambda *_args: None)
+    monkeypatch.setattr(release_checklist, "_validate_promotion_binding", lambda *_args: None)
+    monkeypatch.setattr(release_checklist, "_phase_commands", lambda *_args: [])
+    monkeypatch.setattr(release_checklist, "_verify_promoted_checkout", lambda *_args: {})
+    monkeypatch.setattr(
+        release_checklist,
+        "_revalidate_gate_approvals",
+        lambda *_args, **_kwargs: pytest.fail("dry-run must not revalidate a remote gate"),
+    )
+
+    assert (
+        release_checklist.run_checklist(
+            promoted, tmp_path / "evidence", "package", dry_run=True, allow_network=True
+        )["status"]
+        == "planned"
+    )
+
+
+@pytest.mark.verifies("TST057")
+def test_supplemental_measurement_rejects_linked_checkout(tmp_path: Path) -> None:
+    root = tmp_path / "supplemental"
+    root.mkdir()
+    external = tmp_path / "external-checkout"
+    (external / ".git").mkdir(parents=True)
+    linked = root / "linked-checkout"
+    try:
+        linked.symlink_to(external, target_is_directory=True)
+    except OSError:
+        pytest.skip("symlink creation is unavailable on this Windows host")
+
+    with pytest.raises(measure_acceptance.CorpusError, match="not a direct corpus directory"):
+        measure_acceptance._supplemental_measurement(root)  # noqa: SLF001
+
+
+@pytest.mark.verifies("TST057")
+def test_release_git_checks_clear_inherited_git_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    captured: dict[str, str] = {}
+
+    class Completed:
+        returncode = 0
+        stdout = "verified\n"
+        stderr = ""
+
+    def fake_run(_command: list[str], **kwargs: object) -> Completed:
+        captured.update(cast(dict[str, str], kwargs["env"]))
+        return Completed()
+
+    monkeypatch.setenv("GIT_DIR", "outside")
+    monkeypatch.setenv("GIT_WORK_TREE", "outside")
+    monkeypatch.setenv("GIT_CONFIG_PARAMETERS", "include.path=outside")
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    assert release_checklist._git(tmp_path, "rev-parse", "HEAD") == "verified"  # noqa: SLF001
+    assert "GIT_DIR" not in captured
+    assert "GIT_WORK_TREE" not in captured
+    assert "GIT_CONFIG_PARAMETERS" not in captured
+    assert captured["GIT_CONFIG_GLOBAL"] == os.devnull
+    assert captured["GIT_CONFIG_NOSYSTEM"] == "1"
+
+
+@pytest.mark.verifies("TST057")
 def test_formal_snapshot_preserves_links_without_reading_targets(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -931,6 +1012,7 @@ def test_testpypi_verification_requires_post_gate_publication_job(
                 [
                     {
                         "databaseId": 1,
+                        "url": "https://example.invalid/runs/1",
                         "headSha": "b" * 40,
                         "headBranch": inputs.tag,
                         "status": "completed",
@@ -969,6 +1051,7 @@ def test_testpypi_verification_accepts_an_older_qualifying_publication(
                 [
                     {
                         "databaseId": 2,
+                        "url": "https://example.invalid/runs/2",
                         "headSha": "b" * 40,
                         "headBranch": inputs.tag,
                         "status": "completed",
@@ -977,6 +1060,7 @@ def test_testpypi_verification_accepts_an_older_qualifying_publication(
                     },
                     {
                         "databaseId": 1,
+                        "url": "https://example.invalid/runs/1",
                         "headSha": "b" * 40,
                         "headBranch": inputs.tag,
                         "status": "completed",
@@ -1003,12 +1087,82 @@ def test_testpypi_verification_accepts_an_older_qualifying_publication(
     monkeypatch.setattr(release_checklist, "_git", lambda *_args: "b" * 40)
     monkeypatch.setattr(subprocess, "run", fake_run)
 
-    assert (
-        release_checklist._verify_hosted_phase(  # noqa: SLF001
-            tmp_path, inputs, "verify-testpypi", "2026-01-01T00:00:00Z"
-        )["status"]
-        == "passed"
+    result = release_checklist._verify_hosted_phase(  # noqa: SLF001
+        tmp_path, inputs, "verify-testpypi", "2026-01-01T00:00:00Z"
     )
+
+    assert result["status"] == "passed"
+    assert result["workflow_run_id"] == 1
+    assert result["workflow_run_url"] == "https://example.invalid/runs/1"
+
+
+@pytest.mark.verifies("TST057")
+def test_pypi_verification_accepts_a_verify_only_recovery_run(
+    inputs: release_checklist.Inputs, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class Completed:
+        returncode = 0
+        stdout = ""
+
+    def fake_run(command: list[str], **_kwargs: object) -> Completed:
+        result = Completed()
+        if command[1:3] == ["run", "list"]:
+            result.stdout = json.dumps(
+                [
+                    {
+                        "databaseId": 2,
+                        "url": "https://example.invalid/runs/2",
+                        "headSha": "b" * 40,
+                        "headBranch": inputs.tag,
+                        "status": "completed",
+                        "conclusion": "success",
+                        "createdAt": "2026-01-01T00:00:02Z",
+                    },
+                    {
+                        "databaseId": 1,
+                        "url": "https://example.invalid/runs/1",
+                        "headSha": "b" * 40,
+                        "headBranch": inputs.tag,
+                        "status": "completed",
+                        "conclusion": "failure",
+                        "createdAt": "2026-01-01T00:00:01Z",
+                    },
+                ]
+            )
+        elif command[3] == "1":
+            result.stdout = json.dumps(
+                {
+                    "jobs": [
+                        {
+                            "name": "Publish approved files to PyPI",
+                            "startedAt": "2026-01-01T00:00:01Z",
+                            "conclusion": "success",
+                        }
+                    ]
+                }
+            )
+        else:
+            result.stdout = json.dumps(
+                {
+                    "jobs": [
+                        {
+                            "name": "Verify PyPI hashes and provenance",
+                            "conclusion": "success",
+                        }
+                    ]
+                }
+            )
+        return result
+
+    monkeypatch.setattr(release_checklist, "_git", lambda *_args: "b" * 40)
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    result = release_checklist._verify_hosted_phase(  # noqa: SLF001
+        tmp_path, inputs, "verify-pypi", "2026-01-01T00:00:00Z"
+    )
+
+    assert result["workflow_run_id"] == 2
+    assert result["publication_run_id"] == 1
 
 
 @pytest.mark.verifies("TST057")

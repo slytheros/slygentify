@@ -178,12 +178,29 @@ def _formal_measurement(
 
 
 def _supplemental_measurement(root: Path) -> dict[str, object]:
-    checkouts = tuple(
-        sorted(
-            (path for path in root.iterdir() if (path / ".git").exists()),
-            key=lambda path: path.name,
-        )
-    )
+    try:
+        corpus_root = root.resolve(strict=True)
+        entries = tuple(root.iterdir())
+    except OSError as error:
+        raise CorpusError("could not inspect the supplemental corpus root") from error
+    reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+    checkouts: list[Path] = []
+    for path in entries:
+        try:
+            metadata = path.lstat()
+        except OSError as error:
+            raise CorpusError(f"supplemental corpus entry is unsafe: {path.name}") from error
+        if (
+            stat.S_ISLNK(metadata.st_mode)
+            or bool(getattr(metadata, "st_file_attributes", 0) & reparse_flag)
+            or path.parent.resolve() != corpus_root
+        ):
+            raise CorpusError(
+                f"supplemental checkout is not a direct corpus directory: {path.name}"
+            )
+        if stat.S_ISDIR(metadata.st_mode) and (path / ".git").exists():
+            checkouts.append(path)
+    checkouts.sort(key=lambda path: path.name)
     if len(checkouts) != 71:
         raise CorpusError(
             f"supplemental corpus must contain exactly 71 Git checkouts, found {len(checkouts)}"

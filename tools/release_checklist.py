@@ -322,12 +322,34 @@ def _load_resume_context(path: Path) -> Inputs:
 
 def _git(root: Path, *arguments: str) -> str:
     completed = subprocess.run(
-        ["git", "-C", str(root), *arguments], capture_output=True, check=False, text=True
+        ["git", "-C", str(root), *arguments],
+        capture_output=True,
+        check=False,
+        text=True,
+        env=_git_environment(),
     )
     if completed.returncode:
         detail = (completed.stderr or completed.stdout or "Git failed").strip()
         raise ChecklistError(f"Git inspection failed: {detail}")
     return completed.stdout.strip()
+
+
+def _git_environment() -> dict[str, str]:
+    """Run release Git checks independently of inherited repository settings."""
+    environment = {
+        key: value for key, value in os.environ.items() if not key.upper().startswith("GIT_")
+    }
+    environment.update(
+        {
+            "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_NO_LAZY_FETCH": "1",
+            "GIT_OPTIONAL_LOCKS": "0",
+            "GIT_PAGER": "cat",
+            "GIT_TERMINAL_PROMPT": "0",
+        }
+    )
+    return environment
 
 
 def _repository_root() -> Path:
@@ -903,6 +925,7 @@ def _verify_gitflow(
         check=False,
         capture_output=True,
         text=True,
+        env=_git_environment(),
     )
     if frozen.returncode:
         raise ChecklistError("release tag is not derived from the frozen commit")
@@ -1201,14 +1224,14 @@ def _verify_hosted_phase(
             and run.get("headSha") == tagged
             and run.get("headBranch") == inputs.tag
             and run.get("status") == "completed"
-            and run.get("conclusion") == "success"
-            and isinstance(run.get("createdAt"), str)
-            and (phase == "verify-pypi" or _postdates(run["createdAt"], gate_time))
+            and isinstance(run.get("databaseId"), int)
+            and isinstance(run.get("url"), str)
         ]
         if isinstance(runs, list)
         else []
     )
-    if not matching:
+    successful = [run for run in matching if run.get("conclusion") == "success"]
+    if not successful:
         raise ChecklistError(f"no successful {workflow} run exists for the immutable tag")
     if phase in {"verify-testpypi", "verify-pypi"}:
         publication = (
@@ -1216,10 +1239,14 @@ def _verify_hosted_phase(
             if phase == "verify-testpypi"
             else "Publish approved files to PyPI"
         )
-        for candidate in matching:
-            run_id = candidate.get("databaseId")
-            if not isinstance(run_id, int):
-                continue
+        verification = (
+            "Verify TestPyPI hashes and provenance"
+            if phase == "verify-testpypi"
+            else "Verify PyPI hashes and provenance"
+        )
+
+        def jobs_for(candidate: dict[str, object]) -> list[object] | None:
+            run_id = candidate["databaseId"]
             published = subprocess.run(
                 ["gh", "run", "view", str(run_id), "--repo", GITHUB_REPOSITORY, "--json", "jobs"],
                 check=False,
@@ -1229,24 +1256,88 @@ def _verify_hosted_phase(
             try:
                 jobs = json.loads(published.stdout)["jobs"]
             except (KeyError, TypeError, json.JSONDecodeError):
-                continue
-            if (
-                not published.returncode
-                and isinstance(jobs, list)
-                and any(
-                    isinstance(job, dict)
-                    and job.get("name") == publication
-                    and isinstance(job.get("startedAt"), str)
-                    and _postdates(job["startedAt"], gate_time)
-                    for job in jobs
-                )
-            ):
-                break
-        else:
-            raise ChecklistError(
-                f"{workflow} publication job did not start after the approval record"
+                return None
+            return jobs if not published.returncode and isinstance(jobs, list) else None
+
+        def publication_started_after_approval(jobs: list[object]) -> bool:
+            return any(
+                isinstance(job, dict)
+                and job.get("name") == publication
+                and isinstance(job.get("startedAt"), str)
+                and _postdates(job["startedAt"], gate_time)
+                for job in jobs
             )
-    return {"tag": inputs.tag, "workflow": workflow, "status": "passed"}
+
+        def run_postdates(candidate: dict[str, object], prior: dict[str, object]) -> bool:
+            created = candidate.get("createdAt")
+            prior_created = prior.get("createdAt")
+            if not isinstance(created, str) or not isinstance(prior_created, str):
+                return False
+            try:
+                return _postdates(
+                    created, datetime.fromisoformat(prior_created.replace("Z", "+00:00"))
+                )
+            except ValueError:
+                return False
+
+        for candidate in successful:
+            jobs = jobs_for(candidate)
+            if jobs is not None and publication_started_after_approval(jobs):
+                return {
+                    "tag": inputs.tag,
+                    "workflow": workflow,
+                    "workflow_run_id": candidate["databaseId"],
+                    "workflow_run_url": candidate["url"],
+                    "status": "passed",
+                }
+
+        if phase == "verify-pypi":
+            publishing_runs = [
+                candidate
+                for candidate in matching
+                if (jobs := jobs_for(candidate)) is not None
+                and publication_started_after_approval(jobs)
+            ]
+            for candidate in successful:
+                jobs = jobs_for(candidate)
+                if (
+                    jobs is None
+                    or not isinstance(candidate.get("createdAt"), str)
+                    or not any(
+                        isinstance(job, dict)
+                        and job.get("name") == verification
+                        and job.get("conclusion") == "success"
+                        for job in jobs
+                    )
+                ):
+                    continue
+                prior_publication = next(
+                    (
+                        published
+                        for published in publishing_runs
+                        if run_postdates(candidate, published)
+                    ),
+                    None,
+                )
+                if prior_publication is not None:
+                    return {
+                        "tag": inputs.tag,
+                        "workflow": workflow,
+                        "workflow_run_id": candidate["databaseId"],
+                        "workflow_run_url": candidate["url"],
+                        "publication_run_id": prior_publication["databaseId"],
+                        "publication_run_url": prior_publication["url"],
+                        "status": "passed",
+                    }
+        raise ChecklistError(f"{workflow} publication job did not start after the approval record")
+    selected = successful[0]
+    return {
+        "tag": inputs.tag,
+        "workflow": workflow,
+        "workflow_run_id": selected["databaseId"],
+        "workflow_run_url": selected["url"],
+        "status": "passed",
+    }
 
 
 def _postdates(value: str, reference: datetime) -> bool:
@@ -1273,9 +1364,6 @@ def run_checklist(
     state_path = evidence / "release-checklist-state.json"
     state = _load_state(state_path, inputs)
     _require_predecessors(state, phase, evidence)
-    _revalidate_gate_approvals(inputs, evidence, phase, allow_network=allow_network)
-    state = _load_state(state_path, inputs)
-    _require_predecessors(state, phase, evidence)
     _validate_promotion_binding(state, inputs, phase)
     stored = state["phases"].get(phase)
     plan = _phase_commands(inputs, phase, evidence)
@@ -1294,6 +1382,11 @@ def run_checklist(
             },
             "status": "planned",
         }
+    _revalidate_gate_approvals(inputs, evidence, phase, allow_network=allow_network)
+    state = _load_state(state_path, inputs)
+    _require_predecessors(state, phase, evidence)
+    _validate_promotion_binding(state, inputs, phase)
+    stored = state["phases"].get(phase)
     if stored is not None:
         digest = _validate_completed_phase(state, phase, evidence)
         packet = None
