@@ -216,7 +216,7 @@ def test_scaling_and_network_phases_fail_closed_before_effects(
     monkeypatch.setattr(release_checklist, "_repository_root", lambda: tmp_path / "repository")
     with pytest.raises(release_checklist.ChecklistError, match="requires --allow-network"):
         release_checklist.run_checklist(
-            inputs, tmp_path / "evidence", "testpypi", dry_run=True, allow_network=False
+            inputs, tmp_path / "evidence", "verify-testpypi", dry_run=True, allow_network=False
         )
     scaling = release_checklist.Inputs(
         inputs.version,
@@ -232,3 +232,69 @@ def test_scaling_and_network_phases_fail_closed_before_effects(
         release_checklist.run_checklist(
             scaling, tmp_path / "evidence", "scaling", dry_run=True, allow_network=False
         )
+
+
+@pytest.mark.verifies("TST057")
+def test_preflight_does_not_require_a_release_tag(
+    inputs: release_checklist.Inputs, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    monkeypatch.setattr(release_checklist, "_repository_root", lambda: repository)
+    monkeypatch.setattr(release_checklist, "_phase_commands", lambda *_args: [])
+    monkeypatch.setattr(
+        release_checklist,
+        "_verify_gitflow",
+        lambda *_args: (_ for _ in ()).throw(AssertionError("not a preflight check")),
+    )
+
+    assert (
+        release_checklist.run_checklist(
+            inputs, tmp_path / "evidence", "preflight", dry_run=False, allow_network=False
+        )["status"]
+        == "passed"
+    )
+
+
+@pytest.mark.verifies("TST057")
+def test_rerun_compares_staged_evidence_before_replacing_it(
+    inputs: release_checklist.Inputs, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    monkeypatch.setattr(release_checklist, "_repository_root", lambda: repository)
+    monkeypatch.setattr(release_checklist, "_phase_commands", lambda *_args: [])
+    evidence = tmp_path / "evidence"
+    first = release_checklist.run_checklist(
+        inputs, evidence, "preflight", dry_run=False, allow_network=False
+    )
+    original = (evidence / "preflight.json").read_bytes()
+    second = release_checklist.run_checklist(
+        inputs, evidence, "preflight", dry_run=False, allow_network=False
+    )
+
+    assert second["digest"] == first["digest"]
+    assert (evidence / "preflight.json").read_bytes() == original
+
+
+@pytest.mark.verifies("TST057")
+def test_hosted_verification_requires_matching_tag_ref(
+    inputs: release_checklist.Inputs, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class Completed:
+        returncode = 0
+        stdout = json.dumps(
+            [
+                {
+                    "headSha": "b" * 40,
+                    "headBranch": "develop",
+                    "status": "completed",
+                    "conclusion": "success",
+                }
+            ]
+        )
+
+    monkeypatch.setattr(release_checklist, "_git", lambda *_args: "b" * 40)
+    monkeypatch.setattr(subprocess, "run", lambda *_args, **_kwargs: Completed())
+    with pytest.raises(release_checklist.ChecklistError, match="immutable tag"):
+        release_checklist._verify_hosted_phase(tmp_path, inputs, "verify-testpypi")  # noqa: SLF001

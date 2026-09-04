@@ -12,9 +12,11 @@ python -m tools.release_checklist --version X.Y.Z --tag vX.Y.Z \
   --phase preflight --dry-run
 ```
 
-Run phases in the reported order. A gate packet identifies the sole decision a human may
-take and the exact command to resume; do not tag, merge, approve `testpypi`/`pypi`, or
-publish a GitHub Release early. Record approval or rejection, identity, date, notes, and
+Run phases in the reported order. The `*-gate` phase creates the packet before its
+corresponding external human action; the following `verify-*` phase performs the
+read-only confirmation. A gate packet identifies the sole decision a human may take and
+the exact command to resume; do not tag, merge, approve `testpypi`/`pypi`, or publish a
+GitHub Release early. Record approval or rejection, identity, date, notes, and
 the packet digest in the release issue. The runner only verifies that record through an
 explicit network/forge phase. Its evidence does not replace the workflow-produced bundle,
 manifest, checksums, attestations, or post-publication verification described below.

@@ -14,6 +14,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 from collections.abc import Sequence
 from contextlib import suppress
 from dataclasses import dataclass
@@ -21,7 +22,7 @@ from pathlib import Path
 from typing import Any
 
 from slygentify.traceability import implements
-from tools.release import release_version_from_tag
+from tools.release import release_version_from_tag, verify_release_bundle
 
 SCHEMA_VERSION = 1
 DEFINITION_VERSION = 1
@@ -33,11 +34,14 @@ PHASES = (
     "scaling",
     "package",
     "gitflow",
-    "testpypi",
-    "pypi",
-    "github-release",
+    "testpypi-gate",
+    "verify-testpypi",
+    "pypi-gate",
+    "verify-pypi",
+    "github-release-gate",
+    "verify-github-release",
 )
-NETWORK_PHASES = frozenset({"testpypi", "pypi", "github-release"})
+NETWORK_PHASES = frozenset({"verify-testpypi", "verify-pypi", "verify-github-release"})
 GITHUB_REPOSITORY = "slytheros/slygentify"
 RELEASE_MAINTAINER = "slytheros"
 RESUME_CONTEXT_FILENAME = ".release-checklist-resume.json"
@@ -45,9 +49,9 @@ GATES = {
     "formal-corpus": "semantic-corpus",
     "initialization-review": "initialization-usefulness",
     "gitflow": "promotion-and-tag",
-    "testpypi": "testpypi-environment",
-    "pypi": "production-go-no-go",
-    "github-release": "github-release-publication",
+    "testpypi-gate": "testpypi-environment",
+    "pypi-gate": "production-go-no-go",
+    "github-release-gate": "github-release-publication",
 }
 
 
@@ -70,9 +74,12 @@ class Inputs:
         """Return portable identity values without local paths."""
         return {
             "definition_version": DEFINITION_VERSION,
+            "composed_root_id": _path_identity(self.composed_root),
             "freeze_commit": self.freeze_commit,
+            "formal_root_id": _path_identity(self.formal_root),
             "github_issue": self.github_issue,
             "source_date_epoch": self.source_date_epoch,
+            "supplemental_root_id": _path_identity(self.supplemental_root),
             "tag": self.tag,
             "version": self.version,
         }
@@ -99,6 +106,13 @@ def _canonical(document: object) -> bytes:
 
 def _digest(document: object) -> str:
     return hashlib.sha256(_canonical(document)).hexdigest()
+
+
+def _path_identity(path: Path | None) -> str | None:
+    """Return a portable identity for a local corpus location without retaining its path."""
+    if path is None:
+        return None
+    return hashlib.sha256(str(path.resolve()).encode("utf-8")).hexdigest()
 
 
 def _write(path: Path, document: object) -> str:
@@ -232,7 +246,8 @@ def _require_predecessors(state: dict[str, Any], phase: str, evidence: Path) -> 
             candidate = evidence / filename
             if (
                 not isinstance(filename, str)
-                or Path(filename).name != filename
+                or Path(filename).is_absolute()
+                or ".." in Path(filename).parts
                 or not isinstance(digest, str)
                 or not candidate.is_file()
                 or hashlib.sha256(candidate.read_bytes()).hexdigest() != digest
@@ -325,7 +340,7 @@ def verify_human_gate(inputs: Inputs, evidence_directory: Path, phase: str) -> d
     return {"phase": phase, "gate": GATES[phase], "status": "approved"}
 
 
-def _phase_commands(inputs: Inputs, phase: str, evidence: Path) -> list[list[str]]:
+def _phase_commands(inputs: Inputs, phase: str, output: Path) -> list[list[str]]:
     python = sys.executable
     if phase == "preflight":
         return [
@@ -336,7 +351,6 @@ def _phase_commands(inputs: Inputs, phase: str, evidence: Path) -> list[list[str
             ["uv", "run", "--locked", "slygentify", "doctor", "."],
             ["uv", "run", "--locked", "mkdocs", "build", "--strict"],
             ["uv", "run", "pre-commit", "run", "--all-files"],
-            ["uv", "build", "--no-sources"],
         ]
     if phase == "formal-corpus":
         return [
@@ -349,7 +363,7 @@ def _phase_commands(inputs: Inputs, phase: str, evidence: Path) -> list[list[str
                 "--matrix",
                 "tests/acceptance/expected-facts-v1.json",
                 "--report",
-                str(evidence / "formal-report.json"),
+                str(output / "formal-report.json"),
             ]
         ]
     if phase == "initialization-review":
@@ -363,7 +377,7 @@ def _phase_commands(inputs: Inputs, phase: str, evidence: Path) -> list[list[str
                 "--reviewed-matrix",
                 "tests/acceptance/initialization-review-v1.json",
                 "--report",
-                str(evidence / "initialization-report.json"),
+                str(output / "initialization-report.json"),
             ]
         ]
     if phase == "supplemental-corpus":
@@ -375,7 +389,7 @@ def _phase_commands(inputs: Inputs, phase: str, evidence: Path) -> list[list[str
                 "--supplemental-root",
                 str(inputs.supplemental_root),
                 "--report",
-                str(evidence / "supplemental-report.json"),
+                str(output / "supplemental-report.json"),
             ]
         ]
     if phase == "scaling":
@@ -390,13 +404,34 @@ def _phase_commands(inputs: Inputs, phase: str, evidence: Path) -> list[list[str
                 "--composed-root",
                 str(inputs.composed_root),
                 "--report",
-                str(evidence / "scaling-report.json"),
+                str(output / "scaling-report.json"),
             ]
         ]
     if phase == "package":
         return [
-            ["uv", "build", "--no-sources"],
-            [python, "-m", "tools.release", "version", inputs.tag],
+            ["uv", "build", "--no-sources", "--out-dir", str(output / "package-dist")],
+            [
+                python,
+                "-m",
+                "tools.release",
+                "prepare",
+                "--tag",
+                inputs.tag,
+                "--dist",
+                str(output / "package-dist"),
+                "--bundle",
+                str(output / "package-bundle"),
+            ],
+            [
+                python,
+                "-m",
+                "tools.release",
+                "verify-bundle",
+                "--tag",
+                inputs.tag,
+                "--bundle",
+                str(output / "package-bundle"),
+            ],
         ]
     if phase == "gitflow":
         return []
@@ -409,6 +444,7 @@ def _phase_artifacts(phase: str) -> tuple[str, ...]:
         "initialization-review": ("initialization-report.json",),
         "supplemental-corpus": ("supplemental-report.json",),
         "scaling": ("scaling-report.json",),
+        "package": ("package-bundle/release-manifest.json", "package-bundle/SHA256SUMS"),
     }.get(phase, ())
 
 
@@ -423,6 +459,14 @@ def _verify_gitflow(root: Path, inputs: Inputs) -> dict[str, object]:
     if _git(root, "cat-file", "-t", f"refs/tags/{inputs.tag}") != "tag":
         raise ChecklistError("release tag must exist and be annotated")
     tagged = _git(root, "rev-list", "-n", "1", inputs.tag)
+    frozen = subprocess.run(
+        ["git", "-C", str(root), "merge-base", "--is-ancestor", inputs.freeze_commit, tagged],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if frozen.returncode:
+        raise ChecklistError("release tag is not derived from the frozen commit")
     for reference, commit in (("origin/main", tagged), ("origin/develop", tagged)):
         completed = subprocess.run(
             ["git", "-C", str(root), "merge-base", "--is-ancestor", commit, reference],
@@ -436,13 +480,45 @@ def _verify_gitflow(root: Path, inputs: Inputs) -> dict[str, object]:
 
 
 def _verify_hosted_phase(root: Path, inputs: Inputs, phase: str) -> dict[str, object]:
-    if phase == "github-release":
-        command = ["gh", "release", "view", inputs.tag, "--repo", GITHUB_REPOSITORY]
+    if phase == "verify-github-release":
+        command = [
+            "gh",
+            "release",
+            "view",
+            inputs.tag,
+            "--repo",
+            GITHUB_REPOSITORY,
+            "--json",
+            "assets,isDraft,publishedAt,tagName",
+        ]
         completed = subprocess.run(command, check=False, capture_output=True, text=True)
         if completed.returncode:
             raise ChecklistError("GitHub Release is missing for the immutable tag")
-        return {"release": inputs.tag, "status": "passed"}
-    workflow = "Rehearse release on TestPyPI" if phase == "testpypi" else "Release to PyPI"
+        try:
+            release = json.loads(completed.stdout)
+            assets = release["assets"]
+        except (KeyError, TypeError, json.JSONDecodeError) as error:
+            raise ChecklistError("GitHub Release returned invalid release data") from error
+        expected = {
+            f"slygentify-{inputs.version}-py3-none-any.whl",
+            f"slygentify-{inputs.version}.tar.gz",
+            "SHA256SUMS",
+        }
+        names = (
+            {item.get("name") for item in assets if isinstance(item, dict)}
+            if isinstance(assets, list)
+            else set()
+        )
+        if (
+            not isinstance(release, dict)
+            or release.get("tagName") != inputs.tag
+            or release.get("isDraft") is not False
+            or not isinstance(release.get("publishedAt"), str)
+            or not expected <= names
+        ):
+            raise ChecklistError("GitHub Release does not expose the expected immutable assets")
+        return {"release": inputs.tag, "assets": sorted(expected), "status": "passed"}
+    workflow = "Rehearse release on TestPyPI" if phase == "verify-testpypi" else "Release to PyPI"
     command = [
         "gh",
         "run",
@@ -451,10 +527,12 @@ def _verify_hosted_phase(root: Path, inputs: Inputs, phase: str) -> dict[str, ob
         GITHUB_REPOSITORY,
         "--workflow",
         workflow,
+        "--branch",
+        inputs.tag,
         "--limit",
         "100",
         "--json",
-        "headSha,conclusion,status,url",
+        "headBranch,headSha,conclusion,status,url",
     ]
     completed = subprocess.run(command, check=False, capture_output=True, text=True)
     if completed.returncode:
@@ -467,6 +545,7 @@ def _verify_hosted_phase(root: Path, inputs: Inputs, phase: str) -> dict[str, ob
     if not isinstance(runs, list) or not any(
         isinstance(run, dict)
         and run.get("headSha") == tagged
+        and run.get("headBranch") == inputs.tag
         and run.get("status") == "completed"
         and run.get("conclusion") == "success"
         for run in runs
@@ -492,6 +571,7 @@ def run_checklist(
     state_path = evidence / "release-checklist-state.json"
     state = _load_state(state_path, inputs)
     _require_predecessors(state, phase, evidence)
+    stored = state["phases"].get(phase)
     plan = _phase_commands(inputs, phase, evidence)
     if dry_run:
         return {
@@ -510,38 +590,51 @@ def run_checklist(
             },
             "status": "planned",
         }
-    resume_context = _write_resume_context(evidence, inputs)
-    results = [_run_command(command, dry_run=False) for command in plan]
-    if phase in {"preflight", "gitflow"}:
-        results.append(_verify_gitflow(root, inputs))
-    if phase in NETWORK_PHASES:
-        results.append(_verify_hosted_phase(root, inputs, phase))
-    artifacts = {
-        filename: hashlib.sha256((evidence / filename).read_bytes()).hexdigest()
-        for filename in _phase_artifacts(phase)
-        if (evidence / filename).is_file()
-    }
-    if set(artifacts) != set(_phase_artifacts(phase)):
-        raise ChecklistError(f"phase {phase!r} did not produce its required evidence artifacts")
-    record: dict[str, object] = {
-        "schema_version": SCHEMA_VERSION,
-        "phase": phase,
-        "inputs": inputs.public(),
-        "artifacts": artifacts,
-        "results": results,
-    }
-    digest = _write(evidence / f"{phase}.json", record)
-    stored = state["phases"].get(phase)
-    if stored is not None and stored.get("digest") != digest:
-        raise ChecklistError(
-            f"completed phase {phase!r} is not reproducible; evidence digest changed"
-        )
-    state["phases"][phase] = {"artifacts": artifacts, "digest": digest}
-    _write(state_path, state)
-    packet = _gate_packet(inputs, phase, digest, resume_context) if phase in GATES else None
-    if packet is not None:
-        _write(evidence / f"{phase}-review-packet.json", packet)
-    return {"phase": phase, "digest": digest, "human_gate": packet, "status": "passed"}
+    with tempfile.TemporaryDirectory(prefix="slygentify-release-checklist-") as temporary:
+        output = Path(temporary) if stored is not None else evidence
+        if stored is not None:
+            plan = _phase_commands(inputs, phase, output)
+        results = [_run_command(command, dry_run=False) for command in plan]
+        if phase == "gitflow":
+            results.append(_verify_gitflow(root, inputs))
+        if phase in NETWORK_PHASES:
+            results.append(_verify_hosted_phase(root, inputs, phase))
+        if phase == "package":
+            try:
+                verify_release_bundle(output / "package-bundle", inputs.tag)
+            except ValueError as error:
+                raise ChecklistError(
+                    f"package bundle failed release validation: {error}"
+                ) from error
+        artifacts = {
+            filename: hashlib.sha256((output / filename).read_bytes()).hexdigest()
+            for filename in _phase_artifacts(phase)
+            if (output / filename).is_file()
+        }
+        if set(artifacts) != set(_phase_artifacts(phase)):
+            raise ChecklistError(f"phase {phase!r} did not produce its required evidence artifacts")
+        record: dict[str, object] = {
+            "schema_version": SCHEMA_VERSION,
+            "phase": phase,
+            "inputs": inputs.public(),
+            "artifacts": artifacts,
+            "results": results,
+        }
+        digest = _digest(record)
+        if stored is not None:
+            if stored.get("digest") != digest:
+                raise ChecklistError(
+                    f"completed phase {phase!r} is not reproducible; evidence digest changed"
+                )
+            return {"phase": phase, "digest": digest, "human_gate": None, "status": "passed"}
+        resume_context = _write_resume_context(evidence, inputs)
+        _write(evidence / f"{phase}.json", record)
+        state["phases"][phase] = {"artifacts": artifacts, "digest": digest}
+        _write(state_path, state)
+        packet = _gate_packet(inputs, phase, digest, resume_context) if phase in GATES else None
+        if packet is not None:
+            _write(evidence / f"{phase}-review-packet.json", packet)
+        return {"phase": phase, "digest": digest, "human_gate": packet, "status": "passed"}
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -631,6 +724,8 @@ def main(arguments: Sequence[str] | None = None) -> int:
     if options.resume:
         previous = PHASES[PHASES.index(options.phase) - 1] if options.phase != PHASES[0] else None
         if previous in GATES:
+            if options.dry_run:
+                raise ChecklistError("--resume --dry-run cannot verify a human gate")
             if not options.allow_network:
                 raise ChecklistError("resuming after a human gate requires --allow-network")
             verify_human_gate(inputs, evidence_directory, previous)
