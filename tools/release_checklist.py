@@ -366,6 +366,41 @@ def _validate_promotion_binding(state: dict[str, Any], inputs: Inputs, phase: st
         raise ChecklistError("promotion commit does not match the verified release state")
 
 
+def _validate_completed_phase(state: dict[str, Any], phase: str, evidence: Path) -> str:
+    """Validate retained phase evidence before reusing it instead of rerunning it."""
+    completed = state["phases"][phase]
+    record_path = evidence / f"{phase}.json"
+    if (
+        record_path.is_symlink()
+        or not record_path.is_file()
+        or hashlib.sha256(record_path.read_bytes()).hexdigest() != completed.get("digest")
+    ):
+        raise ChecklistError(f"completed phase evidence is stale or missing: {phase}")
+    try:
+        record = json.loads(record_path.read_text(encoding="utf-8"))
+        artifacts = record["artifacts"]
+    except (KeyError, OSError, TypeError, json.JSONDecodeError) as error:
+        raise ChecklistError(f"completed phase evidence is invalid: {phase}") from error
+    if not isinstance(artifacts, dict) or artifacts != completed.get("artifacts"):
+        raise ChecklistError(f"completed phase evidence is invalid: {phase}")
+    for filename, digest in artifacts.items():
+        artifact = evidence / filename
+        if (
+            not isinstance(filename, str)
+            or Path(filename).is_absolute()
+            or ".." in Path(filename).parts
+            or not isinstance(digest, str)
+            or artifact.is_symlink()
+            or not artifact.is_file()
+            or hashlib.sha256(artifact.read_bytes()).hexdigest() != digest
+        ):
+            raise ChecklistError(f"completed phase artifact is stale or missing: {phase}")
+    digest = completed.get("digest")
+    if not isinstance(digest, str):
+        raise ChecklistError(f"completed phase evidence is invalid: {phase}")
+    return digest
+
+
 def _require_predecessors(state: dict[str, Any], phase: str, evidence: Path) -> None:
     index = PHASES.index(phase)
     missing = [name for name in PHASES[:index] if name not in state["phases"]]
@@ -776,6 +811,17 @@ def _verify_gitflow(root: Path, inputs: Inputs) -> dict[str, object]:
     )
     if promotion is None:
         raise ChecklistError("promotion commit is not the reviewed develop-to-main merge")
+    head = promotion.get("headRefName")
+    if not isinstance(head, str) or not head:
+        raise ChecklistError("promotion pull request has no temporary release branch")
+    branch_response = subprocess.run(
+        ["gh", "api", f"repos/{GITHUB_REPOSITORY}/git/ref/heads/{head}"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if not branch_response.returncode:
+        raise ChecklistError("temporary release branch has not been deleted")
     return {
         "tag": inputs.tag,
         "tagged_commit": tagged,
@@ -1008,6 +1054,7 @@ def run_checklist(
     state_path = evidence / "release-checklist-state.json"
     state = _load_state(state_path, inputs)
     _require_predecessors(state, phase, evidence)
+    _validate_promotion_binding(state, inputs, phase)
     stored = state["phases"].get(phase)
     plan = _phase_commands(inputs, phase, evidence)
     if dry_run:
@@ -1020,6 +1067,13 @@ def run_checklist(
                 "human_gate": GATES.get(phase),
             },
             "status": "planned",
+        }
+    if stored is not None:
+        return {
+            "phase": phase,
+            "digest": _validate_completed_phase(state, phase, evidence),
+            "human_gate": None,
+            "status": "passed",
         }
     with tempfile.TemporaryDirectory(prefix="slygentify-release-checklist-") as temporary:
         output = Path(temporary)
@@ -1071,12 +1125,6 @@ def run_checklist(
             "results": results,
         }
         digest = _digest(record)
-        if stored is not None:
-            if stored.get("digest") != digest:
-                raise ChecklistError(
-                    f"completed phase {phase!r} is not reproducible; evidence digest changed"
-                )
-            return {"phase": phase, "digest": digest, "human_gate": None, "status": "passed"}
         for filename in _phase_artifacts(phase):
             _publish_artifact(output / filename, evidence, filename)
         resume_context = _write_resume_context(evidence, inputs)

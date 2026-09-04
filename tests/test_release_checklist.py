@@ -579,6 +579,8 @@ def test_gitflow_requires_a_reviewed_develop_to_main_merge(
                     }
                 }
             )
+        elif "/git/ref/heads/" in command[2]:
+            result.returncode = 1
         elif command[:2] == ["gh", "api"]:
             result.stdout = json.dumps({"behind_by": 0})
         return result
