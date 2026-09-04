@@ -434,8 +434,12 @@ def test_formal_snapshot_preserves_links_without_reading_targets(
     except OSError:
         pytest.skip("symlink creation is unavailable on this Windows host")
     monkeypatch.setattr(measure_acceptance, "_git", lambda *_args: "")
+    hooks_directory = tmp_path / "disabled-hooks"
+    hooks_directory.mkdir()
 
-    snapshot = measure_acceptance._snapshot(checkout, "a" * 40, tmp_path / "snapshot")  # noqa: SLF001
+    snapshot = measure_acceptance._snapshot(  # noqa: SLF001
+        checkout, "a" * 40, tmp_path / "snapshot", hooks_directory
+    )
     copied_link = snapshot / "linked-secret.txt"
 
     assert copied_link.is_symlink()

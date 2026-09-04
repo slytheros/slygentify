@@ -51,10 +51,21 @@ def _load_corpus(path: Path) -> tuple[dict[str, object], ...]:
     return tuple(result)
 
 
-def _git(path: Path, *arguments: str) -> str:
+def _git(path: Path, hooks_directory: Path, *arguments: str) -> str:
     try:
         result = subprocess.run(
-            ["git", "-C", str(path), *arguments],
+            [
+                "git",
+                "-c",
+                f"core.hooksPath={hooks_directory}",
+                "-c",
+                "core.fsmonitor=false",
+                "-c",
+                "core.untrackedCache=false",
+                "-C",
+                str(path),
+                *arguments,
+            ],
             capture_output=True,
             check=False,
             text=True,
@@ -67,7 +78,7 @@ def _git(path: Path, *arguments: str) -> str:
     return result.stdout.strip()
 
 
-def _verify_formal_checkout(root: Path, entry: dict[str, object]) -> Path:
+def _verify_formal_checkout(root: Path, entry: dict[str, object], hooks_directory: Path) -> Path:
     identifier = str(entry["id"])
     checkout = root / identifier
     try:
@@ -85,25 +96,25 @@ def _verify_formal_checkout(root: Path, entry: dict[str, object]) -> Path:
         raise CorpusError(f"formal checkout is not a direct corpus directory: {identifier}")
     if not checkout.is_dir():
         raise CorpusError(f"formal checkout is missing: {identifier}")
-    if _git(checkout, "rev-parse", "HEAD") != entry["commit"]:
+    if _git(checkout, hooks_directory, "rev-parse", "HEAD") != entry["commit"]:
         raise CorpusError(f"formal checkout is not at its approved commit: {identifier}")
-    if _git(checkout, "remote", "get-url", "origin") != entry["source_url"]:
+    if _git(checkout, hooks_directory, "remote", "get-url", "origin") != entry["source_url"]:
         raise CorpusError(f"formal checkout has an unexpected origin: {identifier}")
-    status = _git(checkout, "status", "--porcelain=v1", "--untracked-files=all")
+    status = _git(checkout, hooks_directory, "status", "--porcelain=v1", "--untracked-files=all")
     if any(not line.startswith("?? ") for line in status.splitlines()):
         raise CorpusError(f"formal checkout has tracked changes: {identifier}")
     return checkout
 
 
-def _snapshot(checkout: Path, commit: str, destination: Path) -> Path:
+def _snapshot(checkout: Path, commit: str, destination: Path, hooks_directory: Path) -> Path:
     try:
         shutil.copytree(checkout, destination, symlinks=True)
     except OSError as error:
         raise CorpusError(
             f"could not create disposable snapshot for {checkout.name}: {error}"
         ) from error
-    _git(destination, "clean", "--force", "-d", "-x", "--quiet")
-    if _git(destination, "checkout", "--quiet", "--detach", commit) != "":
+    _git(destination, hooks_directory, "clean", "--force", "-d", "-x", "--quiet")
+    if _git(destination, hooks_directory, "checkout", "--quiet", "--detach", commit) != "":
         raise CorpusError(f"could not select approved commit for {checkout.name}")
     return destination
 
@@ -131,15 +142,18 @@ def _formal_measurement(
 ) -> dict[str, object]:
     with tempfile.TemporaryDirectory(prefix="slygentify-acceptance-") as temporary_directory:
         temporary_root = Path(temporary_directory)
+        hooks_directory = temporary_root / "disabled-hooks"
+        hooks_directory.mkdir()
         claims = tuple(
             claim
             for entry in entries
             for claim in _scan_twice(
                 str(entry["id"]),
                 _snapshot(
-                    _verify_formal_checkout(root, entry),
+                    _verify_formal_checkout(root, entry, hooks_directory),
                     str(entry["commit"]),
                     temporary_root / str(entry["id"]),
+                    hooks_directory,
                 ),
             )
         )
