@@ -133,7 +133,7 @@ def _load_state(path: Path, inputs: Inputs) -> dict[str, Any]:
     return state
 
 
-def _require_predecessors(state: dict[str, Any], phase: str) -> None:
+def _require_predecessors(state: dict[str, Any], phase: str, evidence: Path) -> None:
     index = PHASES.index(phase)
     missing = [name for name in PHASES[:index] if name not in state["phases"]]
     if missing:
@@ -149,6 +149,26 @@ def _require_predecessors(state: dict[str, Any], phase: str) -> None:
         raise ChecklistError(
             "a human gate must be verified before continuing: " + ", ".join(unverified)
         )
+    for name in PHASES[:index]:
+        completed = state["phases"][name]
+        artifact = evidence / f"{name}.json"
+        if not artifact.is_file() or hashlib.sha256(
+            artifact.read_bytes()
+        ).hexdigest() != completed.get("digest"):
+            raise ChecklistError(f"predecessor evidence is stale or missing: {name}")
+        artifacts = completed.get("artifacts", {})
+        if not isinstance(artifacts, dict):
+            raise ChecklistError(f"predecessor evidence has invalid artifacts: {name}")
+        for filename, digest in artifacts.items():
+            candidate = evidence / filename
+            if (
+                not isinstance(filename, str)
+                or Path(filename).name != filename
+                or not isinstance(digest, str)
+                or not candidate.is_file()
+                or hashlib.sha256(candidate.read_bytes()).hexdigest() != digest
+            ):
+                raise ChecklistError(f"predecessor artifact is stale or missing: {name}")
 
 
 def _gate_packet(inputs: Inputs, phase: str, evidence_digest: str) -> dict[str, object]:
@@ -308,14 +328,76 @@ def _phase_commands(inputs: Inputs, phase: str, evidence: Path) -> list[list[str
     return []
 
 
+def _phase_artifacts(phase: str) -> tuple[str, ...]:
+    return {
+        "formal-corpus": ("formal-report.json",),
+        "initialization-review": ("initialization-report.json",),
+        "supplemental-corpus": ("supplemental-report.json",),
+        "scaling": ("scaling-report.json",),
+    }.get(phase, ())
+
+
 def _verify_gitflow(root: Path, inputs: Inputs) -> dict[str, object]:
-    if _git(root, "rev-parse", "HEAD") != inputs.freeze_commit:
-        raise ChecklistError("checkout HEAD does not match --freeze-commit")
     if _git(root, "status", "--porcelain", "--untracked-files=all"):
         raise ChecklistError("release checkout is not clean")
-    if int(_git(root, "show", "-s", "--format=%ct", "HEAD")) != inputs.source_date_epoch:
+    if (
+        int(_git(root, "show", "-s", "--format=%ct", inputs.freeze_commit))
+        != inputs.source_date_epoch
+    ):
         raise ChecklistError("SOURCE_DATE_EPOCH does not match the frozen commit")
-    return {"head": inputs.freeze_commit, "status": "passed"}
+    if _git(root, "cat-file", "-t", f"refs/tags/{inputs.tag}") != "tag":
+        raise ChecklistError("release tag must exist and be annotated")
+    tagged = _git(root, "rev-list", "-n", "1", inputs.tag)
+    for reference, commit in (("origin/main", tagged), ("origin/develop", tagged)):
+        completed = subprocess.run(
+            ["git", "-C", str(root), "merge-base", "--is-ancestor", commit, reference],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if completed.returncode:
+            raise ChecklistError(f"{reference} does not contain the promoted tagged commit")
+    return {"tag": inputs.tag, "tagged_commit": tagged, "status": "passed"}
+
+
+def _verify_hosted_phase(root: Path, inputs: Inputs, phase: str) -> dict[str, object]:
+    if phase == "github-release":
+        command = ["gh", "release", "view", inputs.tag, "--repo", GITHUB_REPOSITORY]
+        completed = subprocess.run(command, check=False, capture_output=True, text=True)
+        if completed.returncode:
+            raise ChecklistError("GitHub Release is missing for the immutable tag")
+        return {"release": inputs.tag, "status": "passed"}
+    workflow = "Rehearse release on TestPyPI" if phase == "testpypi" else "Release to PyPI"
+    command = [
+        "gh",
+        "run",
+        "list",
+        "--repo",
+        GITHUB_REPOSITORY,
+        "--workflow",
+        workflow,
+        "--limit",
+        "100",
+        "--json",
+        "headSha,conclusion,status,url",
+    ]
+    completed = subprocess.run(command, check=False, capture_output=True, text=True)
+    if completed.returncode:
+        raise ChecklistError(f"could not inspect the {workflow} workflow")
+    try:
+        runs = json.loads(completed.stdout)
+    except json.JSONDecodeError as error:
+        raise ChecklistError(f"{workflow} returned invalid workflow data") from error
+    tagged = _git(root, "rev-list", "-n", "1", inputs.tag)
+    if not isinstance(runs, list) or not any(
+        isinstance(run, dict)
+        and run.get("headSha") == tagged
+        and run.get("status") == "completed"
+        and run.get("conclusion") == "success"
+        for run in runs
+    ):
+        raise ChecklistError(f"no successful {workflow} run exists for the immutable tag")
+    return {"tag": inputs.tag, "workflow": workflow, "status": "passed"}
 
 
 @implements("REQ056")
@@ -334,7 +416,7 @@ def run_checklist(
     evidence = _safe_external(evidence_directory, roots)
     state_path = evidence / "release-checklist-state.json"
     state = _load_state(state_path, inputs)
-    _require_predecessors(state, phase)
+    _require_predecessors(state, phase, evidence)
     plan = _phase_commands(inputs, phase, evidence)
     if dry_run:
         return {
@@ -342,7 +424,12 @@ def run_checklist(
             "effects": {
                 "commands": plan,
                 "network": phase in NETWORK_PHASES,
-                "writes": ["release-checklist-state.json", f"{phase}.json"],
+                "writes": [
+                    "release-checklist-state.json",
+                    f"{phase}.json",
+                    *_phase_artifacts(phase),
+                    *(() if phase not in GATES else (f"{phase}-review-packet.json",)),
+                ],
                 "human_gate": GATES.get(phase),
             },
             "status": "planned",
@@ -350,10 +437,20 @@ def run_checklist(
     results = [_run_command(command, dry_run=False) for command in plan]
     if phase in {"preflight", "gitflow"}:
         results.append(_verify_gitflow(root, inputs))
+    if phase in NETWORK_PHASES:
+        results.append(_verify_hosted_phase(root, inputs, phase))
+    artifacts = {
+        filename: hashlib.sha256((evidence / filename).read_bytes()).hexdigest()
+        for filename in _phase_artifacts(phase)
+        if (evidence / filename).is_file()
+    }
+    if set(artifacts) != set(_phase_artifacts(phase)):
+        raise ChecklistError(f"phase {phase!r} did not produce its required evidence artifacts")
     record: dict[str, object] = {
         "schema_version": SCHEMA_VERSION,
         "phase": phase,
         "inputs": inputs.public(),
+        "artifacts": artifacts,
         "results": results,
     }
     digest = _write(evidence / f"{phase}.json", record)
@@ -362,7 +459,7 @@ def run_checklist(
         raise ChecklistError(
             f"completed phase {phase!r} is not reproducible; evidence digest changed"
         )
-    state["phases"][phase] = {"digest": digest}
+    state["phases"][phase] = {"artifacts": artifacts, "digest": digest}
     _write(state_path, state)
     packet = _gate_packet(inputs, phase, digest) if phase in GATES else None
     if packet is not None:
