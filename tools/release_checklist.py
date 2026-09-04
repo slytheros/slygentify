@@ -448,6 +448,32 @@ def _phase_artifacts(phase: str) -> tuple[str, ...]:
     }.get(phase, ())
 
 
+def _phase_writes(phase: str) -> tuple[str, ...]:
+    """List every known write a non-dry-run phase may make."""
+    writes = [
+        f"evidence/{RESUME_CONTEXT_FILENAME}",
+        "evidence/release-checklist-state.json",
+        f"evidence/{phase}.json",
+        *(f"evidence/{artifact}" for artifact in _phase_artifacts(phase)),
+    ]
+    if phase in GATES:
+        writes.append(f"evidence/{phase}-review-packet.json")
+    if phase == "package":
+        writes.extend(("evidence/package-dist/", "evidence/package-bundle/dist/"))
+    if phase == "preflight":
+        writes.extend(
+            (
+                "repository/.coverage",
+                "repository/.mypy_cache/",
+                "repository/.pytest_cache/",
+                "repository/.ruff_cache/",
+                "repository/site/",
+                "tool-managed cache directories outside the repository",
+            )
+        )
+    return tuple(writes)
+
+
 def _verify_gitflow(root: Path, inputs: Inputs) -> dict[str, object]:
     if _git(root, "status", "--porcelain", "--untracked-files=all"):
         raise ChecklistError("release checkout is not clean")
@@ -579,13 +605,7 @@ def run_checklist(
             "effects": {
                 "commands": plan,
                 "network": phase in NETWORK_PHASES,
-                "writes": [
-                    RESUME_CONTEXT_FILENAME,
-                    "release-checklist-state.json",
-                    f"{phase}.json",
-                    *_phase_artifacts(phase),
-                    *(() if phase not in GATES else (f"{phase}-review-packet.json",)),
-                ],
+                "writes": _phase_writes(phase),
                 "human_gate": GATES.get(phase),
             },
             "status": "planned",

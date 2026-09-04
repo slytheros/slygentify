@@ -42,6 +42,25 @@ def test_dry_run_reports_effects_without_writing(
 
 
 @pytest.mark.verifies("TST057")
+def test_dry_run_reports_phase_and_command_writes(
+    inputs: release_checklist.Inputs, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(release_checklist, "_repository_root", lambda: tmp_path / "repository")
+
+    preflight = release_checklist.run_checklist(
+        inputs, tmp_path / "evidence", "preflight", dry_run=True, allow_network=False
+    )
+    package_writes = release_checklist._phase_writes("package")  # noqa: SLF001
+
+    preflight_writes = cast(
+        tuple[str, ...], cast(dict[str, object], preflight["effects"])["writes"]
+    )
+    assert "repository/.coverage" in preflight_writes
+    assert "evidence/package-dist/" in package_writes
+    assert "evidence/package-bundle/release-manifest.json" in package_writes
+
+
+@pytest.mark.verifies("TST057")
 def test_phase_rejects_skipped_prerequisite(
     inputs: release_checklist.Inputs, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
