@@ -30,6 +30,9 @@ the reviewer identity, UTC date, and concise notes. Verify it without any remote
 python -m tools.release_checklist ... --phase formal-corpus --verify-gate --allow-network
 ```
 
+Post a new approval comment rather than editing an existing comment: edited approval
+records are rejected.
+
 This is the maintainer runbook for preparing, rehearsing, publishing, verifying, and
 recovering a Slygentify package release. Use it only for genuine reviewed releases;
 never use it to reserve a name or publish a placeholder.

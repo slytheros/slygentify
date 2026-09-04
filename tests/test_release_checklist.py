@@ -152,6 +152,7 @@ def test_human_gate_reads_issue_without_writing(
                         "body": release_checklist._gate_comment("semantic-corpus", digest),  # noqa: SLF001
                         "createdAt": "2026-01-01T00:00:00Z",
                         "updatedAt": "2026-01-01T00:00:00Z",
+                        "includesCreatedEdit": False,
                     }
                 ]
             }
@@ -436,6 +437,98 @@ def test_preflight_does_not_require_a_release_tag(
         )["status"]
         == "passed"
     )
+
+
+@pytest.mark.verifies("TST057")
+def test_preflight_propagates_offline_uv_controls(
+    inputs: release_checklist.Inputs, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    environments: list[dict[str, str] | None] = []
+    monkeypatch.setattr(release_checklist, "_repository_root", lambda: repository)
+    monkeypatch.setattr(release_checklist, "_phase_commands", lambda *_args: [["pre-commit"]])
+    monkeypatch.setattr(
+        release_checklist, "_verify_frozen_checkout", lambda *_args: {"status": "passed"}
+    )
+
+    def capture_environment(
+        *_args: object, environment: dict[str, str] | None, **_kwargs: object
+    ) -> dict[str, object]:
+        environments.append(environment)
+        return {"status": "passed"}
+
+    monkeypatch.setattr(release_checklist, "_run_command", capture_environment)
+
+    release_checklist.run_checklist(
+        inputs, tmp_path / "evidence", "preflight", dry_run=False, allow_network=False
+    )
+
+    assert environments == [{"UV_OFFLINE": "1", "UV_NO_SYNC": "1"}]
+
+
+@pytest.mark.verifies("TST057")
+def test_gitflow_requires_a_reviewed_develop_to_main_merge(
+    inputs: release_checklist.Inputs, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    promoted = release_checklist.Inputs(
+        inputs.version,
+        inputs.tag,
+        inputs.freeze_commit,
+        123,
+        inputs.formal_root,
+        inputs.supplemental_root,
+        inputs.composed_root,
+        inputs.github_issue,
+        "b" * 40,
+    )
+
+    def fake_git(_root: Path, *arguments: str) -> str:
+        if arguments == ("status", "--porcelain", "--untracked-files=all"):
+            return ""
+        if arguments == ("show", "-s", "--format=%ct", "b" * 40):
+            return "123"
+        if arguments == ("cat-file", "-t", f"refs/tags/{promoted.tag}"):
+            return "tag"
+        if arguments == ("rev-list", "-n", "1", promoted.tag):
+            return "b" * 40
+        raise AssertionError(arguments)
+
+    class Completed:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def fake_run(command: list[str], **_kwargs: object) -> Completed:
+        result = Completed()
+        if command[:3] == ["gh", "api", "graphql"]:
+            result.stdout = json.dumps(
+                {
+                    "data": {
+                        "repository": {
+                            "object": {
+                                "associatedPullRequests": {
+                                    "nodes": [
+                                        {
+                                            "number": 37,
+                                            "mergedAt": "2026-01-01T00:00:00Z",
+                                            "baseRefName": "main",
+                                            "headRefName": "develop",
+                                            "mergeCommit": {"oid": "b" * 40},
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            )
+        return result
+
+    monkeypatch.setattr(release_checklist, "_git", fake_git)
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    assert release_checklist._verify_gitflow(tmp_path, promoted)["promotion_pull_request"] == 37  # noqa: SLF001
 
 
 @pytest.mark.verifies("TST057")

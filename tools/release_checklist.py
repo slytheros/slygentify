@@ -44,7 +44,9 @@ PHASES = (
     "github-release-gate",
     "verify-github-release",
 )
-NETWORK_PHASES = frozenset({"verify-testpypi", "verify-pypi", "verify-github-release"})
+NETWORK_PHASES = frozenset(
+    {"verify-gitflow", "verify-testpypi", "verify-pypi", "verify-github-release"}
+)
 GITHUB_REPOSITORY = "slytheros/slygentify"
 RELEASE_MAINTAINER = "slytheros"
 RESUME_CONTEXT_FILENAME = ".release-checklist-resume.json"
@@ -481,7 +483,7 @@ def verify_human_gate(inputs: Inputs, evidence_directory: Path, phase: str) -> d
                 and isinstance(comment.get("author"), dict)
                 and comment["author"].get("login") == RELEASE_MAINTAINER
                 and isinstance(comment.get("createdAt"), str)
-                and comment.get("updatedAt") == comment["createdAt"]
+                and comment.get("includesCreatedEdit") is False
             ),
             None,
         )
@@ -676,7 +678,61 @@ def _verify_gitflow(root: Path, inputs: Inputs) -> dict[str, object]:
         )
         if completed.returncode:
             raise ChecklistError(f"{reference} does not contain the promoted tagged commit")
-    return {"tag": inputs.tag, "tagged_commit": tagged, "status": "passed"}
+    query = (
+        "query($owner:String!, $repo:String!, $expression:String!) { "
+        "repository(owner:$owner, name:$repo) { object(expression:$expression) { "
+        "... on Commit { associatedPullRequests(first:10) { nodes { "
+        "number mergedAt baseRefName headRefName mergeCommit { oid } } } } } } }"
+    )
+    pull_requests = subprocess.run(
+        [
+            "gh",
+            "api",
+            "graphql",
+            "-f",
+            f"query={query}",
+            "-F",
+            "owner=slytheros",
+            "-F",
+            "repo=slygentify",
+            "-F",
+            f"expression={inputs.promotion_commit}",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    try:
+        candidates = json.loads(pull_requests.stdout)["data"]["repository"]["object"][
+            "associatedPullRequests"
+        ]["nodes"]
+    except (KeyError, TypeError, json.JSONDecodeError) as error:
+        raise ChecklistError("could not read promotion pull requests") from error
+    promotion = (
+        next(
+            (
+                pull_request
+                for pull_request in candidates
+                if isinstance(pull_request, dict)
+                and pull_request.get("baseRefName") == "main"
+                and pull_request.get("headRefName") == "develop"
+                and isinstance(pull_request.get("mergedAt"), str)
+                and isinstance(pull_request.get("mergeCommit"), dict)
+                and pull_request["mergeCommit"].get("oid") == inputs.promotion_commit
+            ),
+            None,
+        )
+        if not pull_requests.returncode and isinstance(candidates, list)
+        else None
+    )
+    if promotion is None:
+        raise ChecklistError("promotion commit is not the reviewed develop-to-main merge")
+    return {
+        "tag": inputs.tag,
+        "tagged_commit": tagged,
+        "promotion_pull_request": promotion["number"],
+        "status": "passed",
+    }
 
 
 def _verify_frozen_checkout(root: Path, inputs: Inputs) -> dict[str, object]:
@@ -922,7 +978,11 @@ def run_checklist(
         else:
             checkout = None
         environment = (
-            {"SOURCE_DATE_EPOCH": str(inputs.source_date_epoch)} if phase == "package" else None
+            {"UV_OFFLINE": "1", "UV_NO_SYNC": "1"}
+            if phase == "preflight"
+            else {"SOURCE_DATE_EPOCH": str(inputs.source_date_epoch)}
+            if phase == "package"
+            else None
         )
         results = [
             _run_command(command, dry_run=False, environment=environment, cwd=root)
