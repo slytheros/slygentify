@@ -12,13 +12,14 @@ import argparse
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
 from collections.abc import Sequence
 from contextlib import suppress
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -281,10 +282,18 @@ def _gate_packet(
     }
 
 
-def _run_command(command: list[str], *, dry_run: bool) -> dict[str, object]:
+def _run_command(
+    command: list[str], *, dry_run: bool, environment: dict[str, str] | None = None
+) -> dict[str, object]:
     if dry_run:
         return {"command": command, "status": "planned"}
-    completed = subprocess.run(command, check=False, capture_output=True, text=True)
+    completed = subprocess.run(
+        command,
+        check=False,
+        capture_output=True,
+        text=True,
+        env={**os.environ, **environment} if environment is not None else None,
+    )
     if completed.returncode:
         raise ChecklistError(f"command failed ({completed.returncode}): {' '.join(command)}")
     return {"status": "passed"}
@@ -330,18 +339,28 @@ def verify_human_gate(inputs: Inputs, evidence_directory: Path, phase: str) -> d
         comments = document["comments"]
     except (KeyError, TypeError, json.JSONDecodeError) as error:
         raise ChecklistError("GitHub release issue returned invalid comments") from error
-    if not isinstance(comments, list) or not any(
-        isinstance(comment, dict)
-        and expected in comment.get("body", "")
-        and isinstance(comment.get("author"), dict)
-        and comment["author"].get("login") == RELEASE_MAINTAINER
-        for comment in comments
-    ):
+    approval = (
+        next(
+            (
+                comment
+                for comment in comments
+                if isinstance(comment, dict)
+                and expected in comment.get("body", "")
+                and isinstance(comment.get("author"), dict)
+                and comment["author"].get("login") == RELEASE_MAINTAINER
+                and isinstance(comment.get("createdAt"), str)
+            ),
+            None,
+        )
+        if isinstance(comments, list)
+        else None
+    )
+    if approval is None:
         raise ChecklistError(
             "GitHub issue does not contain the required approval record: " + expected
         )
     completed["gate_verified"] = True
-    completed["gate_verified_at"] = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+    completed["gate_verified_at"] = approval["createdAt"]
     _write(state_path, state)
     return {"phase": phase, "gate": GATES[phase], "status": "approved"}
 
@@ -415,7 +434,16 @@ def _phase_commands(inputs: Inputs, phase: str, output: Path) -> list[list[str]]
         ]
     if phase == "package":
         return [
-            ["uv", "build", "--no-sources", "--out-dir", str(output / "package-dist")],
+            [
+                "uv",
+                "build",
+                "--no-sources",
+                "--offline",
+                "--no-isolation",
+                "--no-create-gitignore",
+                "--out-dir",
+                str(output / "package-dist"),
+            ],
             [
                 python,
                 "-m",
@@ -521,7 +549,11 @@ def _verify_frozen_checkout(root: Path, inputs: Inputs) -> dict[str, object]:
 
 
 def _verify_hosted_phase(
-    root: Path, inputs: Inputs, phase: str, gate_verified_at: str | None
+    root: Path,
+    inputs: Inputs,
+    phase: str,
+    gate_verified_at: str | None,
+    evidence: Path | None = None,
 ) -> dict[str, object]:
     if gate_verified_at is None:
         raise ChecklistError("hosted verification requires a recorded human-gate time")
@@ -558,13 +590,44 @@ def _verify_hosted_phase(
             if isinstance(assets, list)
             else set()
         )
+        sizes: dict[str, int] = (
+            {
+                item["name"]: item["size"]
+                for item in assets
+                if isinstance(item, dict)
+                and isinstance(item.get("name"), str)
+                and isinstance(item.get("size"), int)
+            }
+            if isinstance(assets, list)
+            else {}
+        )
+        expected_sizes: dict[str, int] = {}
+        if evidence is not None:
+            try:
+                manifest = json.loads(
+                    (evidence / "package-bundle" / "release-manifest.json").read_text(
+                        encoding="utf-8"
+                    )
+                )
+                expected_sizes = {
+                    item["filename"]: item["size"]
+                    for item in manifest["artifacts"]
+                    if isinstance(item, dict)
+                    and isinstance(item.get("filename"), str)
+                    and isinstance(item.get("size"), int)
+                }
+            except (KeyError, OSError, TypeError, json.JSONDecodeError) as error:
+                raise ChecklistError(
+                    "package manifest is unavailable for release-asset validation"
+                ) from error
         if (
             not isinstance(release, dict)
             or release.get("tagName") != inputs.tag
             or release.get("isDraft") is not False
             or not isinstance(release.get("publishedAt"), str)
             or not _postdates(release["publishedAt"], gate_time)
-            or not expected <= names
+            or names != expected
+            or {name: sizes.get(name) for name in expected_sizes} != expected_sizes
         ):
             raise ChecklistError("GitHub Release does not expose the expected immutable assets")
         return {"release": inputs.tag, "assets": sorted(expected), "status": "passed"}
@@ -644,18 +707,26 @@ def run_checklist(
             "status": "planned",
         }
     with tempfile.TemporaryDirectory(prefix="slygentify-release-checklist-") as temporary:
-        output = Path(temporary) if stored is not None else evidence
-        if stored is not None:
-            plan = _phase_commands(inputs, phase, output)
-        results = [_run_command(command, dry_run=False) for command in plan]
+        output = Path(temporary)
+        plan = _phase_commands(inputs, phase, output)
         if phase in PHASES[: PHASES.index("promotion-gate")]:
-            results.append(_verify_frozen_checkout(root, inputs))
+            checkout = _verify_frozen_checkout(root, inputs)
+        else:
+            checkout = None
+        environment = (
+            {"SOURCE_DATE_EPOCH": str(inputs.source_date_epoch)} if phase == "package" else None
+        )
+        results = [
+            _run_command(command, dry_run=False, environment=environment) for command in plan
+        ]
+        if checkout is not None:
+            results.append(checkout)
         if phase == "verify-gitflow":
             results.append(_verify_gitflow(root, inputs))
         if phase in NETWORK_PHASES:
             previous = PHASES[PHASES.index(phase) - 1]
             verified_at = state["phases"].get(previous, {}).get("gate_verified_at")
-            results.append(_verify_hosted_phase(root, inputs, phase, verified_at))
+            results.append(_verify_hosted_phase(root, inputs, phase, verified_at, evidence))
         if phase == "package":
             try:
                 verify_release_bundle(output / "package-bundle", inputs.tag)
@@ -684,6 +755,10 @@ def run_checklist(
                     f"completed phase {phase!r} is not reproducible; evidence digest changed"
                 )
             return {"phase": phase, "digest": digest, "human_gate": None, "status": "passed"}
+        for filename in _phase_artifacts(phase):
+            source, destination = output / filename, evidence / filename
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, destination)
         resume_context = _write_resume_context(evidence, inputs)
         _write(evidence / f"{phase}.json", record)
         state["phases"][phase] = {"artifacts": artifacts, "digest": digest}
@@ -771,6 +846,10 @@ def main(arguments: Sequence[str] | None = None) -> int:
     expected = release_version_from_tag(inputs.tag)
     if inputs.version != expected or inputs.source_date_epoch <= 0:
         raise ChecklistError("release inputs are not canonical")
+    if inputs.composed_root is None or inputs.github_issue is None or inputs.github_issue <= 0:
+        raise ChecklistError(
+            "--composed-root and --github-issue are required for a resumable release"
+        )
     if options.verify_gate:
         if options.dry_run:
             raise ChecklistError("--verify-gate cannot be combined with --dry-run")

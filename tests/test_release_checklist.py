@@ -144,6 +144,7 @@ def test_human_gate_reads_issue_without_writing(
                     {
                         "author": {"login": release_checklist.RELEASE_MAINTAINER},
                         "body": release_checklist._gate_comment("semantic-corpus", digest),  # noqa: SLF001
+                        "createdAt": "2026-01-01T00:00:00Z",
                     }
                 ]
             }
@@ -184,6 +185,7 @@ def test_human_gate_rejects_an_untrusted_commenter(
                     {
                         "author": {"login": "untrusted"},
                         "body": release_checklist._gate_comment("semantic-corpus", digest),  # noqa: SLF001
+                        "createdAt": "2026-01-01T00:00:00Z",
                     }
                 ]
             }
@@ -351,6 +353,10 @@ def test_direct_gate_dry_run_is_side_effect_free(tmp_path: Path) -> None:
                 str(tmp_path / "supplemental"),
                 "--evidence-directory",
                 str(tmp_path / "evidence"),
+                "--composed-root",
+                str(tmp_path / "composed"),
+                "--github-issue",
+                "22",
                 "--phase",
                 "formal-corpus",
                 "--verify-gate",
