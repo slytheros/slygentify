@@ -1,7 +1,7 @@
 # Post-1.0 release process design
 
 This design replaces an operator-orchestrated release with a repository-owned checklist.
-This document is the design record to review alongside proposed ADR 0014; it is not an
+This document is the design record retained alongside accepted ADR 0014; it is not an
 authorization to publish a package or alter a protected ref.
 
 ## Current process and evidence budget

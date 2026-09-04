@@ -112,10 +112,16 @@ def _digest(document: object) -> str:
 
 
 def _path_identity(path: Path | None) -> str | None:
-    """Return a portable identity for a local corpus location without retaining its path."""
+    """Return a path-sanitized identity derived from a corpus tree's contents."""
     if path is None:
         return None
-    return hashlib.sha256(str(path.resolve()).encode("utf-8")).hexdigest()
+    digest = hashlib.sha256()
+    root = path.resolve()
+    for candidate in sorted(item for item in root.rglob("*") if item.is_file()):
+        digest.update(candidate.relative_to(root).as_posix().encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(hashlib.sha256(candidate.read_bytes()).digest())
+    return digest.hexdigest()
 
 
 def _write(path: Path, document: object) -> str:
@@ -245,8 +251,12 @@ def _require_predecessors(state: dict[str, Any], phase: str, evidence: Path) -> 
             artifact.read_bytes()
         ).hexdigest() != completed.get("digest"):
             raise ChecklistError(f"predecessor evidence is stale or missing: {name}")
-        artifacts = completed.get("artifacts", {})
-        if not isinstance(artifacts, dict):
+        try:
+            record = json.loads(artifact.read_text(encoding="utf-8"))
+            artifacts = record["artifacts"]
+        except (KeyError, OSError, TypeError, json.JSONDecodeError) as error:
+            raise ChecklistError(f"predecessor evidence has invalid artifacts: {name}") from error
+        if not isinstance(artifacts, dict) or artifacts != completed.get("artifacts"):
             raise ChecklistError(f"predecessor evidence has invalid artifacts: {name}")
         for filename, digest in artifacts.items():
             candidate = evidence / filename
@@ -283,7 +293,11 @@ def _gate_packet(
 
 
 def _run_command(
-    command: list[str], *, dry_run: bool, environment: dict[str, str] | None = None
+    command: list[str],
+    *,
+    dry_run: bool,
+    environment: dict[str, str] | None = None,
+    cwd: Path | None = None,
 ) -> dict[str, object]:
     if dry_run:
         return {"command": command, "status": "planned"}
@@ -293,6 +307,7 @@ def _run_command(
         capture_output=True,
         text=True,
         env={**os.environ, **environment} if environment is not None else None,
+        cwd=cwd,
     )
     if completed.returncode:
         raise ChecklistError(f"command failed ({completed.returncode}): {' '.join(command)}")
@@ -369,13 +384,13 @@ def _phase_commands(inputs: Inputs, phase: str, output: Path) -> list[list[str]]
     python = sys.executable
     if phase == "preflight":
         return [
-            ["uv", "run", "pytest"],
-            ["uv", "run", "ruff", "check", "."],
-            ["uv", "run", "mypy"],
-            ["uv", "run", "doorstop", "-e"],
-            ["uv", "run", "--locked", "slygentify", "doctor", "."],
-            ["uv", "run", "--locked", "mkdocs", "build", "--strict"],
-            ["uv", "run", "pre-commit", "run", "--all-files"],
+            ["uv", "run", "--offline", "--no-sync", "pytest"],
+            ["uv", "run", "--offline", "--no-sync", "ruff", "check", "."],
+            ["uv", "run", "--offline", "--no-sync", "mypy"],
+            ["uv", "run", "--offline", "--no-sync", "doorstop", "-e"],
+            ["uv", "run", "--offline", "--no-sync", "slygentify", "doctor", "."],
+            ["uv", "run", "--offline", "--no-sync", "mkdocs", "build", "--strict"],
+            ["uv", "run", "--offline", "--no-sync", "pre-commit", "run", "--all-files"],
         ]
     if phase == "formal-corpus":
         return [
@@ -439,7 +454,7 @@ def _phase_commands(inputs: Inputs, phase: str, output: Path) -> list[list[str]]
                 "build",
                 "--no-sources",
                 "--offline",
-                "--no-isolation",
+                "--no-build-isolation",
                 "--no-create-gitignore",
                 "--out-dir",
                 str(output / "package-dist"),
@@ -717,7 +732,8 @@ def run_checklist(
             {"SOURCE_DATE_EPOCH": str(inputs.source_date_epoch)} if phase == "package" else None
         )
         results = [
-            _run_command(command, dry_run=False, environment=environment) for command in plan
+            _run_command(command, dry_run=False, environment=environment, cwd=root)
+            for command in plan
         ]
         if checkout is not None:
             results.append(checkout)
