@@ -827,12 +827,12 @@ def run_checklist(
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source, destination)
         resume_context = _write_resume_context(evidence, inputs)
-        _write(evidence / f"{phase}.json", record)
-        state["phases"][phase] = {"artifacts": artifacts, "digest": digest}
-        _write(state_path, state)
         packet = _gate_packet(inputs, phase, digest, resume_context) if phase in GATES else None
         if packet is not None:
             _write(evidence / f"{phase}-review-packet.json", packet)
+        _write(evidence / f"{phase}.json", record)
+        state["phases"][phase] = {"artifacts": artifacts, "digest": digest}
+        _write(state_path, state)
         return {"phase": phase, "digest": digest, "human_gate": packet, "status": "passed"}
 
 
