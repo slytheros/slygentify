@@ -14,6 +14,7 @@ import json
 import os
 import re
 import shlex
+import stat
 import subprocess
 import sys
 import tempfile
@@ -135,16 +136,41 @@ def _path_identity(path: Path | None) -> str | None:
         return None
     if not path.is_dir():
         raise ChecklistError(f"corpus root must be an existing directory: {path}")
-    digest = hashlib.sha256()
     root = path.resolve()
-    for candidate in sorted(
-        item
-        for item in root.rglob("*")
-        if item.is_file() and not item.is_symlink() and ".git" not in item.relative_to(root).parts
-    ):
-        digest.update(candidate.relative_to(root).as_posix().encode("utf-8"))
+    files: list[tuple[Path, Path, os.stat_result]] = []
+    pending = [root]
+    while pending:
+        directory = pending.pop()
+        try:
+            entries = tuple(os.scandir(directory))
+        except OSError as error:
+            raise ChecklistError(f"could not inspect corpus tree: {path}") from error
+        for entry in entries:
+            candidate = Path(entry.path)
+            relative = candidate.relative_to(root)
+            if ".git" in relative.parts:
+                continue
+            try:
+                metadata = entry.stat(follow_symlinks=False)
+            except OSError as error:
+                raise ChecklistError(f"could not inspect corpus entry: {relative}") from error
+            reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+            is_link_or_reparse = stat.S_ISLNK(metadata.st_mode) or bool(
+                getattr(metadata, "st_file_attributes", 0) & reparse_flag
+            )
+            if is_link_or_reparse or stat.S_ISREG(metadata.st_mode):
+                files.append((relative, candidate, metadata))
+            elif stat.S_ISDIR(metadata.st_mode):
+                pending.append(candidate)
+    digest = hashlib.sha256()
+    for relative, candidate, metadata in sorted(files, key=lambda item: item[0].as_posix()):
+        digest.update(relative.as_posix().encode("utf-8"))
         digest.update(b"\0")
-        digest.update(hashlib.sha256(candidate.read_bytes()).digest())
+        if stat.S_ISREG(metadata.st_mode):
+            digest.update(hashlib.sha256(candidate.read_bytes()).digest())
+        else:
+            digest.update(b"link_or_reparse\0")
+            digest.update(str(stat.S_IFMT(metadata.st_mode)).encode("ascii"))
     return digest.hexdigest()
 
 
@@ -1144,10 +1170,14 @@ def run_checklist(
             if phase == "package"
             else None
         )
-        results = [
-            _run_command(command, dry_run=False, environment=environment, cwd=root)
-            for command in plan
-        ]
+        results = (
+            []
+            if phase in NETWORK_PHASES
+            else [
+                _run_command(command, dry_run=False, environment=environment, cwd=root)
+                for command in plan
+            ]
+        )
         if checkout is not None:
             results.append(checkout)
         if phase == "verify-gitflow":

@@ -11,7 +11,7 @@ from typing import cast
 
 import pytest
 
-from tools import release_checklist
+from tools import measure_acceptance, release_checklist
 
 
 @pytest.fixture
@@ -346,6 +346,57 @@ def test_path_identity_excludes_mutable_git_metadata(tmp_path: Path) -> None:
 
 
 @pytest.mark.verifies("TST057")
+def test_path_identity_includes_link_entries_without_reading_their_targets(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    corpus = tmp_path / "corpus"
+    corpus.mkdir()
+    outside = tmp_path / "outside-secret.txt"
+    outside.write_text("must not become corpus input", encoding="utf-8")
+    link = corpus / "linked-secret.txt"
+    try:
+        link.symlink_to(outside)
+    except OSError:
+        pytest.skip("symlink creation is unavailable on this Windows host")
+    read_bytes = Path.read_bytes
+
+    def no_target_read(candidate: Path) -> bytes:
+        if candidate == outside:
+            pytest.fail("corpus identity must not read a linked target")
+        return read_bytes(candidate)
+
+    monkeypatch.setattr(Path, "read_bytes", no_target_read)
+
+    with_link = release_checklist._path_identity(corpus)  # noqa: SLF001
+    link.unlink()
+
+    assert release_checklist._path_identity(corpus) != with_link  # noqa: SLF001
+
+
+@pytest.mark.verifies("TST057")
+def test_formal_snapshot_preserves_links_without_reading_targets(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    checkout = tmp_path / "checkout"
+    checkout.mkdir()
+    outside = tmp_path / "outside-secret.txt"
+    outside.write_text("must not be copied", encoding="utf-8")
+    link = checkout / "linked-secret.txt"
+    try:
+        link.symlink_to(outside)
+    except OSError:
+        pytest.skip("symlink creation is unavailable on this Windows host")
+    monkeypatch.setattr(measure_acceptance, "_git", lambda *_args: "")
+
+    snapshot = measure_acceptance._snapshot(checkout, "a" * 40, tmp_path / "snapshot")  # noqa: SLF001
+    copied_link = snapshot / "linked-secret.txt"
+
+    assert copied_link.is_symlink()
+    assert os.readlink(copied_link) == os.readlink(link)
+    assert not (snapshot / "outside-secret.txt").exists()
+
+
+@pytest.mark.verifies("TST057")
 def test_human_gate_rejects_embedded_approval_record(
     inputs: release_checklist.Inputs, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -538,6 +589,56 @@ def test_preflight_propagates_offline_uv_controls(
     )
 
     assert environments == [{"UV_OFFLINE": "1", "UV_NO_SYNC": "1"}]
+
+
+@pytest.mark.verifies("TST057")
+@pytest.mark.parametrize(
+    "phase", ["verify-gitflow", "verify-testpypi", "verify-pypi", "verify-github-release"]
+)
+def test_network_verification_never_executes_display_only_command_plans(
+    inputs: release_checklist.Inputs,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    phase: str,
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    bound = release_checklist.Inputs(
+        inputs.version,
+        inputs.tag,
+        inputs.freeze_commit,
+        123,
+        inputs.formal_root,
+        inputs.supplemental_root,
+        inputs.composed_root,
+        inputs.github_issue,
+        "b" * 40,
+        37,
+    )
+    monkeypatch.setattr(release_checklist, "_repository_root", lambda: repository)
+    monkeypatch.setattr(release_checklist, "_require_predecessors", lambda *_args: None)
+    monkeypatch.setattr(
+        release_checklist,
+        "_load_state",
+        lambda *_args: {"phases": {}, "promotion": release_checklist._promotion_binding(bound)},  # noqa: SLF001
+    )
+    monkeypatch.setattr(release_checklist, "_phase_commands", lambda *_args: [["PLACEHOLDER"]])
+    monkeypatch.setattr(
+        release_checklist,
+        "_run_command",
+        lambda *_args, **_kwargs: pytest.fail("display-only plan must not execute"),
+    )
+    monkeypatch.setattr(release_checklist, "_verify_gitflow", lambda *_args: {"status": "passed"})
+    monkeypatch.setattr(
+        release_checklist, "_verify_hosted_phase", lambda *_args: {"status": "passed"}
+    )
+
+    assert (
+        release_checklist.run_checklist(
+            bound, tmp_path / "evidence", phase, dry_run=False, allow_network=True
+        )["status"]
+        == "passed"
+    )
 
 
 @pytest.mark.verifies("TST057")

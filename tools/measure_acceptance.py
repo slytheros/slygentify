@@ -83,7 +83,7 @@ def _verify_formal_checkout(root: Path, entry: dict[str, object]) -> Path:
 
 def _snapshot(checkout: Path, commit: str, destination: Path) -> Path:
     try:
-        shutil.copytree(checkout, destination)
+        shutil.copytree(checkout, destination, symlinks=True)
     except OSError as error:
         raise CorpusError(
             f"could not create disposable snapshot for {checkout.name}: {error}"
