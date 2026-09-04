@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
+import stat
 import subprocess
 import tempfile
 from collections.abc import Sequence
@@ -69,6 +70,19 @@ def _git(path: Path, *arguments: str) -> str:
 def _verify_formal_checkout(root: Path, entry: dict[str, object]) -> Path:
     identifier = str(entry["id"])
     checkout = root / identifier
+    try:
+        metadata = checkout.lstat()
+        corpus_root = root.resolve(strict=True)
+    except OSError as error:
+        raise CorpusError(f"formal checkout is unsafe: {identifier}") from error
+    reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+    if (
+        stat.S_ISLNK(metadata.st_mode)
+        or bool(getattr(metadata, "st_file_attributes", 0) & reparse_flag)
+        or not stat.S_ISDIR(metadata.st_mode)
+        or checkout.parent.resolve() != corpus_root
+    ):
+        raise CorpusError(f"formal checkout is not a direct corpus directory: {identifier}")
     if not checkout.is_dir():
         raise CorpusError(f"formal checkout is missing: {identifier}")
     if _git(checkout, "rev-parse", "HEAD") != entry["commit"]:

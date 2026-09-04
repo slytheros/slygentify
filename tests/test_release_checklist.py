@@ -714,6 +714,11 @@ def test_gitflow_requires_a_reviewed_develop_to_main_merge(
             return "tag"
         if arguments == ("rev-list", "-n", "1", promoted.tag):
             return "b" * 40
+        if arguments in {
+            ("rev-parse", f"{promoted.freeze_commit}^{{tree}}"),
+            ("rev-parse", f"{'b' * 40}^{{tree}}"),
+        }:
+            return "d" * 40
         raise AssertionError(arguments)
 
     class Completed:
@@ -748,6 +753,10 @@ def test_gitflow_requires_a_reviewed_develop_to_main_merge(
         elif any("/git/ref/heads/" in value for value in command):
             result.returncode = 1
             result.stdout = "HTTP/2 404 Not Found\n"
+        elif any("/git/ref/tags/" in value for value in command):
+            result.stdout = json.dumps({"object": {"type": "tag", "sha": "e" * 40}})
+        elif any("/git/tags/" in value for value in command):
+            result.stdout = json.dumps({"object": {"type": "commit", "sha": "b" * 40}})
         elif any("pulls?state=closed" in value for value in command):
             result.stdout = json.dumps(
                 [

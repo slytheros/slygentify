@@ -30,7 +30,7 @@ from slygentify.traceability import implements
 from tools.release import release_version_from_tag, verify_release_bundle
 
 SCHEMA_VERSION = 1
-DEFINITION_VERSION = 1
+DEFINITION_VERSION = 2
 PHASES = (
     "preflight",
     "formal-corpus",
@@ -150,7 +150,7 @@ def _path_identity(path: Path | None) -> str | None:
     if not path.is_dir():
         raise ChecklistError(f"corpus root must be an existing directory: {path}")
     root = path.resolve()
-    files: list[tuple[Path, Path, os.stat_result, str]] = []
+    entries_to_hash: list[tuple[Path, Path, os.stat_result, str]] = []
     pending = [root]
     while pending:
         directory = pending.pop()
@@ -167,23 +167,26 @@ def _path_identity(path: Path | None) -> str | None:
                 raise ChecklistError(f"could not inspect corpus entry: {relative}") from error
             if ".git" in relative.parts:
                 if relative.name == ".git":
-                    files.append((relative, candidate, metadata, "git_marker"))
+                    entries_to_hash.append((relative, candidate, metadata, "git_marker"))
                 continue
             reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
             is_link_or_reparse = stat.S_ISLNK(metadata.st_mode) or bool(
                 getattr(metadata, "st_file_attributes", 0) & reparse_flag
             )
             if is_link_or_reparse:
-                files.append((relative, candidate, metadata, "link_or_reparse"))
+                entries_to_hash.append((relative, candidate, metadata, "link_or_reparse"))
             elif stat.S_ISREG(metadata.st_mode):
                 kind = "sensitive" if _sensitive(relative.as_posix()) else "file"
-                files.append((relative, candidate, metadata, kind))
+                entries_to_hash.append((relative, candidate, metadata, kind))
             elif stat.S_ISDIR(metadata.st_mode):
+                entries_to_hash.append((relative, candidate, metadata, "directory"))
                 pending.append(candidate)
             else:
-                files.append((relative, candidate, metadata, "special"))
+                entries_to_hash.append((relative, candidate, metadata, "special"))
     digest = hashlib.sha256()
-    for relative, candidate, metadata, kind in sorted(files, key=lambda item: item[0].as_posix()):
+    for relative, candidate, metadata, kind in sorted(
+        entries_to_hash, key=lambda item: item[0].as_posix()
+    ):
         digest.update(relative.as_posix().encode("utf-8"))
         digest.update(b"\0")
         if kind == "file":
@@ -193,6 +196,19 @@ def _path_identity(path: Path | None) -> str | None:
             digest.update(b"\0")
             digest.update(str(stat.S_IFMT(metadata.st_mode)).encode("ascii"))
     return digest.hexdigest()
+
+
+def _evidence_artifact(evidence: Path, filename: str) -> Path | None:
+    """Return a retained artifact only when every path component is contained."""
+    relative = Path(filename)
+    if relative.is_absolute() or ".." in relative.parts:
+        return None
+    candidate = evidence
+    for component in relative.parts:
+        candidate /= component
+        if candidate.is_symlink():
+            return None
+    return candidate
 
 
 def _write(path: Path, document: object) -> str:
@@ -432,13 +448,13 @@ def _validate_completed_phase(state: dict[str, Any], phase: str, evidence: Path)
     if not isinstance(artifacts, dict) or artifacts != completed.get("artifacts"):
         raise ChecklistError(f"completed phase evidence is invalid: {phase}")
     for filename, digest in artifacts.items():
-        artifact = evidence / filename
+        artifact = _evidence_artifact(evidence, filename)
         if (
             not isinstance(filename, str)
             or Path(filename).is_absolute()
             or ".." in Path(filename).parts
             or not isinstance(digest, str)
-            or artifact.is_symlink()
+            or artifact is None
             or not artifact.is_file()
             or hashlib.sha256(artifact.read_bytes()).hexdigest() != digest
         ):
@@ -482,13 +498,13 @@ def _require_predecessors(state: dict[str, Any], phase: str, evidence: Path) -> 
         if not isinstance(artifacts, dict) or artifacts != completed.get("artifacts"):
             raise ChecklistError(f"predecessor evidence has invalid artifacts: {name}")
         for filename, digest in artifacts.items():
-            candidate = evidence / filename
+            candidate = _evidence_artifact(evidence, filename)
             if (
                 not isinstance(filename, str)
                 or Path(filename).is_absolute()
                 or ".." in Path(filename).parts
                 or not isinstance(digest, str)
-                or candidate.is_symlink()
+                or candidate is None
                 or not candidate.is_file()
                 or hashlib.sha256(candidate.read_bytes()).hexdigest() != digest
             ):
@@ -829,6 +845,43 @@ def _verify_gitflow(
     tagged = _git(root, "rev-list", "-n", "1", inputs.tag)
     if tagged != inputs.promotion_commit:
         raise ChecklistError("release tag does not dereference to the expected promotion commit")
+    if _git(root, "rev-parse", f"{inputs.freeze_commit}^{{tree}}") != _git(
+        root, "rev-parse", f"{tagged}^{{tree}}"
+    ):
+        raise ChecklistError("promotion tree does not match the frozen candidate")
+    remote_ref = subprocess.run(
+        ["gh", "api", f"repos/{GITHUB_REPOSITORY}/git/ref/tags/{inputs.tag}"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    try:
+        remote_object = json.loads(remote_ref.stdout)["object"]
+        remote_tag_id = remote_object["sha"]
+    except (KeyError, TypeError, json.JSONDecodeError) as error:
+        raise ChecklistError("could not inspect the remote immutable release tag") from error
+    if (
+        remote_ref.returncode
+        or remote_object.get("type") != "tag"
+        or not isinstance(remote_tag_id, str)
+    ):
+        raise ChecklistError("remote release tag must be annotated")
+    remote_tag = subprocess.run(
+        ["gh", "api", f"repos/{GITHUB_REPOSITORY}/git/tags/{remote_tag_id}"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    try:
+        remote_target = json.loads(remote_tag.stdout)["object"]
+    except (KeyError, TypeError, json.JSONDecodeError) as error:
+        raise ChecklistError("could not dereference the remote immutable release tag") from error
+    if (
+        remote_tag.returncode
+        or remote_target.get("type") != "commit"
+        or remote_target.get("sha") != tagged
+    ):
+        raise ChecklistError("remote release tag does not dereference to the promotion commit")
     frozen = subprocess.run(
         ["git", "-C", str(root), "merge-base", "--is-ancestor", inputs.freeze_commit, tagged],
         check=False,
