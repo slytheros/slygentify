@@ -511,6 +511,22 @@ def _require_predecessors(state: dict[str, Any], phase: str, evidence: Path) -> 
                 raise ChecklistError(f"predecessor artifact is stale or missing: {name}")
 
 
+def _revalidate_gate_approvals(
+    inputs: Inputs, evidence: Path, phase: str, *, allow_network: bool
+) -> None:
+    """Recheck every prior human decision instead of trusting mutable local state."""
+    prior_gates = [name for name in PHASES[: PHASES.index(phase)] if name in GATES]
+    if not prior_gates:
+        return
+    if not allow_network:
+        raise ChecklistError(
+            "--allow-network is required to revalidate prior human-gate approvals: "
+            + ", ".join(prior_gates)
+        )
+    for gate_phase in prior_gates:
+        verify_human_gate(inputs, evidence, gate_phase)
+
+
 def _gate_packet(
     inputs: Inputs, phase: str, evidence_digest: str, resume_context: Path
 ) -> dict[str, object]:
@@ -1255,6 +1271,9 @@ def run_checklist(
         roots += (inputs.composed_root,)
     evidence = _safe_external(evidence_directory, roots)
     state_path = evidence / "release-checklist-state.json"
+    state = _load_state(state_path, inputs)
+    _require_predecessors(state, phase, evidence)
+    _revalidate_gate_approvals(inputs, evidence, phase, allow_network=allow_network)
     state = _load_state(state_path, inputs)
     _require_predecessors(state, phase, evidence)
     _validate_promotion_binding(state, inputs, phase)

@@ -421,6 +421,29 @@ def test_dry_run_validates_checkout_preconditions(
 
 
 @pytest.mark.verifies("TST057")
+def test_successor_phases_revalidate_prior_human_gates(
+    inputs: release_checklist.Inputs, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    evidence = tmp_path / "evidence"
+    verified: list[str] = []
+    monkeypatch.setattr(
+        release_checklist,
+        "verify_human_gate",
+        lambda _inputs, _evidence, phase: verified.append(phase),
+    )
+
+    release_checklist._revalidate_gate_approvals(  # noqa: SLF001
+        inputs, evidence, "package", allow_network=True
+    )
+
+    assert verified == ["formal-corpus", "initialization-review", "promotion-gate"]
+    with pytest.raises(release_checklist.ChecklistError, match="--allow-network"):
+        release_checklist._revalidate_gate_approvals(  # noqa: SLF001
+            inputs, evidence, "package", allow_network=False
+        )
+
+
+@pytest.mark.verifies("TST057")
 def test_formal_snapshot_preserves_links_without_reading_targets(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -668,6 +691,9 @@ def test_network_verification_never_executes_display_only_command_plans(
     )
     monkeypatch.setattr(release_checklist, "_repository_root", lambda: repository)
     monkeypatch.setattr(release_checklist, "_require_predecessors", lambda *_args: None)
+    monkeypatch.setattr(
+        release_checklist, "_revalidate_gate_approvals", lambda *_args, **_kwargs: None
+    )
     monkeypatch.setattr(
         release_checklist,
         "_load_state",
