@@ -47,6 +47,7 @@ PHASES = (
 NETWORK_PHASES = frozenset(
     {"verify-gitflow", "verify-testpypi", "verify-pypi", "verify-github-release"}
 )
+HOSTED_PUBLICATION_PHASES = frozenset({"verify-testpypi", "verify-pypi", "verify-github-release"})
 GITHUB_REPOSITORY = "slytheros/slygentify"
 RELEASE_MAINTAINER = "slytheros"
 RESUME_CONTEXT_FILENAME = ".release-checklist-resume.json"
@@ -145,7 +146,16 @@ def _write(path: Path, document: object) -> str:
         raise ChecklistError(f"refusing to write through symlinked evidence path: {path.name}")
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = _canonical(document)
-    path.write_bytes(payload)
+    with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as staged:
+        staged.write(payload)
+        staged.flush()
+        os.fsync(staged.fileno())
+        staged_path = Path(staged.name)
+    try:
+        os.replace(staged_path, path)
+    finally:
+        with suppress(FileNotFoundError):
+            staged_path.unlink()
     return hashlib.sha256(payload).hexdigest()
 
 
@@ -354,9 +364,11 @@ def _require_predecessors(state: dict[str, Any], phase: str, evidence: Path) -> 
     for name in PHASES[:index]:
         completed = state["phases"][name]
         artifact = evidence / f"{name}.json"
-        if not artifact.is_file() or hashlib.sha256(
-            artifact.read_bytes()
-        ).hexdigest() != completed.get("digest"):
+        if (
+            artifact.is_symlink()
+            or not artifact.is_file()
+            or hashlib.sha256(artifact.read_bytes()).hexdigest() != completed.get("digest")
+        ):
             raise ChecklistError(f"predecessor evidence is stale or missing: {name}")
         try:
             record = json.loads(artifact.read_text(encoding="utf-8"))
@@ -372,6 +384,7 @@ def _require_predecessors(state: dict[str, Any], phase: str, evidence: Path) -> 
                 or Path(filename).is_absolute()
                 or ".." in Path(filename).parts
                 or not isinstance(digest, str)
+                or candidate.is_symlink()
                 or not candidate.is_file()
                 or hashlib.sha256(candidate.read_bytes()).hexdigest() != digest
             ):
@@ -669,15 +682,19 @@ def _verify_gitflow(root: Path, inputs: Inputs) -> dict[str, object]:
     )
     if frozen.returncode:
         raise ChecklistError("release tag is not derived from the frozen commit")
-    for reference, commit in (("origin/main", tagged), ("origin/develop", tagged)):
+    for branch in ("main", "develop"):
         completed = subprocess.run(
-            ["git", "-C", str(root), "merge-base", "--is-ancestor", commit, reference],
+            ["gh", "api", f"repos/{GITHUB_REPOSITORY}/compare/{tagged}...{branch}"],
             check=False,
             capture_output=True,
             text=True,
         )
-        if completed.returncode:
-            raise ChecklistError(f"{reference} does not contain the promoted tagged commit")
+        try:
+            comparison = json.loads(completed.stdout)
+        except json.JSONDecodeError as error:
+            raise ChecklistError(f"could not inspect the current {branch} head") from error
+        if completed.returncode or comparison.get("behind_by") != 0:
+            raise ChecklistError(f"current {branch} does not contain the promoted tagged commit")
     query = (
         "query($owner:String!, $repo:String!, $expression:String!) { "
         "repository(owner:$owner, name:$repo) { object(expression:$expression) { "
@@ -992,7 +1009,7 @@ def run_checklist(
             results.append(checkout)
         if phase == "verify-gitflow":
             results.append(_verify_gitflow(root, inputs))
-        if phase in NETWORK_PHASES:
+        if phase in HOSTED_PUBLICATION_PHASES:
             previous = PHASES[PHASES.index(phase) - 1]
             verified_at = state["phases"].get(previous, {}).get("gate_verified_at")
             results.append(_verify_hosted_phase(root, inputs, phase, verified_at, evidence))

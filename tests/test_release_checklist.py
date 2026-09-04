@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shlex
 import subprocess
 from pathlib import Path
@@ -248,6 +249,43 @@ def test_evidence_writer_refuses_a_symlink(tmp_path: Path) -> None:
     with pytest.raises(release_checklist.ChecklistError, match="symlinked"):
         release_checklist._write(link, {"value": "new"})  # noqa: SLF001
     assert target.read_text(encoding="utf-8") == "untouched"
+
+
+@pytest.mark.verifies("TST057")
+def test_evidence_writer_preserves_existing_state_when_replacement_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    state = tmp_path / "release-checklist-state.json"
+    state.write_text("original", encoding="utf-8")
+
+    def fail_replace(*_args: object) -> None:
+        raise OSError("full")
+
+    monkeypatch.setattr(os, "replace", fail_replace)
+
+    with pytest.raises(OSError, match="full"):
+        release_checklist._write(state, {"replacement": True})  # noqa: SLF001
+    assert state.read_text(encoding="utf-8") == "original"
+
+
+@pytest.mark.verifies("TST057")
+def test_predecessor_validation_refuses_symlinked_phase_evidence(tmp_path: Path) -> None:
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    target = tmp_path / "preflight.json"
+    record: dict[str, object] = {"artifacts": {}}
+    target.write_bytes(release_checklist._canonical(record))  # noqa: SLF001
+    phase = evidence / "preflight.json"
+    try:
+        phase.symlink_to(target)
+    except OSError:
+        pytest.skip("symlink creation is unavailable on this Windows host")
+    state = {
+        "phases": {"preflight": {"digest": release_checklist._digest(record), "artifacts": {}}}
+    }  # noqa: SLF001
+
+    with pytest.raises(release_checklist.ChecklistError, match="stale or missing"):
+        release_checklist._require_predecessors(state, "formal-corpus", evidence)  # noqa: SLF001
 
 
 @pytest.mark.verifies("TST057")
@@ -523,6 +561,8 @@ def test_gitflow_requires_a_reviewed_develop_to_main_merge(
                     }
                 }
             )
+        elif command[:2] == ["gh", "api"]:
+            result.stdout = json.dumps({"behind_by": 0})
         return result
 
     monkeypatch.setattr(release_checklist, "_git", fake_git)
