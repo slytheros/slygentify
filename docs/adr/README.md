@@ -40,3 +40,4 @@ pull requests, or close human gates.
 | [ADR 0012](0012-visible-managed-guidance-sections.md) | Superseded | Visible managed guidance sections |
 | [ADR 0011](0011-public-migration-release-and-support-policy.md) | Accepted | Public migration, release, and support policy |
 | [ADR 0013](0013-generated-artifact-recovery.md) | Accepted | First-class generated-artifact recovery |
+| [ADR 0014](0014-post-1.0-release-checklist.md) | Accepted | Post-1.0 resumable release checklist |

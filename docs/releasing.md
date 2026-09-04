@@ -1,5 +1,38 @@
 # Human-gated release process
 
+## Post-1.0 checklist
+
+After ADR 0014 is accepted, begin a release with the repository-owned runner rather
+than manually reconstructing its state. It writes evidence only to an external directory:
+
+```console
+python -m tools.release_checklist --version X.Y.Z --tag vX.Y.Z \
+  --freeze-commit COMMIT --formal-root FORMAL_ROOT \
+  --supplemental-root SUPPLEMENTAL_ROOT --composed-root COMPOSED_ROOT \
+  --github-issue ISSUE --evidence-directory EVIDENCE \
+  --phase preflight --dry-run
+```
+
+Run phases in the reported order. The `*-gate` phase creates the packet before its
+corresponding external human action; the following `verify-*` phase performs the
+read-only confirmation. A gate packet identifies the sole decision a human may take and
+the exact command to resume; do not tag, merge, approve `testpypi`/`pypi`, or publish a
+GitHub Release early. Record approval or rejection, identity, date, notes, and
+the packet digest in the release issue. The runner only verifies that record through an
+explicit network/forge phase. Its evidence does not replace the workflow-produced bundle,
+manifest, checksums, attestations, or post-publication verification described below.
+
+For an approval packet, use the exact machine-readable line the runner reports in the
+packet: `release-checklist gate=GATE packet_digest=DIGEST decision=approved`, followed by
+the reviewer identity, UTC date, and concise notes. Verify it without any remote write:
+
+```console
+python -m tools.release_checklist ... --phase formal-corpus --verify-gate --allow-network
+```
+
+Post a new approval comment rather than editing an existing comment: edited approval
+records are rejected.
+
 This is the maintainer runbook for preparing, rehearsing, publishing, verifying, and
 recovering a Slygentify package release. Use it only for genuine reviewed releases;
 never use it to reserve a name or publish a placeholder.

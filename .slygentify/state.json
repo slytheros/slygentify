@@ -190,6 +190,15 @@
       "rule_version": 1
     },
     {
+      "id": "python-inspect-v1_1deff115a1b6f749fc3d91986f715db8c65e66229a872fe6f0e21d25939d6872",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release-rehearsal.yml",
+      "locator": "/jobs/release-helper/steps/2/run",
+      "sha256": "bdd078d8d61c5222b6d13680fa3f7e933f10601ba316602f00c7836a71e4c5b4",
+      "rule_id": "ci-command",
+      "rule_version": 1
+    },
+    {
       "id": "python-inspect-v1_28dac06b5c541ab2350b66a98f2998273e86d3c223c07cb92d009ad9f9beb5c1",
       "source_kind": "ci-command",
       "location": ".github/workflows/quality.yml",
@@ -203,8 +212,17 @@
       "source_kind": "dependency",
       "location": "pyproject.toml",
       "locator": "project.dependencies[1]",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "dependency",
+      "rule_version": 1
+    },
+    {
+      "id": "python-inspect-v1_2c4171dfe03fbc13bdcf972141ce618904582a5e93fa2a68a2dfb349bf643011",
+      "source_kind": "ci-command",
+      "location": ".github/workflows/release-rehearsal.yml",
+      "locator": "/jobs/release-helper/steps/3/run",
+      "sha256": "bdd078d8d61c5222b6d13680fa3f7e933f10601ba316602f00c7836a71e4c5b4",
+      "rule_id": "ci-command",
       "rule_version": 1
     },
     {
@@ -257,7 +275,7 @@
       "source_kind": "dependency",
       "location": "pyproject.toml",
       "locator": "dependency-groups.docs[1]",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "dependency",
       "rule_version": 1
     },
@@ -293,7 +311,7 @@
       "source_kind": "dependency",
       "location": "pyproject.toml",
       "locator": "project.dependencies[6]",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "dependency",
       "rule_version": 1
     },
@@ -302,7 +320,7 @@
       "source_kind": "tool-configuration",
       "location": "pyproject.toml",
       "locator": "tool.coverage",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "tool-configuration",
       "rule_version": 1
     },
@@ -311,7 +329,7 @@
       "source_kind": "dependency",
       "location": "pyproject.toml",
       "locator": "project.dependencies[5]",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "dependency",
       "rule_version": 1
     },
@@ -320,7 +338,7 @@
       "source_kind": "tool-configuration",
       "location": "pyproject.toml",
       "locator": "dependency-groups.dev[5]",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "tool-configuration",
       "rule_version": 1
     },
@@ -347,7 +365,7 @@
       "source_kind": "runtime",
       "location": "pyproject.toml",
       "locator": "project.requires-python",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "runtime",
       "rule_version": 1
     },
@@ -365,7 +383,7 @@
       "source_kind": "tool-configuration",
       "location": "pyproject.toml",
       "locator": "dependency-groups.dev[6]",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "tool-configuration",
       "rule_version": 1
     },
@@ -374,7 +392,7 @@
       "source_kind": "dependency",
       "location": "pyproject.toml",
       "locator": "project.dependencies[2]",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "dependency",
       "rule_version": 1
     },
@@ -383,7 +401,7 @@
       "source_kind": "manifest",
       "location": "pyproject.toml",
       "locator": "build-system",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "manifest",
       "rule_version": 1
     },
@@ -428,7 +446,7 @@
       "source_kind": "dependency",
       "location": "pyproject.toml",
       "locator": "dependency-groups.dev[2]",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "dependency",
       "rule_version": 1
     },
@@ -446,7 +464,7 @@
       "source_kind": "tool-configuration",
       "location": "pyproject.toml",
       "locator": "tool.ruff",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "tool-configuration",
       "rule_version": 1
     },
@@ -455,7 +473,7 @@
       "source_kind": "manifest",
       "location": "pyproject.toml",
       "locator": "project",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "manifest",
       "rule_version": 1
     },
@@ -491,7 +509,7 @@
       "source_kind": "dependency",
       "location": "pyproject.toml",
       "locator": "dependency-groups.dev[5]",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "dependency",
       "rule_version": 1
     },
@@ -500,7 +518,7 @@
       "source_kind": "dependency",
       "location": "pyproject.toml",
       "locator": "dependency-groups.dev[0]",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "dependency",
       "rule_version": 1
     },
@@ -509,7 +527,7 @@
       "source_kind": "dependency",
       "location": "pyproject.toml",
       "locator": "project.dependencies[0]",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "dependency",
       "rule_version": 1
     },
@@ -518,7 +536,7 @@
       "source_kind": "dependency",
       "location": "pyproject.toml",
       "locator": "dependency-groups.dev[8]",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "dependency",
       "rule_version": 1
     },
@@ -581,7 +599,7 @@
       "source_kind": "dependency",
       "location": "pyproject.toml",
       "locator": "dependency-groups.dev[10]",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "dependency",
       "rule_version": 1
     },
@@ -590,7 +608,7 @@
       "source_kind": "dependency",
       "location": "pyproject.toml",
       "locator": "project.dependencies[3]",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "dependency",
       "rule_version": 1
     },
@@ -626,7 +644,7 @@
       "source_kind": "dependency",
       "location": "pyproject.toml",
       "locator": "dependency-groups.docs[0]",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "dependency",
       "rule_version": 1
     },
@@ -635,7 +653,7 @@
       "source_kind": "tool-configuration",
       "location": "pyproject.toml",
       "locator": "tool.pytest",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "tool-configuration",
       "rule_version": 1
     },
@@ -644,7 +662,7 @@
       "source_kind": "tool-configuration",
       "location": "pyproject.toml",
       "locator": "dependency-groups.dev[7]",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "tool-configuration",
       "rule_version": 1
     },
@@ -679,7 +697,7 @@
       "source_kind": "entry-point",
       "location": "pyproject.toml",
       "locator": "project.scripts.slygentify",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "entry-point",
       "rule_version": 1
     },
@@ -697,7 +715,7 @@
       "source_kind": "dependency",
       "location": "pyproject.toml",
       "locator": "dependency-groups.dev[3]",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "dependency",
       "rule_version": 1
     },
@@ -715,7 +733,7 @@
       "source_kind": "dependency",
       "location": "pyproject.toml",
       "locator": "dependency-groups.dev[9]",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "dependency",
       "rule_version": 1
     },
@@ -760,7 +778,7 @@
       "source_kind": "dependency",
       "location": "pyproject.toml",
       "locator": "dependency-groups.dev[4]",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "dependency",
       "rule_version": 1
     },
@@ -769,7 +787,7 @@
       "source_kind": "dependency",
       "location": "pyproject.toml",
       "locator": "dependency-groups.dev[6]",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "dependency",
       "rule_version": 1
     },
@@ -778,7 +796,7 @@
       "source_kind": "metadata",
       "location": "pyproject.toml",
       "locator": "project.name",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "metadata",
       "rule_version": 1
     },
@@ -787,7 +805,7 @@
       "source_kind": "tool-configuration",
       "location": "pyproject.toml",
       "locator": "dependency-groups.dev[3]",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "tool-configuration",
       "rule_version": 1
     },
@@ -796,7 +814,7 @@
       "source_kind": "dependency",
       "location": "pyproject.toml",
       "locator": "dependency-groups.dev[1]",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "dependency",
       "rule_version": 1
     },
@@ -805,7 +823,7 @@
       "source_kind": "metadata",
       "location": "pyproject.toml",
       "locator": "project.dynamic[0]",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "metadata",
       "rule_version": 1
     },
@@ -832,7 +850,7 @@
       "source_kind": "dependency",
       "location": "pyproject.toml",
       "locator": "project.dependencies[4]",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "dependency",
       "rule_version": 1
     },
@@ -850,7 +868,7 @@
       "source_kind": "dependency",
       "location": "pyproject.toml",
       "locator": "dependency-groups.dev[7]",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "dependency",
       "rule_version": 1
     },
@@ -868,7 +886,7 @@
       "source_kind": "tool-configuration",
       "location": "pyproject.toml",
       "locator": "dependency-groups.dev[9]",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "tool-configuration",
       "rule_version": 1
     },
@@ -895,7 +913,7 @@
       "source_kind": "tool-configuration",
       "location": "pyproject.toml",
       "locator": "tool.mypy",
-      "sha256": "0acbf916666aa73dac7dc351ad59dc8f9159edd0e4b7d7c2af7c041dfc8070b3",
+      "sha256": "24b8fa7292f4f382497d3151a4638fa56e9bcbe8cc0ba6b2085d752f60b7e137",
       "rule_id": "tool-configuration",
       "rule_version": 1
     },
@@ -1068,7 +1086,23 @@
       "claim_code": "python.ci.command",
       "classification": "verified",
       "evidence_ids": [
+        "python-inspect-v1_1deff115a1b6f749fc3d91986f715db8c65e66229a872fe6f0e21d25939d6872"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
         "python-inspect-v1_28dac06b5c541ab2350b66a98f2998273e86d3c223c07cb92d009ad9f9beb5c1"
+      ]
+    },
+    {
+      "subject_id": "component_c7de4d118bd663682150dbf2bc0f0438d1318a0aa69aca55207590dde884b1de",
+      "claim_code": "python.ci.command",
+      "classification": "verified",
+      "evidence_ids": [
+        "python-inspect-v1_2c4171dfe03fbc13bdcf972141ce618904582a5e93fa2a68a2dfb349bf643011"
       ]
     },
     {
