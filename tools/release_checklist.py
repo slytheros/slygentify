@@ -669,7 +669,7 @@ def _verify_hosted_phase(
         "--limit",
         "100",
         "--json",
-        "createdAt,headBranch,headSha,conclusion,status,url",
+        "databaseId,createdAt,headBranch,headSha,conclusion,status,url",
     ]
     completed = subprocess.run(command, check=False, capture_output=True, text=True)
     if completed.returncode:
@@ -679,17 +679,48 @@ def _verify_hosted_phase(
     except json.JSONDecodeError as error:
         raise ChecklistError(f"{workflow} returned invalid workflow data") from error
     tagged = _git(root, "rev-list", "-n", "1", inputs.tag)
-    if not isinstance(runs, list) or not any(
-        isinstance(run, dict)
-        and run.get("headSha") == tagged
-        and run.get("headBranch") == inputs.tag
-        and run.get("status") == "completed"
-        and run.get("conclusion") == "success"
-        and isinstance(run.get("createdAt"), str)
-        and _postdates(run["createdAt"], gate_time)
-        for run in runs
-    ):
+    matching = (
+        next(
+            (
+                run
+                for run in runs
+                if isinstance(run, dict)
+                and run.get("headSha") == tagged
+                and run.get("headBranch") == inputs.tag
+                and run.get("status") == "completed"
+                and run.get("conclusion") == "success"
+                and isinstance(run.get("createdAt"), str)
+                and (phase == "verify-pypi" or _postdates(run["createdAt"], gate_time))
+            ),
+            None,
+        )
+        if isinstance(runs, list)
+        else None
+    )
+    if matching is None:
         raise ChecklistError(f"no successful {workflow} run exists for the immutable tag")
+    if phase == "verify-pypi":
+        run_id = matching.get("databaseId")
+        if not isinstance(run_id, int):
+            raise ChecklistError("PyPI workflow run has no stable identifier")
+        published = subprocess.run(
+            ["gh", "run", "view", str(run_id), "--repo", GITHUB_REPOSITORY, "--json", "jobs"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        try:
+            jobs = json.loads(published.stdout)["jobs"]
+        except (KeyError, TypeError, json.JSONDecodeError) as error:
+            raise ChecklistError("PyPI workflow jobs are unavailable") from error
+        if published.returncode or not any(
+            isinstance(job, dict)
+            and job.get("name") == "Publish approved files to PyPI"
+            and isinstance(job.get("startedAt"), str)
+            and _postdates(job["startedAt"], gate_time)
+            for job in jobs
+        ):
+            raise ChecklistError("PyPI publication job did not start after the approval record")
     return {"tag": inputs.tag, "workflow": workflow, "status": "passed"}
 
 
