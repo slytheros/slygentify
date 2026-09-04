@@ -198,6 +198,18 @@ def test_composed_corpus_is_protected_from_evidence_writes(
 
 
 @pytest.mark.verifies("TST057")
+def test_private_resume_context_preserves_paths_outside_portable_state(
+    inputs: release_checklist.Inputs, tmp_path: Path
+) -> None:
+    evidence = tmp_path / "evidence"
+    context = release_checklist._write_resume_context(evidence, inputs)  # noqa: SLF001
+
+    assert release_checklist._load_resume_context(context) == inputs  # noqa: SLF001
+    assert json.loads(context.read_text(encoding="utf-8"))["formal_root"] == str(inputs.formal_root)
+    assert str(inputs.formal_root) not in json.dumps(inputs.public())
+
+
+@pytest.mark.verifies("TST057")
 def test_scaling_and_network_phases_fail_closed_before_effects(
     inputs: release_checklist.Inputs, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -11,9 +11,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from collections.abc import Sequence
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -38,6 +40,7 @@ PHASES = (
 NETWORK_PHASES = frozenset({"testpypi", "pypi", "github-release"})
 GITHUB_REPOSITORY = "slytheros/slygentify"
 RELEASE_MAINTAINER = "slytheros"
+RESUME_CONTEXT_FILENAME = ".release-checklist-resume.json"
 GATES = {
     "formal-corpus": "semantic-corpus",
     "initialization-review": "initialization-usefulness",
@@ -74,6 +77,19 @@ class Inputs:
             "version": self.version,
         }
 
+    def local_context(self) -> dict[str, object]:
+        """Return the private, uncommitted arguments needed for a local resume."""
+        return {
+            "composed_root": str(self.composed_root) if self.composed_root is not None else None,
+            "formal_root": str(self.formal_root),
+            "freeze_commit": self.freeze_commit,
+            "github_issue": self.github_issue,
+            "source_date_epoch": self.source_date_epoch,
+            "supplemental_root": str(self.supplemental_root),
+            "tag": self.tag,
+            "version": self.version,
+        }
+
 
 def _canonical(document: object) -> bytes:
     return (json.dumps(document, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode(
@@ -90,6 +106,59 @@ def _write(path: Path, document: object) -> str:
     payload = _canonical(document)
     path.write_bytes(payload)
     return hashlib.sha256(payload).hexdigest()
+
+
+def _write_resume_context(evidence: Path, inputs: Inputs) -> Path:
+    """Write private local paths separately from portable release evidence."""
+    path = evidence / RESUME_CONTEXT_FILENAME
+    _write(path, inputs.local_context())
+    with suppress(OSError):
+        os.chmod(path, 0o600)
+    return path
+
+
+def _load_resume_context(path: Path) -> Inputs:
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise ChecklistError(f"could not load private resume context: {error}") from error
+    if not isinstance(document, dict):
+        raise ChecklistError("private resume context must be an object")
+    required = {
+        "version",
+        "tag",
+        "freeze_commit",
+        "source_date_epoch",
+        "formal_root",
+        "supplemental_root",
+        "composed_root",
+        "github_issue",
+    }
+    if set(document) != required or not all(
+        isinstance(document.get(field), str)
+        for field in ("version", "tag", "freeze_commit", "formal_root", "supplemental_root")
+    ):
+        raise ChecklistError("private resume context is invalid")
+    epoch = document["source_date_epoch"]
+    issue = document["github_issue"]
+    composed = document["composed_root"]
+    if (
+        not isinstance(epoch, int)
+        or isinstance(epoch, bool)
+        or not isinstance(issue, int | None)
+        or not isinstance(composed, str | None)
+    ):
+        raise ChecklistError("private resume context is invalid")
+    return Inputs(
+        document["version"],
+        document["tag"],
+        _parse_commit(document["freeze_commit"]),
+        epoch,
+        Path(document["formal_root"]).resolve(),
+        Path(document["supplemental_root"]).resolve(),
+        Path(composed).resolve() if composed is not None else None,
+        issue,
+    )
 
 
 def _git(root: Path, *arguments: str) -> str:
@@ -171,8 +240,11 @@ def _require_predecessors(state: dict[str, Any], phase: str, evidence: Path) -> 
                 raise ChecklistError(f"predecessor artifact is stale or missing: {name}")
 
 
-def _gate_packet(inputs: Inputs, phase: str, evidence_digest: str) -> dict[str, object]:
+def _gate_packet(
+    inputs: Inputs, phase: str, evidence_digest: str, resume_context: Path
+) -> dict[str, object]:
     gate = GATES[phase]
+    next_phase = PHASES[PHASES.index(phase) + 1] if phase != PHASES[-1] else phase
     return {
         "schema_version": SCHEMA_VERSION,
         "gate": gate,
@@ -182,7 +254,10 @@ def _gate_packet(inputs: Inputs, phase: str, evidence_digest: str) -> dict[str, 
         "acceptance": "The phase passed and its evidence digest matches this packet.",
         "rejection": "Record rejection with a reason; correct the release candidate or evidence, then rerun.",
         "consequence": "Approval permits only the next checklist phase; it does not merge, tag, publish, or approve an environment.",
-        "resume": f"python -m tools.release_checklist --resume --phase {phase} --tag {inputs.tag}",
+        "resume": (
+            "python -m tools.release_checklist --resume "
+            f"--resume-context {resume_context} --phase {next_phase} --allow-network"
+        ),
     }
 
 
@@ -425,6 +500,7 @@ def run_checklist(
                 "commands": plan,
                 "network": phase in NETWORK_PHASES,
                 "writes": [
+                    RESUME_CONTEXT_FILENAME,
                     "release-checklist-state.json",
                     f"{phase}.json",
                     *_phase_artifacts(phase),
@@ -434,6 +510,7 @@ def run_checklist(
             },
             "status": "planned",
         }
+    resume_context = _write_resume_context(evidence, inputs)
     results = [_run_command(command, dry_run=False) for command in plan]
     if phase in {"preflight", "gitflow"}:
         results.append(_verify_gitflow(root, inputs))
@@ -461,7 +538,7 @@ def run_checklist(
         )
     state["phases"][phase] = {"artifacts": artifacts, "digest": digest}
     _write(state_path, state)
-    packet = _gate_packet(inputs, phase, digest) if phase in GATES else None
+    packet = _gate_packet(inputs, phase, digest, resume_context) if phase in GATES else None
     if packet is not None:
         _write(evidence / f"{phase}-review-packet.json", packet)
     return {"phase": phase, "digest": digest, "human_gate": packet, "status": "passed"}
@@ -469,15 +546,16 @@ def run_checklist(
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--version", required=True)
-    parser.add_argument("--tag", required=True)
-    parser.add_argument("--freeze-commit", required=True)
-    parser.add_argument("--source-date-epoch", required=True, type=int)
-    parser.add_argument("--formal-root", required=True, type=Path)
-    parser.add_argument("--supplemental-root", required=True, type=Path)
-    parser.add_argument("--evidence-directory", required=True, type=Path)
+    parser.add_argument("--version")
+    parser.add_argument("--tag")
+    parser.add_argument("--freeze-commit")
+    parser.add_argument("--source-date-epoch", type=int)
+    parser.add_argument("--formal-root", type=Path)
+    parser.add_argument("--supplemental-root", type=Path)
+    parser.add_argument("--evidence-directory", type=Path)
     parser.add_argument("--composed-root", type=Path)
     parser.add_argument("--github-issue", type=int)
+    parser.add_argument("--resume-context", type=Path)
     parser.add_argument("--phase", choices=PHASES, required=True)
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--verify-gate", action="store_true")
@@ -490,35 +568,77 @@ def _parser() -> argparse.ArgumentParser:
 def main(arguments: Sequence[str] | None = None) -> int:
     """Run exactly one fail-closed release-checklist phase."""
     options = _parser().parse_args(arguments)
-    expected = release_version_from_tag(options.tag)
-    if options.version != expected:
-        raise ChecklistError("--version does not match the canonical release tag")
-    if options.source_date_epoch <= 0:
-        raise ChecklistError("--source-date-epoch must be positive")
-    inputs = Inputs(
-        options.version,
-        options.tag,
-        _parse_commit(options.freeze_commit),
-        options.source_date_epoch,
-        options.formal_root.resolve(),
-        options.supplemental_root.resolve(),
-        options.composed_root.resolve() if options.composed_root else None,
-        options.github_issue,
-    )
+    if options.resume_context is not None:
+        if any(
+            value is not None
+            for value in (
+                options.version,
+                options.tag,
+                options.freeze_commit,
+                options.source_date_epoch,
+                options.formal_root,
+                options.supplemental_root,
+                options.evidence_directory,
+                options.composed_root,
+                options.github_issue,
+            )
+        ):
+            raise ChecklistError("--resume-context cannot be combined with immutable input options")
+        inputs = _load_resume_context(options.resume_context)
+        evidence_directory = options.resume_context.resolve().parent
+    else:
+        if any(
+            value is None
+            for value in (
+                options.version,
+                options.tag,
+                options.freeze_commit,
+                options.source_date_epoch,
+                options.formal_root,
+                options.supplemental_root,
+                options.evidence_directory,
+            )
+        ):
+            raise ChecklistError("immutable inputs are required without --resume-context")
+        assert options.version is not None
+        assert options.tag is not None
+        assert options.freeze_commit is not None
+        assert options.source_date_epoch is not None
+        assert options.formal_root is not None
+        assert options.supplemental_root is not None
+        assert options.evidence_directory is not None
+        inputs = Inputs(
+            options.version,
+            options.tag,
+            _parse_commit(options.freeze_commit),
+            options.source_date_epoch,
+            options.formal_root.resolve(),
+            options.supplemental_root.resolve(),
+            options.composed_root.resolve() if options.composed_root else None,
+            options.github_issue,
+        )
+        evidence_directory = options.evidence_directory
+    expected = release_version_from_tag(inputs.tag)
+    if inputs.version != expected or inputs.source_date_epoch <= 0:
+        raise ChecklistError("release inputs are not canonical")
     if options.verify_gate:
         if not options.allow_network:
             raise ChecklistError("--verify-gate requires --allow-network")
         print(
-            json.dumps(
-                verify_human_gate(inputs, options.evidence_directory, options.phase), sort_keys=True
-            )
+            json.dumps(verify_human_gate(inputs, evidence_directory, options.phase), sort_keys=True)
         )
         return 0
+    if options.resume:
+        previous = PHASES[PHASES.index(options.phase) - 1] if options.phase != PHASES[0] else None
+        if previous in GATES:
+            if not options.allow_network:
+                raise ChecklistError("resuming after a human gate requires --allow-network")
+            verify_human_gate(inputs, evidence_directory, previous)
     print(
         json.dumps(
             run_checklist(
                 inputs,
-                options.evidence_directory,
+                evidence_directory,
                 options.phase,
                 dry_run=options.dry_run,
                 allow_network=options.allow_network,
