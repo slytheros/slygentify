@@ -142,6 +142,10 @@ def test_human_gate_reads_issue_without_writing(
             "promotion": None,
         },
     )
+    packet = release_checklist._gate_packet(  # noqa: SLF001
+        inputs, "formal-corpus", digest, evidence / "resume-context.json"
+    )
+    release_checklist._write(evidence / "formal-corpus-review-packet.json", packet)  # noqa: SLF001
 
     class Completed:
         returncode = 0
@@ -150,7 +154,9 @@ def test_human_gate_reads_issue_without_writing(
                 "comments": [
                     {
                         "author": {"login": release_checklist.RELEASE_MAINTAINER},
-                        "body": release_checklist._gate_comment("semantic-corpus", digest),  # noqa: SLF001
+                        "body": release_checklist._gate_comment(  # noqa: SLF001
+                            "semantic-corpus", str(packet["packet_digest"])
+                        ),
                         "createdAt": "2026-01-01T00:00:00Z",
                         "updatedAt": "2026-01-01T00:00:00Z",
                         "includesCreatedEdit": False,
@@ -186,6 +192,10 @@ def test_human_gate_rejects_an_untrusted_commenter(
             "promotion": None,
         },
     )
+    packet = release_checklist._gate_packet(  # noqa: SLF001
+        inputs, "formal-corpus", digest, evidence / "resume-context.json"
+    )
+    release_checklist._write(evidence / "formal-corpus-review-packet.json", packet)  # noqa: SLF001
 
     class Completed:
         returncode = 0
@@ -354,6 +364,10 @@ def test_human_gate_rejects_embedded_approval_record(
             "promotion": None,
         },
     )
+    packet = release_checklist._gate_packet(  # noqa: SLF001
+        inputs, "formal-corpus", digest, evidence / "resume-context.json"
+    )
+    release_checklist._write(evidence / "formal-corpus-review-packet.json", packet)  # noqa: SLF001
 
     class Completed:
         returncode = 0
@@ -394,6 +408,10 @@ def test_human_gate_rejects_an_edited_approval_record(
             "promotion": None,
         },
     )
+    packet = release_checklist._gate_packet(  # noqa: SLF001
+        inputs, "formal-corpus", digest, evidence / "resume-context.json"
+    )
+    release_checklist._write(evidence / "formal-corpus-review-packet.json", packet)  # noqa: SLF001
 
     class Completed:
         returncode = 0
@@ -579,8 +597,9 @@ def test_gitflow_requires_a_reviewed_develop_to_main_merge(
                     }
                 }
             )
-        elif "/git/ref/heads/" in command[2]:
+        elif any("/git/ref/heads/" in value for value in command):
             result.returncode = 1
+            result.stdout = "HTTP/2 404 Not Found\n"
         elif command[:2] == ["gh", "api"]:
             result.stdout = json.dumps({"behind_by": 0})
         return result
@@ -588,7 +607,12 @@ def test_gitflow_requires_a_reviewed_develop_to_main_merge(
     monkeypatch.setattr(release_checklist, "_git", fake_git)
     monkeypatch.setattr(subprocess, "run", fake_run)
 
-    assert release_checklist._verify_gitflow(tmp_path, promoted)["promotion_pull_request"] == 37  # noqa: SLF001
+    assert (
+        release_checklist._verify_gitflow(  # noqa: SLF001
+            tmp_path, promoted, "2025-12-31T00:00:00Z"
+        )["promotion_pull_request"]
+        == 37
+    )
 
 
 @pytest.mark.verifies("TST057")

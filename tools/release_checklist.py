@@ -12,6 +12,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -452,11 +453,11 @@ def _gate_packet(
 ) -> dict[str, object]:
     gate = GATES[phase]
     next_phase = PHASES[PHASES.index(phase) + 1] if phase != PHASES[-1] else phase
-    return {
+    packet = {
         "schema_version": SCHEMA_VERSION,
         "gate": gate,
         "phase": phase,
-        "packet_digest": evidence_digest,
+        "evidence_digest": evidence_digest,
         "decision": f"Approve or reject {gate.replace('-', ' ')}.",
         "acceptance": "The phase passed and its evidence digest matches this packet.",
         "rejection": "Record rejection with a reason; correct the release candidate or evidence, then rerun.",
@@ -485,6 +486,7 @@ def _gate_packet(
             ]
         ),
     }
+    return {**packet, "packet_digest": _digest(packet)}
 
 
 def _run_command(
@@ -513,6 +515,11 @@ def _gate_comment(gate: str, digest: str) -> str:
     return f"release-checklist gate={gate} packet_digest={digest} decision=approved"
 
 
+def _packet_digest(packet: dict[str, object]) -> str:
+    """Return the digest of a review packet without its derived digest field."""
+    return _digest({key: value for key, value in packet.items() if key != "packet_digest"})
+
+
 @implements("REQ056")
 def verify_human_gate(inputs: Inputs, evidence_directory: Path, phase: str) -> dict[str, object]:
     """Read a maintainer's GitHub approval record without changing remote state."""
@@ -531,7 +538,23 @@ def verify_human_gate(inputs: Inputs, evidence_directory: Path, phase: str) -> d
     completed = state["phases"].get(phase)
     if not isinstance(completed, dict) or not isinstance(completed.get("digest"), str):
         raise ChecklistError(f"phase {phase!r} has no evidence to approve")
-    expected = _gate_comment(GATES[phase], completed["digest"])
+    packet_path = evidence / f"{phase}-review-packet.json"
+    if packet_path.is_symlink():
+        raise ChecklistError(f"review packet for phase {phase!r} is invalid")
+    try:
+        packet = json.loads(packet_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise ChecklistError(f"could not load review packet for phase {phase!r}") from error
+    if (
+        not isinstance(packet, dict)
+        or packet.get("phase") != phase
+        or packet.get("gate") != GATES[phase]
+        or packet.get("evidence_digest") != completed["digest"]
+        or not isinstance(packet.get("packet_digest"), str)
+        or packet["packet_digest"] != _packet_digest(packet)
+    ):
+        raise ChecklistError(f"review packet for phase {phase!r} is invalid")
+    expected = _gate_comment(GATES[phase], packet["packet_digest"])
     command = [
         "gh",
         "issue",
@@ -681,7 +704,23 @@ def _phase_commands(inputs: Inputs, phase: str, output: Path) -> list[list[str]]
             ],
         ]
     if phase == "verify-gitflow":
-        return []
+        return [
+            ["git", "status", "--porcelain", "--untracked-files=all"],
+            ["git", "show", "-s", "--format=%ct", "PROMOTION_COMMIT"],
+            ["git", "cat-file", "-t", f"refs/tags/{inputs.tag}"],
+            ["git", "rev-list", "-n", "1", inputs.tag],
+            ["gh", "api", f"repos/{GITHUB_REPOSITORY}/compare/{inputs.tag}...main"],
+            ["gh", "api", f"repos/{GITHUB_REPOSITORY}/compare/{inputs.tag}...develop"],
+            ["gh", "api", "graphql", "promotion-commit-associated-pull-requests"],
+            ["gh", "api", "--include", "temporary-release-branch-ref"],
+        ]
+    if phase in {"verify-testpypi", "verify-pypi"}:
+        return [
+            ["gh", "run", "list", "--workflow", "release-workflow", "--branch", inputs.tag],
+            ["gh", "run", "view", "RUN_ID", "--json", "jobs"],
+        ]
+    if phase == "verify-github-release":
+        return [["gh", "api", f"repos/{GITHUB_REPOSITORY}/releases/tags/{inputs.tag}"]]
     return []
 
 
@@ -720,7 +759,9 @@ def _phase_writes(phase: str) -> tuple[str, ...]:
     return tuple(writes)
 
 
-def _verify_gitflow(root: Path, inputs: Inputs) -> dict[str, object]:
+def _verify_gitflow(
+    root: Path, inputs: Inputs, promotion_gate_verified_at: str | None
+) -> dict[str, object]:
     if _git(root, "status", "--porcelain", "--untracked-files=all"):
         raise ChecklistError("release checkout is not clean")
     if (
@@ -811,17 +852,29 @@ def _verify_gitflow(root: Path, inputs: Inputs) -> dict[str, object]:
     )
     if promotion is None:
         raise ChecklistError("promotion commit is not the reviewed develop-to-main merge")
+    if promotion_gate_verified_at is None:
+        raise ChecklistError("promotion gate has no verified approval time")
+    try:
+        promotion_gate_time = datetime.fromisoformat(
+            promotion_gate_verified_at.replace("Z", "+00:00")
+        )
+    except ValueError as error:
+        raise ChecklistError("promotion gate approval time is invalid") from error
+    if not _postdates(promotion["mergedAt"], promotion_gate_time):
+        raise ChecklistError("promotion merge predates the verified promotion-gate approval")
     head = promotion.get("headRefName")
     if not isinstance(head, str) or not head:
         raise ChecklistError("promotion pull request has no temporary release branch")
     branch_response = subprocess.run(
-        ["gh", "api", f"repos/{GITHUB_REPOSITORY}/git/ref/heads/{head}"],
+        ["gh", "api", "--include", f"repos/{GITHUB_REPOSITORY}/git/ref/heads/{head}"],
         check=False,
         capture_output=True,
         text=True,
     )
     if not branch_response.returncode:
         raise ChecklistError("temporary release branch has not been deleted")
+    if not re.search(r"(?m)^HTTP/\S+ 404\b", branch_response.stdout):
+        raise ChecklistError("could not verify temporary release branch deletion")
     return {
         "tag": inputs.tag,
         "tagged_commit": tagged,
@@ -1098,7 +1151,13 @@ def run_checklist(
         if checkout is not None:
             results.append(checkout)
         if phase == "verify-gitflow":
-            results.append(_verify_gitflow(root, inputs))
+            results.append(
+                _verify_gitflow(
+                    root,
+                    inputs,
+                    state["phases"].get("promotion-gate", {}).get("gate_verified_at"),
+                )
+            )
         if phase in HOSTED_PUBLICATION_PHASES:
             previous = PHASES[PHASES.index(phase) - 1]
             verified_at = state["phases"].get(previous, {}).get("gate_verified_at")
