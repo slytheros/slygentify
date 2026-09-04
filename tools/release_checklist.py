@@ -12,7 +12,6 @@ import argparse
 import hashlib
 import json
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -118,6 +117,8 @@ def _path_identity(path: Path | None) -> str | None:
     """Return a path-sanitized identity derived from a corpus tree's contents."""
     if path is None:
         return None
+    if not path.is_dir():
+        raise ChecklistError(f"corpus root must be an existing directory: {path}")
     digest = hashlib.sha256()
     root = path.resolve()
     for candidate in sorted(
@@ -145,6 +146,36 @@ def _write_resume_context(evidence: Path, inputs: Inputs) -> Path:
     with suppress(OSError):
         os.chmod(path, 0o600)
     return path
+
+
+def _publish_artifact(source: Path, evidence: Path, filename: str) -> None:
+    """Atomically publish one staged artifact without following evidence symlinks."""
+    relative = Path(filename)
+    if relative.is_absolute() or ".." in relative.parts:
+        raise ChecklistError(f"invalid evidence artifact path: {filename}")
+    parent = evidence
+    if parent.is_symlink():
+        raise ChecklistError("refusing to write through symlinked evidence directory")
+    for component in relative.parts[:-1]:
+        parent /= component
+        if parent.is_symlink():
+            raise ChecklistError(f"refusing to write through symlinked evidence path: {component}")
+        if parent.exists() and not parent.is_dir():
+            raise ChecklistError(f"evidence artifact parent is not a directory: {component}")
+        parent.mkdir(exist_ok=True)
+    destination = parent / relative.name
+    if destination.is_symlink():
+        raise ChecklistError(f"refusing to write through symlinked evidence path: {filename}")
+    if not source.is_file() or source.is_symlink():
+        raise ChecklistError(f"staged artifact is not a regular file: {filename}")
+    with tempfile.NamedTemporaryFile(dir=parent, delete=False) as staged:
+        staged.write(source.read_bytes())
+        staged_path = Path(staged.name)
+    try:
+        os.replace(staged_path, destination)
+    finally:
+        with suppress(FileNotFoundError):
+            staged_path.unlink()
 
 
 def _load_resume_context(path: Path) -> Inputs:
@@ -371,7 +402,8 @@ def verify_human_gate(inputs: Inputs, evidence_directory: Path, phase: str) -> d
                 comment
                 for comment in comments
                 if isinstance(comment, dict)
-                and expected in comment.get("body", "")
+                and isinstance(comment.get("body"), str)
+                and expected in comment["body"].splitlines()
                 and isinstance(comment.get("author"), dict)
                 and comment["author"].get("login") == RELEASE_MAINTAINER
                 and isinstance(comment.get("createdAt"), str)
@@ -715,10 +747,10 @@ def _verify_hosted_phase(
     )
     if matching is None:
         raise ChecklistError(f"no successful {workflow} run exists for the immutable tag")
-    if phase == "verify-pypi":
+    if phase in {"verify-testpypi", "verify-pypi"}:
         run_id = matching.get("databaseId")
         if not isinstance(run_id, int):
-            raise ChecklistError("PyPI workflow run has no stable identifier")
+            raise ChecklistError(f"{workflow} run has no stable identifier")
         published = subprocess.run(
             ["gh", "run", "view", str(run_id), "--repo", GITHUB_REPOSITORY, "--json", "jobs"],
             check=False,
@@ -729,14 +761,21 @@ def _verify_hosted_phase(
             jobs = json.loads(published.stdout)["jobs"]
         except (KeyError, TypeError, json.JSONDecodeError) as error:
             raise ChecklistError("PyPI workflow jobs are unavailable") from error
+        publication = (
+            "Publish approved files to TestPyPI"
+            if phase == "verify-testpypi"
+            else "Publish approved files to PyPI"
+        )
         if published.returncode or not any(
             isinstance(job, dict)
-            and job.get("name") == "Publish approved files to PyPI"
+            and job.get("name") == publication
             and isinstance(job.get("startedAt"), str)
             and _postdates(job["startedAt"], gate_time)
             for job in jobs
         ):
-            raise ChecklistError("PyPI publication job did not start after the approval record")
+            raise ChecklistError(
+                f"{workflow} publication job did not start after the approval record"
+            )
     return {"tag": inputs.tag, "workflow": workflow, "status": "passed"}
 
 
@@ -828,9 +867,7 @@ def run_checklist(
                 )
             return {"phase": phase, "digest": digest, "human_gate": None, "status": "passed"}
         for filename in _phase_artifacts(phase):
-            source, destination = output / filename, evidence / filename
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(source, destination)
+            _publish_artifact(output / filename, evidence, filename)
         resume_context = _write_resume_context(evidence, inputs)
         packet = _gate_packet(inputs, phase, digest, resume_context) if phase in GATES else None
         if packet is not None:

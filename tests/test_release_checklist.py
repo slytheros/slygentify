@@ -14,13 +14,17 @@ from tools import release_checklist
 
 @pytest.fixture
 def inputs(tmp_path: Path) -> release_checklist.Inputs:
+    formal = tmp_path / "formal"
+    supplemental = tmp_path / "supplemental"
+    formal.mkdir()
+    supplemental.mkdir()
     return release_checklist.Inputs(
         "1.2.3",
         "v1.2.3",
         "a" * 40,
         1,
-        tmp_path / "formal",
-        tmp_path / "supplemental",
+        formal,
+        supplemental,
         None,
         22,
     )
@@ -242,6 +246,75 @@ def test_evidence_writer_refuses_a_symlink(tmp_path: Path) -> None:
 
 
 @pytest.mark.verifies("TST057")
+def test_artifact_publisher_refuses_a_symlink(tmp_path: Path) -> None:
+    source = tmp_path / "source.json"
+    source.write_text("source", encoding="utf-8")
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    target = tmp_path / "target.json"
+    target.write_text("untouched", encoding="utf-8")
+    link = evidence / "formal-report.json"
+    try:
+        link.symlink_to(target)
+    except OSError:
+        pytest.skip("symlink creation is unavailable on this Windows host")
+
+    with pytest.raises(release_checklist.ChecklistError, match="symlinked"):
+        release_checklist._publish_artifact(source, evidence, "formal-report.json")  # noqa: SLF001
+    assert target.read_text(encoding="utf-8") == "untouched"
+
+
+@pytest.mark.verifies("TST057")
+def test_path_identity_rejects_missing_or_non_directory_roots(tmp_path: Path) -> None:
+    missing = tmp_path / "missing"
+    file = tmp_path / "file"
+    file.write_text("not a corpus", encoding="utf-8")
+
+    for root in (missing, file):
+        with pytest.raises(release_checklist.ChecklistError, match="existing directory"):
+            release_checklist._path_identity(root)  # noqa: SLF001
+
+
+@pytest.mark.verifies("TST057")
+def test_human_gate_rejects_embedded_approval_record(
+    inputs: release_checklist.Inputs, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    monkeypatch.setattr(release_checklist, "_repository_root", lambda: repository)
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    digest = "b" * 64
+    release_checklist._write(  # noqa: SLF001
+        evidence / "release-checklist-state.json",
+        {
+            "schema_version": 1,
+            "inputs": inputs.public(),
+            "phases": {"formal-corpus": {"digest": digest}},
+        },
+    )
+
+    class Completed:
+        returncode = 0
+        stdout = json.dumps(
+            {
+                "comments": [
+                    {
+                        "author": {"login": release_checklist.RELEASE_MAINTAINER},
+                        "body": "quoted "
+                        + release_checklist._gate_comment("semantic-corpus", digest),
+                        "createdAt": "2026-01-01T00:00:00Z",
+                    }
+                ]
+            }
+        )
+
+    monkeypatch.setattr(subprocess, "run", lambda *_args, **_kwargs: Completed())
+    with pytest.raises(release_checklist.ChecklistError, match="does not contain"):
+        release_checklist.verify_human_gate(inputs, evidence, "formal-corpus")
+
+
+@pytest.mark.verifies("TST057")
 def test_private_resume_context_preserves_paths_outside_portable_state(
     inputs: release_checklist.Inputs, tmp_path: Path
 ) -> None:
@@ -344,6 +417,44 @@ def test_hosted_verification_requires_matching_tag_ref(
     monkeypatch.setattr(release_checklist, "_git", lambda *_args: "b" * 40)
     monkeypatch.setattr(subprocess, "run", lambda *_args, **_kwargs: Completed())
     with pytest.raises(release_checklist.ChecklistError, match="immutable tag"):
+        release_checklist._verify_hosted_phase(  # noqa: SLF001
+            tmp_path, inputs, "verify-testpypi", "2026-01-01T00:00:00Z"
+        )
+
+
+@pytest.mark.verifies("TST057")
+def test_testpypi_verification_requires_post_gate_publication_job(
+    inputs: release_checklist.Inputs, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class Completed:
+        returncode = 0
+        stdout = ""
+
+    def fake_run(command: list[str], **_kwargs: object) -> Completed:
+        result = Completed()
+        if command[1:3] == ["run", "list"]:
+            result.stdout = json.dumps(
+                [
+                    {
+                        "databaseId": 1,
+                        "headSha": "b" * 40,
+                        "headBranch": inputs.tag,
+                        "status": "completed",
+                        "conclusion": "success",
+                        "createdAt": "2026-01-01T00:00:01Z",
+                    }
+                ]
+            )
+        else:
+            result.stdout = json.dumps(
+                {"jobs": [{"name": "Verify only", "startedAt": "2026-01-01T00:00:01Z"}]}
+            )
+        return result
+
+    monkeypatch.setattr(release_checklist, "_git", lambda *_args: "b" * 40)
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    with pytest.raises(release_checklist.ChecklistError, match="publication job"):
         release_checklist._verify_hosted_phase(  # noqa: SLF001
             tmp_path, inputs, "verify-testpypi", "2026-01-01T00:00:00Z"
         )
