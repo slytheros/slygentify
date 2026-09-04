@@ -28,9 +28,11 @@ and known limitations. A fact is copied only when its destination has a named co
    supplemental, and scaling corpus phases. Each phase emits canonical external evidence.
 3. The maintainer reviews only bounded semantic packets, recording a decision and packet
    digest in the release issue. The runner reads, never writes, that record.
-4. A reviewed release branch is merged to `main`; the runner verifies the exact merge
-   SHA. A human creates and dereferences an annotated tag, then back-merges `main` to
-   `develop` and deletes the release branch.
+4. After the promotion gate is approved, a reviewed release branch is merged to `main`.
+   The runner receives that merge SHA, derives the build epoch from it, and verifies the
+   exact merge before a human creates and dereferences an annotated tag. It then builds
+   the local package at that same promoted commit before the hosted release workflow.
+   A human back-merges `main` to `develop` and deletes the release branch.
 5. Hosted workflows remain authoritative for package builds, attestations, environment
    approval, TestPyPI/PyPI verification, and the supported install matrix. TestPyPI is
    never a dependency index; the candidate wheel is hash-bound and dependencies resolve

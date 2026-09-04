@@ -28,7 +28,7 @@
                 "freeze_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
                 "github_issue": {"type": ["integer", "null"], "minimum": 1},
                 "promotion_commit": {"type": ["string", "null"], "pattern": "^[0-9a-f]{40}$"},
-                "source_date_epoch": {"type": "integer", "minimum": 1},
+                "source_date_epoch": {"type": ["integer", "null"], "minimum": 1},
                 "supplemental_root_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
                 "tag": {"type": "string", "pattern": "^v"},
                 "version": {"type": "string"},

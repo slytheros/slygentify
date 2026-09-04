@@ -33,9 +33,9 @@ PHASES = (
     "initialization-review",
     "supplemental-corpus",
     "scaling",
-    "package",
     "promotion-gate",
     "verify-gitflow",
+    "package",
     "testpypi-gate",
     "verify-testpypi",
     "pypi-gate",
@@ -66,7 +66,7 @@ class Inputs:
     version: str
     tag: str
     freeze_commit: str
-    source_date_epoch: int
+    source_date_epoch: int | None
     formal_root: Path
     supplemental_root: Path
     composed_root: Path | None
@@ -87,6 +87,13 @@ class Inputs:
             "tag": self.tag,
             "version": self.version,
         }
+
+    def initial_public(self) -> dict[str, object]:
+        """Return immutable inputs known before the human promotion decision."""
+        document = self.public()
+        document["promotion_commit"] = None
+        document["source_date_epoch"] = None
+        return document
 
     def local_context(self) -> dict[str, object]:
         """Return the private, uncommitted arguments needed for a local resume."""
@@ -206,7 +213,7 @@ def _load_resume_context(path: Path) -> Inputs:
     composed = document["composed_root"]
     promotion = document["promotion_commit"]
     if (
-        not isinstance(epoch, int)
+        not isinstance(epoch, int | None)
         or isinstance(epoch, bool)
         or not isinstance(issue, int | None)
         or not isinstance(composed, str | None)
@@ -256,16 +263,39 @@ def _parse_commit(value: str) -> str:
     return value
 
 
+def _bind_promotion(inputs: Inputs, promotion_commit: str) -> Inputs:
+    """Bind the post-gate merge commit and its authoritative build epoch."""
+    root = _repository_root()
+    promotion = _parse_commit(promotion_commit)
+    try:
+        epoch = int(_git(root, "show", "-s", "--format=%ct", promotion))
+    except ValueError as error:
+        raise ChecklistError("promotion commit has an invalid commit timestamp") from error
+    if epoch <= 0:
+        raise ChecklistError("promotion commit has an invalid commit timestamp")
+    return Inputs(
+        inputs.version,
+        inputs.tag,
+        inputs.freeze_commit,
+        epoch,
+        inputs.formal_root,
+        inputs.supplemental_root,
+        inputs.composed_root,
+        inputs.github_issue,
+        promotion,
+    )
+
+
 def _load_state(path: Path, inputs: Inputs) -> dict[str, Any]:
     if not path.exists():
-        return {"schema_version": SCHEMA_VERSION, "inputs": inputs.public(), "phases": {}}
+        return {"schema_version": SCHEMA_VERSION, "inputs": inputs.initial_public(), "phases": {}}
     try:
         state = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
         raise ChecklistError(f"could not load checklist state: {error}") from error
     if not isinstance(state, dict) or state.get("schema_version") != SCHEMA_VERSION:
         raise ChecklistError("checklist state has an unsupported schema")
-    if state.get("inputs") != inputs.public() or not isinstance(state.get("phases"), dict):
+    if state.get("inputs") != inputs.initial_public() or not isinstance(state.get("phases"), dict):
         raise ChecklistError("checklist state does not match the immutable release inputs")
     return state
 
@@ -327,9 +357,16 @@ def _gate_packet(
         "acceptance": "The phase passed and its evidence digest matches this packet.",
         "rejection": "Record rejection with a reason; correct the release candidate or evidence, then rerun.",
         "consequence": "Approval permits only the next checklist phase; it does not merge, tag, publish, or approve an environment.",
-        "resume": (
-            "python -m tools.release_checklist --resume "
-            f"--resume-context {resume_context} --phase {next_phase} --allow-network"
+        "resume": " ".join(
+            part
+            for part in (
+                "python -m tools.release_checklist --resume",
+                f"--resume-context {resume_context}",
+                f"--phase {next_phase}",
+                "--promotion-commit <merged-main-sha>" if phase == "promotion-gate" else None,
+                "--allow-network",
+            )
+            if part is not None
         ),
     }
 
@@ -570,15 +607,19 @@ def _phase_writes(phase: str) -> tuple[str, ...]:
 def _verify_gitflow(root: Path, inputs: Inputs) -> dict[str, object]:
     if _git(root, "status", "--porcelain", "--untracked-files=all"):
         raise ChecklistError("release checkout is not clean")
+    if inputs.promotion_commit is None or inputs.source_date_epoch is None:
+        raise ChecklistError(
+            "promotion commit and build epoch are required after the promotion gate"
+        )
     if (
-        int(_git(root, "show", "-s", "--format=%ct", inputs.freeze_commit))
+        int(_git(root, "show", "-s", "--format=%ct", inputs.promotion_commit))
         != inputs.source_date_epoch
     ):
-        raise ChecklistError("SOURCE_DATE_EPOCH does not match the frozen commit")
+        raise ChecklistError("SOURCE_DATE_EPOCH does not match the promotion commit")
     if _git(root, "cat-file", "-t", f"refs/tags/{inputs.tag}") != "tag":
         raise ChecklistError("release tag must exist and be annotated")
     tagged = _git(root, "rev-list", "-n", "1", inputs.tag)
-    if inputs.promotion_commit is None or tagged != inputs.promotion_commit:
+    if tagged != inputs.promotion_commit:
         raise ChecklistError("release tag does not dereference to the expected promotion commit")
     frozen = subprocess.run(
         ["git", "-C", str(root), "merge-base", "--is-ancestor", inputs.freeze_commit, tagged],
@@ -607,6 +648,19 @@ def _verify_frozen_checkout(root: Path, inputs: Inputs) -> dict[str, object]:
     if _git(root, "rev-parse", "HEAD") != inputs.freeze_commit:
         raise ChecklistError("local release checks must run at the frozen commit")
     return {"commit": inputs.freeze_commit, "status": "passed"}
+
+
+def _verify_promoted_checkout(root: Path, inputs: Inputs) -> dict[str, object]:
+    """Bind local package construction to the reviewed tagged promotion commit."""
+    if inputs.promotion_commit is None or inputs.source_date_epoch is None:
+        raise ChecklistError(
+            "promotion commit and build epoch are required for package construction"
+        )
+    if _git(root, "status", "--porcelain", "--untracked-files=all"):
+        raise ChecklistError("release checkout is not clean")
+    if _git(root, "rev-parse", "HEAD") != inputs.promotion_commit:
+        raise ChecklistError("local package construction must run at the promotion commit")
+    return {"commit": inputs.promotion_commit, "status": "passed"}
 
 
 def _verify_hosted_phase(
@@ -821,6 +875,8 @@ def run_checklist(
         plan = _phase_commands(inputs, phase, output)
         if phase in PHASES[: PHASES.index("promotion-gate")]:
             checkout = _verify_frozen_checkout(root, inputs)
+        elif phase == "package":
+            checkout = _verify_promoted_checkout(root, inputs)
         else:
             checkout = None
         environment = (
@@ -883,7 +939,6 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--version")
     parser.add_argument("--tag")
     parser.add_argument("--freeze-commit")
-    parser.add_argument("--source-date-epoch", type=int)
     parser.add_argument("--formal-root", type=Path)
     parser.add_argument("--supplemental-root", type=Path)
     parser.add_argument("--evidence-directory", type=Path)
@@ -910,26 +965,27 @@ def main(arguments: Sequence[str] | None = None) -> int:
                 options.version,
                 options.tag,
                 options.freeze_commit,
-                options.source_date_epoch,
                 options.formal_root,
                 options.supplemental_root,
                 options.evidence_directory,
                 options.composed_root,
                 options.github_issue,
-                options.promotion_commit,
             )
         ):
             raise ChecklistError("--resume-context cannot be combined with immutable input options")
         inputs = _load_resume_context(options.resume_context)
         evidence_directory = options.resume_context.resolve().parent
+        if options.promotion_commit is not None:
+            inputs = _bind_promotion(inputs, options.promotion_commit)
     else:
+        if options.promotion_commit is not None:
+            raise ChecklistError("--promotion-commit is only valid with --resume-context")
         if any(
             value is None
             for value in (
                 options.version,
                 options.tag,
                 options.freeze_commit,
-                options.source_date_epoch,
                 options.formal_root,
                 options.supplemental_root,
                 options.evidence_directory,
@@ -939,7 +995,6 @@ def main(arguments: Sequence[str] | None = None) -> int:
         assert options.version is not None
         assert options.tag is not None
         assert options.freeze_commit is not None
-        assert options.source_date_epoch is not None
         assert options.formal_root is not None
         assert options.supplemental_root is not None
         assert options.evidence_directory is not None
@@ -947,26 +1002,25 @@ def main(arguments: Sequence[str] | None = None) -> int:
             options.version,
             options.tag,
             _parse_commit(options.freeze_commit),
-            options.source_date_epoch,
+            None,
             options.formal_root.resolve(),
             options.supplemental_root.resolve(),
             options.composed_root.resolve() if options.composed_root else None,
             options.github_issue,
-            _parse_commit(options.promotion_commit) if options.promotion_commit else None,
+            None,
         )
         evidence_directory = options.evidence_directory
     expected = release_version_from_tag(inputs.tag)
-    if inputs.version != expected or inputs.source_date_epoch <= 0:
+    if inputs.version != expected:
         raise ChecklistError("release inputs are not canonical")
-    if (
-        inputs.composed_root is None
-        or inputs.github_issue is None
-        or inputs.github_issue <= 0
-        or inputs.promotion_commit is None
-    ):
+    if inputs.composed_root is None or inputs.github_issue is None or inputs.github_issue <= 0:
         raise ChecklistError(
-            "--composed-root, --github-issue, and --promotion-commit are required for a resumable release"
+            "--composed-root and --github-issue are required for a resumable release"
         )
+    if PHASES.index(options.phase) >= PHASES.index("verify-gitflow") and (
+        inputs.promotion_commit is None or inputs.source_date_epoch is None
+    ):
+        raise ChecklistError("--promotion-commit is required after the promotion gate")
     if options.verify_gate:
         if options.dry_run:
             raise ChecklistError("--verify-gate cannot be combined with --dry-run")

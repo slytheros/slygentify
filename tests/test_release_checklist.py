@@ -22,7 +22,7 @@ def inputs(tmp_path: Path) -> release_checklist.Inputs:
         "1.2.3",
         "v1.2.3",
         "a" * 40,
-        1,
+        None,
         formal,
         supplemental,
         None,
@@ -374,6 +374,27 @@ def test_preflight_does_not_require_a_release_tag(
 
 
 @pytest.mark.verifies("TST057")
+def test_package_phase_follows_promotion_verification() -> None:
+    assert release_checklist.PHASES.index("verify-gitflow") < release_checklist.PHASES.index(
+        "package"
+    )
+
+
+@pytest.mark.verifies("TST057")
+def test_promotion_binding_derives_the_build_epoch(
+    inputs: release_checklist.Inputs, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(release_checklist, "_repository_root", lambda: tmp_path / "repository")
+    monkeypatch.setattr(release_checklist, "_git", lambda *_args: "123")
+
+    bound = release_checklist._bind_promotion(inputs, "b" * 40)  # noqa: SLF001
+
+    assert bound.promotion_commit == "b" * 40
+    assert bound.source_date_epoch == 123
+    assert bound.initial_public() == inputs.initial_public()
+
+
+@pytest.mark.verifies("TST057")
 def test_rerun_compares_staged_evidence_before_replacing_it(
     inputs: release_checklist.Inputs, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -471,8 +492,6 @@ def test_direct_gate_dry_run_is_side_effect_free(tmp_path: Path) -> None:
                 "v1.2.3",
                 "--freeze-commit",
                 "a" * 40,
-                "--source-date-epoch",
-                "1",
                 "--formal-root",
                 str(tmp_path / "formal"),
                 "--supplemental-root",
@@ -483,8 +502,6 @@ def test_direct_gate_dry_run_is_side_effect_free(tmp_path: Path) -> None:
                 str(tmp_path / "composed"),
                 "--github-issue",
                 "22",
-                "--promotion-commit",
-                "b" * 40,
                 "--phase",
                 "formal-corpus",
                 "--verify-gate",
