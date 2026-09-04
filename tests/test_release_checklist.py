@@ -102,7 +102,9 @@ def test_completed_phase_writes_canonical_evidence_and_gate_packet(
     repository.mkdir()
     monkeypatch.setattr(release_checklist, "_repository_root", lambda: repository)
     monkeypatch.setattr(release_checklist, "_phase_commands", lambda *_args: [])
-    monkeypatch.setattr(release_checklist, "_verify_gitflow", lambda *_args: {"status": "passed"})
+    monkeypatch.setattr(
+        release_checklist, "_verify_frozen_checkout", lambda *_args: {"status": "passed"}
+    )
     evidence = tmp_path / "evidence"
 
     result = release_checklist.run_checklist(
@@ -217,6 +219,12 @@ def test_composed_corpus_is_protected_from_evidence_writes(
 
 
 @pytest.mark.verifies("TST057")
+def test_evidence_directory_cannot_contain_a_corpus_root(tmp_path: Path) -> None:
+    with pytest.raises(release_checklist.ChecklistError, match="outside"):
+        release_checklist._safe_external(tmp_path, (tmp_path / "corpus",))  # noqa: SLF001
+
+
+@pytest.mark.verifies("TST057")
 def test_private_resume_context_preserves_paths_outside_portable_state(
     inputs: release_checklist.Inputs, tmp_path: Path
 ) -> None:
@@ -263,8 +271,8 @@ def test_preflight_does_not_require_a_release_tag(
     monkeypatch.setattr(release_checklist, "_phase_commands", lambda *_args: [])
     monkeypatch.setattr(
         release_checklist,
-        "_verify_gitflow",
-        lambda *_args: (_ for _ in ()).throw(AssertionError("not a preflight check")),
+        "_verify_frozen_checkout",
+        lambda *_args: {"status": "passed"},
     )
 
     assert (
@@ -283,6 +291,9 @@ def test_rerun_compares_staged_evidence_before_replacing_it(
     repository.mkdir()
     monkeypatch.setattr(release_checklist, "_repository_root", lambda: repository)
     monkeypatch.setattr(release_checklist, "_phase_commands", lambda *_args: [])
+    monkeypatch.setattr(
+        release_checklist, "_verify_frozen_checkout", lambda *_args: {"status": "passed"}
+    )
     evidence = tmp_path / "evidence"
     first = release_checklist.run_checklist(
         inputs, evidence, "preflight", dry_run=False, allow_network=False
@@ -316,4 +327,33 @@ def test_hosted_verification_requires_matching_tag_ref(
     monkeypatch.setattr(release_checklist, "_git", lambda *_args: "b" * 40)
     monkeypatch.setattr(subprocess, "run", lambda *_args, **_kwargs: Completed())
     with pytest.raises(release_checklist.ChecklistError, match="immutable tag"):
-        release_checklist._verify_hosted_phase(tmp_path, inputs, "verify-testpypi")  # noqa: SLF001
+        release_checklist._verify_hosted_phase(  # noqa: SLF001
+            tmp_path, inputs, "verify-testpypi", "2026-01-01T00:00:00Z"
+        )
+
+
+@pytest.mark.verifies("TST057")
+def test_direct_gate_dry_run_is_side_effect_free(tmp_path: Path) -> None:
+    with pytest.raises(release_checklist.ChecklistError, match="cannot be combined"):
+        release_checklist.main(
+            [
+                "--version",
+                "1.2.3",
+                "--tag",
+                "v1.2.3",
+                "--freeze-commit",
+                "a" * 40,
+                "--source-date-epoch",
+                "1",
+                "--formal-root",
+                str(tmp_path / "formal"),
+                "--supplemental-root",
+                str(tmp_path / "supplemental"),
+                "--evidence-directory",
+                str(tmp_path / "evidence"),
+                "--phase",
+                "formal-corpus",
+                "--verify-gate",
+                "--dry-run",
+            ]
+        )

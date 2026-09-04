@@ -18,6 +18,7 @@ import tempfile
 from collections.abc import Sequence
 from contextlib import suppress
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -33,7 +34,8 @@ PHASES = (
     "supplemental-corpus",
     "scaling",
     "package",
-    "gitflow",
+    "promotion-gate",
+    "verify-gitflow",
     "testpypi-gate",
     "verify-testpypi",
     "pypi-gate",
@@ -48,7 +50,7 @@ RESUME_CONTEXT_FILENAME = ".release-checklist-resume.json"
 GATES = {
     "formal-corpus": "semantic-corpus",
     "initialization-review": "initialization-usefulness",
-    "gitflow": "promotion-and-tag",
+    "promotion-gate": "promotion-and-tag",
     "testpypi-gate": "testpypi-environment",
     "pypi-gate": "production-go-no-go",
     "github-release-gate": "github-release-publication",
@@ -191,7 +193,10 @@ def _repository_root() -> Path:
 
 def _safe_external(path: Path, roots: Sequence[Path]) -> Path:
     resolved = path.resolve(strict=False)
-    if any(resolved == root or resolved.is_relative_to(root) for root in roots):
+    if any(
+        resolved == root or resolved.is_relative_to(root) or root.is_relative_to(resolved)
+        for root in roots
+    ):
         raise ChecklistError("evidence output must be outside the repository and corpus roots")
     return resolved
 
@@ -336,6 +341,7 @@ def verify_human_gate(inputs: Inputs, evidence_directory: Path, phase: str) -> d
             "GitHub issue does not contain the required approval record: " + expected
         )
     completed["gate_verified"] = True
+    completed["gate_verified_at"] = datetime.now(UTC).isoformat().replace("+00:00", "Z")
     _write(state_path, state)
     return {"phase": phase, "gate": GATES[phase], "status": "approved"}
 
@@ -433,7 +439,7 @@ def _phase_commands(inputs: Inputs, phase: str, output: Path) -> list[list[str]]
                 str(output / "package-bundle"),
             ],
         ]
-    if phase == "gitflow":
+    if phase == "verify-gitflow":
         return []
     return []
 
@@ -505,7 +511,24 @@ def _verify_gitflow(root: Path, inputs: Inputs) -> dict[str, object]:
     return {"tag": inputs.tag, "tagged_commit": tagged, "status": "passed"}
 
 
-def _verify_hosted_phase(root: Path, inputs: Inputs, phase: str) -> dict[str, object]:
+def _verify_frozen_checkout(root: Path, inputs: Inputs) -> dict[str, object]:
+    """Bind candidate-building phases to the exact clean frozen checkout."""
+    if _git(root, "status", "--porcelain", "--untracked-files=all"):
+        raise ChecklistError("release checkout is not clean")
+    if _git(root, "rev-parse", "HEAD") != inputs.freeze_commit:
+        raise ChecklistError("local release checks must run at the frozen commit")
+    return {"commit": inputs.freeze_commit, "status": "passed"}
+
+
+def _verify_hosted_phase(
+    root: Path, inputs: Inputs, phase: str, gate_verified_at: str | None
+) -> dict[str, object]:
+    if gate_verified_at is None:
+        raise ChecklistError("hosted verification requires a recorded human-gate time")
+    try:
+        gate_time = datetime.fromisoformat(gate_verified_at.replace("Z", "+00:00"))
+    except ValueError as error:
+        raise ChecklistError("human-gate time is invalid") from error
     if phase == "verify-github-release":
         command = [
             "gh",
@@ -540,6 +563,7 @@ def _verify_hosted_phase(root: Path, inputs: Inputs, phase: str) -> dict[str, ob
             or release.get("tagName") != inputs.tag
             or release.get("isDraft") is not False
             or not isinstance(release.get("publishedAt"), str)
+            or not _postdates(release["publishedAt"], gate_time)
             or not expected <= names
         ):
             raise ChecklistError("GitHub Release does not expose the expected immutable assets")
@@ -558,7 +582,7 @@ def _verify_hosted_phase(root: Path, inputs: Inputs, phase: str) -> dict[str, ob
         "--limit",
         "100",
         "--json",
-        "headBranch,headSha,conclusion,status,url",
+        "createdAt,headBranch,headSha,conclusion,status,url",
     ]
     completed = subprocess.run(command, check=False, capture_output=True, text=True)
     if completed.returncode:
@@ -574,10 +598,19 @@ def _verify_hosted_phase(root: Path, inputs: Inputs, phase: str) -> dict[str, ob
         and run.get("headBranch") == inputs.tag
         and run.get("status") == "completed"
         and run.get("conclusion") == "success"
+        and isinstance(run.get("createdAt"), str)
+        and _postdates(run["createdAt"], gate_time)
         for run in runs
     ):
         raise ChecklistError(f"no successful {workflow} run exists for the immutable tag")
     return {"tag": inputs.tag, "workflow": workflow, "status": "passed"}
+
+
+def _postdates(value: str, reference: datetime) -> bool:
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00")) >= reference
+    except ValueError:
+        return False
 
 
 @implements("REQ056")
@@ -615,10 +648,14 @@ def run_checklist(
         if stored is not None:
             plan = _phase_commands(inputs, phase, output)
         results = [_run_command(command, dry_run=False) for command in plan]
-        if phase == "gitflow":
+        if phase in PHASES[: PHASES.index("promotion-gate")]:
+            results.append(_verify_frozen_checkout(root, inputs))
+        if phase == "verify-gitflow":
             results.append(_verify_gitflow(root, inputs))
         if phase in NETWORK_PHASES:
-            results.append(_verify_hosted_phase(root, inputs, phase))
+            previous = PHASES[PHASES.index(phase) - 1]
+            verified_at = state["phases"].get(previous, {}).get("gate_verified_at")
+            results.append(_verify_hosted_phase(root, inputs, phase, verified_at))
         if phase == "package":
             try:
                 verify_release_bundle(output / "package-bundle", inputs.tag)
@@ -735,6 +772,8 @@ def main(arguments: Sequence[str] | None = None) -> int:
     if inputs.version != expected or inputs.source_date_epoch <= 0:
         raise ChecklistError("release inputs are not canonical")
     if options.verify_gate:
+        if options.dry_run:
+            raise ChecklistError("--verify-gate cannot be combined with --dry-run")
         if not options.allow_network:
             raise ChecklistError("--verify-gate requires --allow-network")
         print(
