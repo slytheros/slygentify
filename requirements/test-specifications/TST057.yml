@@ -11,7 +11,7 @@ references:
 - keyword: TST057
   path: tests/test_release_checklist.py
   type: file
-reviewed: U-UyBBx4KiQB_EfKmX6B0iWBBb6LkTHUfI0L6OQKBJw=
+reviewed: bHRB4qNZ69QVu9hE0kW17I123shhE31BkY58Gnx49p0=
 text: |
   Verify release-checklist input validation, ordered phase execution, dry-run effect
   reporting, canonical evidence, external-output boundaries, immutable-state matching,
