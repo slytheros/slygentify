@@ -120,7 +120,9 @@ def _path_identity(path: Path | None) -> str | None:
         return None
     digest = hashlib.sha256()
     root = path.resolve()
-    for candidate in sorted(item for item in root.rglob("*") if item.is_file()):
+    for candidate in sorted(
+        item for item in root.rglob("*") if item.is_file() and not item.is_symlink()
+    ):
         digest.update(candidate.relative_to(root).as_posix().encode("utf-8"))
         digest.update(b"\0")
         digest.update(hashlib.sha256(candidate.read_bytes()).digest())
@@ -128,6 +130,8 @@ def _path_identity(path: Path | None) -> str | None:
 
 
 def _write(path: Path, document: object) -> str:
+    if path.is_symlink():
+        raise ChecklistError(f"refusing to write through symlinked evidence path: {path.name}")
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = _canonical(document)
     path.write_bytes(payload)
@@ -507,6 +511,7 @@ def _phase_artifacts(phase: str) -> tuple[str, ...]:
 def _phase_writes(phase: str) -> tuple[str, ...]:
     """List every known write a non-dry-run phase may make."""
     writes = [
+        "system temporary directory (staged phase outputs)",
         f"evidence/{RESUME_CONTEXT_FILENAME}",
         "evidence/release-checklist-state.json",
         f"evidence/{phase}.json",

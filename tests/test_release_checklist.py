@@ -227,6 +227,21 @@ def test_evidence_directory_cannot_contain_a_corpus_root(tmp_path: Path) -> None
 
 
 @pytest.mark.verifies("TST057")
+def test_evidence_writer_refuses_a_symlink(tmp_path: Path) -> None:
+    target = tmp_path / "target.json"
+    target.write_text("untouched", encoding="utf-8")
+    link = tmp_path / "state.json"
+    try:
+        link.symlink_to(target)
+    except OSError:
+        pytest.skip("symlink creation is unavailable on this Windows host")
+
+    with pytest.raises(release_checklist.ChecklistError, match="symlinked"):
+        release_checklist._write(link, {"value": "new"})  # noqa: SLF001
+    assert target.read_text(encoding="utf-8") == "untouched"
+
+
+@pytest.mark.verifies("TST057")
 def test_private_resume_context_preserves_paths_outside_portable_state(
     inputs: release_checklist.Inputs, tmp_path: Path
 ) -> None:
