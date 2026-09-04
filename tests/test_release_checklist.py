@@ -380,7 +380,7 @@ def test_path_identity_includes_link_entries_without_reading_their_targets(
 
 
 @pytest.mark.verifies("TST057")
-def test_path_identity_does_not_read_sensitive_files_and_tracks_special_entries(
+def test_path_identity_does_not_read_sensitive_files(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     corpus = tmp_path / "corpus"
