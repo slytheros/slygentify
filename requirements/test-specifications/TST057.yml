@@ -1,0 +1,22 @@
+active: true
+derived: false
+header: |
+  Release checklist runner tests
+level: 1.57
+links:
+- REQ056: 7rjK4iWuTskKPwXpMDb7HHQq4LBF0E1D2DAi1oh7LoA=
+normative: true
+ref: ''
+references:
+- keyword: TST057
+  path: tests/test_release_checklist.py
+  type: file
+reviewed: bHRB4qNZ69QVu9hE0kW17I123shhE31BkY58Gnx49p0=
+text: |
+  Verify release-checklist input validation, ordered phase execution, dry-run effect
+  reporting, canonical evidence, external-output boundaries, immutable-state matching,
+  deterministic reruns, missing prerequisites, existing corpus roots, required scaling
+  inputs, safe artifact publication, bounded unedited exact human-gate approval records,
+  quoted resume commands, post-promotion commit and build-epoch binding before package
+  construction, and qualifying hosted publication recovery, without invoking network or
+  publication effects.

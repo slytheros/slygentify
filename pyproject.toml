@@ -120,5 +120,6 @@ files = [
   "tools/measure_acceptance.py",
   "tools/review_initialization.py",
   "tools/release.py",
+  "tools/release_checklist.py",
   "tools/support",
 ]

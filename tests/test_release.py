@@ -602,3 +602,20 @@ def test_release_workflows_are_distinct_human_gated_and_least_privilege() -> Non
 
     assert "environment:\n      name: pypi" in production_text
     assert "repository-url: https://test.pypi.org/legacy/" in test_text
+
+
+@pytest.mark.verifies("TST053")
+def test_release_rehearsal_uses_the_locked_clean_runner_helper_path() -> None:
+    text, document = _workflow("release-rehearsal.yml")
+
+    assert set(document["on"]) == {"workflow_dispatch", "pull_request"}
+    assert document["permissions"] == {"contents": "read"}
+    assert document["jobs"]["release-helper"]["runs-on"] == "ubuntu-24.04"
+    assert "uv sync --locked --all-groups" in text
+    assert "python -m tools.release version" in text
+    assert "python -m tools.release_checklist --help" in text
+    assert "--no-install-project" not in text
+    for line in text.splitlines():
+        if "uses:" in line:
+            reference = line.split("uses:", maxsplit=1)[1].strip().split()[0]
+            assert re.fullmatch(r"[^@\s]+@[0-9a-f]{40}", reference)
