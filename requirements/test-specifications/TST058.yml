@@ -4,14 +4,14 @@ header: |
   Static CMake inspection tests
 level: 1.58
 links:
-- REQ057: evIxNE8yqYPjFmsx4OG0wWi77qkGuzo0mU1y6k1UjhA=
+- REQ057: 6HSs_btPPO_HrXyYha_qbym3eo7YLjKRqQTX5cJqwjI=
 normative: true
 ref: ''
 references:
 - keyword: TST058
   path: tests/test_cmake_inspection.py
   type: file
-reviewed: null
+reviewed: 9G4xgltlpQD5XTl1b4MxWVJlh-RXvaO8irrBuEShsJw=
 text: |
   Verify pure C, C++, mixed, header-only, nested and co-located CMake declarations,
   comment/multiline/escaped/bracket syntax, conditional and deferred scope, malformed

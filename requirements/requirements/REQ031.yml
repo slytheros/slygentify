@@ -13,7 +13,7 @@ references:
 - keyword: REQ031
   path: src/slygentify/_presentation.py
   type: file
-reviewed: fe9H7Hr-tpcAbQnX9s0FE2csT7aD8xJJD68RXNXegws=
+reviewed: YRZNtvoQWe9qBCx2k3RHThFBVNfbkiroqWBndZLW0-Y=
 text: |
   Slygentify shall recognize bounded static CMake and ESP-IDF project markers and
   valid KiCad project documents as generic component evidence. Supported CMake

@@ -13,7 +13,7 @@ references:
 - keyword: REQ057
   path: src/slygentify/_scan/detectors/_cmake_syntax.py
   type: file
-reviewed: null
+reviewed: 6HSs_btPPO_HrXyYha_qbym3eo7YLjKRqQTX5cJqwjI=
 text: |
   Slygentify shall inspect bounded literal CMake project identity, explicitly declared
   C/C++ languages, minimum versions, variable and target standards, safe subdirectory
