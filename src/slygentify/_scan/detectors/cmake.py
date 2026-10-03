@@ -70,6 +70,17 @@ def _project_languages(call: Command) -> tuple[str, ...] | None:
 
 
 def _unique_object(data: bytes) -> dict[str, object]:
+    def unicode_scalars(value: object) -> None:
+        if isinstance(value, str):
+            value.encode("utf-8")
+        elif isinstance(value, dict):
+            for key, item in value.items():
+                unicode_scalars(key)
+                unicode_scalars(item)
+        elif isinstance(value, list):
+            for item in value:
+                unicode_scalars(item)
+
     def pairs(items: list[tuple[str, object]]) -> dict[str, object]:
         result: dict[str, object] = {}
         for key, value in items:
@@ -81,7 +92,17 @@ def _unique_object(data: bytes) -> dict[str, object]:
     result = json.loads(data.decode("utf-8"), object_pairs_hook=pairs)
     if not isinstance(result, dict):
         raise ValueError("not an object")
+    unicode_scalars(result)
     return result
+
+
+def _subdirectory_arguments(args: list[str]) -> bool:
+    """Accept only source, optional binary directory, and the two literal flags."""
+    flags = {"EXCLUDE_FROM_ALL", "SYSTEM"}
+    remaining = args[1:]
+    if remaining and remaining[0] not in flags:
+        remaining = remaining[1:]
+    return all(arg in flags for arg in remaining) and len(remaining) == len(set(remaining))
 
 
 @implements("REQ057")
@@ -216,7 +237,10 @@ def detect_cmake(view: RepositoryView, context: DetectionContext) -> DetectionRe
                 and all(arg.literal for arg in call.arguments)
             ):
                 continue
-            if any(contains_literal_credential(value) for value in args):
+            # Key/value credentials must be withheld even without assignment syntax.
+            if any(contains_literal_credential(value) for value in args) or any(
+                contains_literal_credential(f"{key}=withheld") for key in args[:-1]
+            ):
                 emit(
                     "declaration.redacted",
                     path,
@@ -469,7 +493,7 @@ def detect_cmake(view: RepositoryView, context: DetectionContext) -> DetectionRe
                         unknown=True,
                         scope=call.scope,
                     )
-            elif name == "add_subdirectory" and args:
+            elif name == "add_subdirectory" and args and _subdirectory_arguments(args):
                 key = emit(
                     "subdirectory.declaration",
                     path,
@@ -557,7 +581,7 @@ def detect_cmake(view: RepositoryView, context: DetectionContext) -> DetectionRe
             issue(
                 "invalid-presets",
                 path,
-                "Presets must be unique-key UTF-8 JSON objects",
+                "Presets must be unique-key UTF-8 JSON objects containing Unicode scalar strings",
                 partial=True,
                 subject=subject,
             )
@@ -747,6 +771,7 @@ def detect_cmake(view: RepositoryView, context: DetectionContext) -> DetectionRe
                 "ci-include-depth": "GitLab local include nesting exceeds the supported depth of 16",
                 "invalid-ci-include": "A GitLab local include is missing, unsafe, excluded, or escaping",
                 "external-ci-include": "An external or dynamic GitLab include was not fetched",
+                "external-ci-step": "A reusable GitLab run step was not fetched or evaluated",
             }
             issue(
                 code,

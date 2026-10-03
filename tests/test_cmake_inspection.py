@@ -382,6 +382,120 @@ def test_dynamic_project_identity_is_checked_before_emission(tmp_path: Path, nam
 
 @pytest.mark.verifies("TST058")
 @pytest.mark.parametrize(
+    "source",
+    [
+        "find_package(Private PASSWORD hunter2)",
+        'find_package(Private api_key "private value")',
+        "find_package(Private AUTH_TOKEN private-token PATHS ${PREFIX})",
+        "project(real LANGUAGES CXX SECRET private-token)",
+        "set(CMAKE_CXX_STANDARD 20 CACHE STRING PASSWORD hunter2)",
+        "add_test(NAME unit COMMAND tool --password hunter2)",
+    ],
+)
+def test_separate_credential_keys_and_values_are_withheld(tmp_path: Path, source: str) -> None:
+    result = scan_repository(_root(tmp_path, source + "\n"))
+    serialized = dump_scan_json(result)
+    for secret in (b"hunter2", b"private value", b"private-token"):
+        assert secret not in serialized
+    assert any(f.code == "cmake.declaration.redacted" for f in result.findings)
+    assert not any(f.code == "cmake.dependency.request" for f in result.findings)
+    output = StringIO()
+    render_scan_report(result, tmp_path, Console(file=output, width=180, color_system=None))
+    assert "hunter2" not in output.getvalue()
+
+
+@pytest.mark.verifies("TST058")
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        "child",
+        "child build",
+        "child EXCLUDE_FROM_ALL",
+        "child SYSTEM",
+        "child build EXCLUDE_FROM_ALL SYSTEM",
+        "child SYSTEM EXCLUDE_FROM_ALL",
+    ],
+)
+def test_subdirectory_valid_argument_shapes_retain_relationships(
+    tmp_path: Path, arguments: str
+) -> None:
+    root = _root(tmp_path, f"project(root CXX)\nadd_subdirectory({arguments})\n")
+    _write(root, "child/CMakeLists.txt", "project(child C)\n")
+    result = scan_repository(root)
+    assert sum(r.kind == "cmake-subdirectory" for r in result.relationships) == 1
+    assert not any(d.code == "cmake.unsupported-declaration" for d in result.diagnostics)
+
+
+@pytest.mark.verifies("TST058")
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        "child build TYPO EXTRA",
+        "child build TYPO",
+        "child SYSTEM build",
+        "child EXCLUDE_FROM_ALL EXCLUDE_FROM_ALL",
+        "child build SYSTEM SYSTEM",
+    ],
+)
+def test_malformed_subdirectories_cannot_verify_relationships(
+    tmp_path: Path, arguments: str
+) -> None:
+    root = _root(tmp_path, f"project(root CXX)\nadd_subdirectory({arguments})\n")
+    _write(root, "child/CMakeLists.txt", "project(child C)\n")
+    result = scan_repository(root)
+    assert not any(r.kind == "cmake-subdirectory" for r in result.relationships)
+    assert not any(f.code == "cmake.subdirectory.declaration" for f in result.findings)
+    assert any(f.code == "cmake.declaration.unresolved" for f in result.findings)
+    assert any(d.code == "cmake.unsupported-declaration" for d in result.diagnostics)
+
+
+@pytest.mark.verifies("TST058")
+@pytest.mark.parametrize(
+    "document",
+    [
+        {"version": 3, "configurePresets": [{"name": "\ud800"}]},
+        {"version": 3, "configurePresets": [{"name": "safe", "generator": "\udfff"}]},
+        {"version": 3, "configurePresets": [{"name": "safe", "toolchainFile": "\ud800"}]},
+        {"version": 3, "vendor": {"\ud800": "value"}},
+        {"version": 3, "vendor": {"nested": [None, {"value": "\udfff"}]}},
+    ],
+)
+def test_presets_reject_non_scalar_strings_without_crashing(
+    tmp_path: Path, document: dict[str, object]
+) -> None:
+    root = _root(tmp_path)
+    _write(root, "CMakePresets.json", json.dumps(document))
+    result = scan_repository(root)
+    assert result.completion == "partial"
+    assert any(d.code == "cmake.invalid-presets" for d in result.diagnostics)
+    assert not any(f.code.startswith("cmake.preset.") for f in result.findings)
+    assert load_scan_json(dump_scan_json(result)) == result
+
+
+@pytest.mark.verifies("TST058")
+def test_presets_accept_paired_surrogates_and_nested_scalar_data(tmp_path: Path) -> None:
+    root = _root(tmp_path)
+    _write(
+        root,
+        "CMakePresets.json",
+        json.dumps(
+            {
+                "version": 3,
+                "configurePresets": [{"name": "valid-\U0001f680", "generator": "Ninja"}],
+                "vendor": {"nested": [None, True, 1, "unicode-\u03b1"]},
+            }
+        ),
+    )
+    result = scan_repository(root)
+    assert result.completion == "complete"
+    assert any(
+        f.code == "cmake.preset.declaration" and "\U0001f680" in f.summary for f in result.findings
+    )
+    assert load_scan_json(dump_scan_json(result)) == result
+
+
+@pytest.mark.verifies("TST058")
+@pytest.mark.parametrize(
     ("assignment", "valid"),
     [
         ("17", True),
@@ -640,7 +754,11 @@ def test_ci_attribution_redaction_and_supported_platforms(tmp_path: Path) -> Non
         ".gitlab-ci.yml",
         "include:\n  - local: ci/local.yml\n  - remote: https://example.invalid/file\nbuild:\n  script: cmake --preset debug\n",
     )
-    _write(root, "ci/local.yml", "test:\n  run:\n    - run: ctest --preset debug\n")
+    _write(
+        root,
+        "ci/local.yml",
+        "test:\n  run:\n    - name: test\n      script: ctest --preset debug\n",
+    )
     result = scan_repository(root)
     child = next(c for c in result.components if c.path == "child")
     assert any(
@@ -746,6 +864,75 @@ def test_gitlab_shared_includes_are_deduplicated_without_cycle_diagnostic(tmp_pa
     ]
     assert len(shared) == 1
     assert result.completion == "complete"
+
+
+@pytest.mark.verifies("TST058")
+def test_gitlab_run_scripts_and_pages_jobs_preserve_evidence_and_redaction(tmp_path: Path) -> None:
+    root = _root(tmp_path)
+    _write(
+        root,
+        ".gitlab-ci.yml",
+        """build:
+  run:
+    - name: configure
+      script: cmake --preset debug
+    - name: build
+      script: cmake --build build
+    - name: sensitive
+      script: token=private-secret cmake --build build
+    - name: reusable
+      step: example/step@main
+pages:
+  script: cmake --build docs
+publish_docs:
+  pages: true
+  script: publish-declared-docs
+""",
+    )
+    result = scan_repository(root)
+    evidence = {e.id: e for e in result.evidence}
+    commands = [f for f in result.findings if f.code == "cmake.ci.command"]
+    expected = {
+        "cmake --preset debug": "/build/run/0/script",
+        "cmake --build build": "/build/run/1/script",
+        "cmake --build docs": "/pages/script/0",
+        "publish-declared-docs": "/publish_docs/script/0",
+    }
+    for command, locator in expected.items():
+        assert any(
+            command in f.summary
+            and f.classification == "verified"
+            and any(evidence[e].locator == locator for e in f.evidence_ids)
+            for f in commands
+        )
+    assert b"private-secret" not in dump_scan_json(result)
+    assert any(f.classification == "unknown" for f in commands)
+    assert any(d.code == "cmake.external-ci-step" for d in result.diagnostics)
+    assert not any(d.code == "cmake.invalid-ci-workflow" for d in result.diagnostics)
+
+
+@pytest.mark.verifies("TST058")
+@pytest.mark.parametrize(
+    "run",
+    [
+        "cmake --build build",
+        {"name": "build", "script": "cmake --build build"},
+        ["cmake --build build"],
+        [{"run": "cmake --build build"}],
+        [{"name": "build"}],
+        [{"name": "", "script": "cmake --build build"}],
+        [{"name": [], "script": "cmake --build build"}],
+        [{"name": "build", "script": "cmake --build build", "step": "reusable"}],
+        [{"name": "build", "script": ["cmake --build build"]}],
+    ],
+)
+def test_gitlab_malformed_run_shapes_cannot_emit_commands(tmp_path: Path, run: object) -> None:
+    root = _root(tmp_path)
+    _write(root, ".gitlab-ci.yml", json.dumps({"build": {"run": run}}))
+    result = scan_repository(root)
+    assert result.completion == "partial"
+    assert any(d.code == "cmake.invalid-ci-workflow" for d in result.diagnostics)
+    assert not any(f.code == "cmake.ci.command" for f in result.findings)
 
 
 @pytest.mark.verifies("TST058")
@@ -879,7 +1066,7 @@ def test_ci_malformed_scopes_includes_and_noncommands(tmp_path: Path) -> None:
   - {}
 before_script: echo before
 after_script:
-  - {run: echo after}
+  - echo after
   - {unrecognized: value}
   - 4
 .template: {script: hidden}

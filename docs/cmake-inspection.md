@@ -51,6 +51,9 @@ catalog. Ordinary build directories remain part of their owning project. A child
 a component only when independent project evidence supports its boundary. Unconditional
 references between established components produce `cmake-subdirectory` relationships;
 conditional references remain source declarations.
+Unsupported trailing arguments leave the reference unresolved rather than establishing
+a relationship; supported forms allow an optional binary directory and the
+`EXCLUDE_FROM_ALL`/`SYSTEM` flags.
 
 Missing, excluded, escaping, linked, unreadable, and cyclic references produce explicit
 limitations. Inspection never follows a reference around containment, ignore, sensitive
@@ -70,6 +73,8 @@ presets from version 2, and workflow presets from version 6. It retains hidden s
 directly written configure-preset generators and safe relative toolchain-file selections
 (from version 3). JSON Pointer locators identify each observation. A toolchain selection
 does not authorize reading or executing the selected file.
+Escaped lone surrogates in JSON strings are invalid preset input and produce a partial
+result instead of interrupting the scan.
 
 Inheritance, conditions, macro expansion, includes, package presets, and unsupported
 versions remain explicit limitations. Literal selections are reported even when another
@@ -83,7 +88,9 @@ literal commands. Checkout ownership and working directories constrain attributi
 workflow-level run directories apply unless a job or step overrides them. Repeated
 GitLab local includes are inspected once; only references to active ancestors are cycles.
 external/dynamic scopes and includes remain unresolved. Credential-shaped literals are
-withheld. Commands are declared evidence and are never executed or promoted to preferred
+withheld, including CMake credentials written as separate key/value arguments.
+GitLab named `run` steps contribute their literal `script` values; reusable steps remain
+unresolved. Jobs named `pages` are inspected as jobs. Commands are declared evidence and are never executed or promoted to preferred
 workflows.
 
 `scan` text, interactive exploration and JSON share these canonical records. `map` places

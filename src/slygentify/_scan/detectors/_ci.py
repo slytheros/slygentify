@@ -205,13 +205,30 @@ def inspect_commands(
                 issue("external-ci-include", path, False)
 
         def values(value: object, locator: tuple[object, ...]) -> Iterator[CICommand]:
+            run_steps = locator[-1] == "run"
+            if run_steps and not isinstance(value, list):
+                issue("invalid-ci-workflow", path, True)
+                return
             for index, command in enumerate(value if isinstance(value, list) else [value]):
                 suffix: tuple[object, ...] = ()
-                if isinstance(command, dict):
-                    command = command.get("run")
-                    suffix = ("run",)
+                if run_steps:
+                    if (
+                        not isinstance(command, dict)
+                        or not isinstance(command.get("name"), str)
+                        or not command["name"]
+                        or ("script" in command) == ("step" in command)
+                    ):
+                        issue("invalid-ci-workflow", path, True)
+                        continue
+                    if "step" in command:
+                        issue("external-ci-step", path, False)
+                        continue
+                    command = command["script"]
+                    suffix = ("script",)
                 if isinstance(command, str):
                     yield CICommand(path, pointer(*locator, index, *suffix), command, ".")
+                elif run_steps:
+                    issue("invalid-ci-workflow", path, True)
 
         for field in ("before_script", "after_script"):
             if field in doc:
@@ -227,7 +244,6 @@ def inspect_commands(
             "before_script",
             "after_script",
             "cache",
-            "pages",
             "interruptible",
         }
         for name, job in doc.items():
