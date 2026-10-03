@@ -1,0 +1,29 @@
+active: true
+derived: false
+header: |
+  Static vcpkg and Conan inspection tests
+level: 1.59
+links:
+- REQ058: null
+normative: true
+ref: ''
+references:
+- keyword: TST059
+  path: tests/test_cpp_dependencies.py
+  type: file
+- keyword: TST059
+  path: tests/test_cpp_dependencies_integration.py
+  type: file
+reviewed: null
+text: |
+  Verify vcpkg string/object dependencies, feature/default/host/version qualifiers,
+  platform/support expressions, named features, overrides and precise source locators;
+  Conan literal requirement categories, ranges, revisions and qualified legacy entries;
+  and recognition-only Python recipe presence. Verify mixed, co-located, nested and
+  unowned attribution without component or facet changes, conflicting declarations,
+  malformed encoding/JSON/types, duplicate keys, dynamic/unsupported constructs,
+  credential withholding and retention of independent valid declarations. Verify tracked
+  ignored evidence, unsafe links and resource-limited partial results, deterministic
+  ordering and evidence closure, JSON/text/explorer/map parity, initialization provenance,
+  doctor drift and preservation of human guidance. Prove recipes and discovered commands
+  are never parsed/imported/executed and inspection never accesses the network.

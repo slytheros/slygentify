@@ -73,6 +73,7 @@ dependencies, or connects to its hosted service.
 | Go | Component boundaries | Module and workspace boundaries and safe workspace-member relationships from `go.mod` and `go.work` |
 | Java and Maven | Component boundaries | Maven project and module boundaries and safe module relationships from `pom.xml` |
 | CMake | Static declarations | Explicit project identity/languages, minimum versions, variable/target standards, safe subdirectories, dependency requests, tools, shared presets, and attributable CI commands; effective configuration remains unknown |
+| vcpkg and Conan | Static dependency declarations | Supported literal `vcpkg.json` dependencies, feature/default/host/version/platform declarations and overrides; Conan text requirement sections; `conanfile.py` presence only, with recipe dependencies unknown |
 | ESP-IDF | Project boundaries | Static `project(...)` and `idf_component_register(...)` markers; deeper ESP-IDF metadata remains unsupported |
 | KiCad | Project boundaries | Valid `.kicad_pro` project boundaries and associated `.kicad_pcb` and `.kicad_sch` artifact evidence |
 | Other ecosystems | Explicit declaration | A maintainer can declare a component boundary in root `slygentify.toml`; unsupported ecosystem-specific metadata remains unknown |

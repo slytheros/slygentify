@@ -1,0 +1,35 @@
+active: true
+derived: false
+header: |
+  Static vcpkg and Conan declarations
+level: 1.58
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ058
+  path: src/slygentify/_scan/detectors/cpp_dependencies.py
+  type: file
+reviewed: null
+text: |
+  Slygentify shall inspect bounded static vcpkg.json dependencies, requested features,
+  explicit default-feature and host flags, minimum-version constraints, named feature
+  dependencies, default-feature declarations, platform/support expressions and version
+  overrides without determining activation or resolving versions. It shall retain literal
+  conanfile.txt requires, tool_requires, test_requires and qualified legacy build_requires
+  references, including ranges, revisions and categories. conanfile.py shall provide
+  recipe-presence evidence only without parsing, importing or executing Python.
+  Declarations shall use inspectable JSON Pointer or section/line locators and belong to
+  the nearest existing component, including non-CMake components, without creating
+  components or ecosystem facets. Unowned declarations shall remain repository-level
+  evidence with an ownership limitation. Malformed supported declarations shall produce
+  partial results while retaining independent valid declarations; unsupported and dynamic
+  constructs shall remain limitations and unsafe values shall be withheld. Conflicting
+  declarations shall remain visible without choosing a winner or treating different
+  managers or feature/platform scopes alone as conflicts. Canonical findings shall remain
+  available across scan text, interactive exploration, JSON and map, with dependency
+  managers in orientation, dependencies in architecture and unknowns in boundaries, and
+  shall participate in initialization provenance and doctor's tooling comparison.
+  All inspection shall preserve existing containment, ignore, link, sensitive-content and
+  resource guards without dependency installation/resolution, registry/profile lookup,
+  external include reads, discovered-command execution or network access.

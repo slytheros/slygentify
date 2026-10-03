@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 import slygentify._scan.detectors.cmake as cmake
+import slygentify._scan.detectors.cpp_dependencies as cpp_dependencies
 import slygentify._scan.detectors.generic as generic
 import slygentify._scan.detectors.javascript as javascript
 import slygentify._scan.detectors.python as python
@@ -114,6 +115,7 @@ def test_detector_registry_is_ordered_and_normalization_propagates_generic_conte
         python.detect_python,
         javascript.detect_javascript,
         cmake.detect_cmake,
+        cpp_dependencies.detect_cpp_dependencies,
     ) == BUILTIN_DETECTORS
     assert all(len(inspect.signature(detector).parameters) == 2 for detector in BUILTIN_DETECTORS)
 

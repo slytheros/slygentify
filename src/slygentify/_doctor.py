@@ -65,6 +65,14 @@ _COMPONENT_CODES = frozenset(
 )
 _TOOLING_CODES = frozenset(
     {
+        "vcpkg.manager.evidence",
+        "vcpkg.dependency.declaration",
+        "vcpkg.dependency.feature",
+        "vcpkg.dependency.default-features",
+        "vcpkg.dependency.override",
+        "vcpkg.dependency.supports",
+        "conan.manager.evidence",
+        "conan.dependency.declaration",
         "cmake.version.declaration",
         "cmake.standard.declaration",
         "cmake.preset.declaration",
