@@ -4,7 +4,7 @@ header: |
   Static vcpkg and Conan inspection tests
 level: 1.59
 links:
-- REQ058: null
+- REQ058: ruckAw3igLiH4uOZZm9NKV9vQVv58P-hJeUMK3Gms0g=
 normative: true
 ref: ''
 references:
@@ -14,7 +14,7 @@ references:
 - keyword: TST059
   path: tests/test_cpp_dependencies_integration.py
   type: file
-reviewed: null
+reviewed: FpeIRN20rJZfLu4ci1bek0bAsWrxbmI_2ox5hLlIauw=
 text: |
   Verify vcpkg string/object dependencies, feature/default/host/version qualifiers,
   platform/support expressions, named features, overrides and precise source locators;

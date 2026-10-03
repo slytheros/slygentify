@@ -10,7 +10,7 @@ references:
 - keyword: REQ058
   path: src/slygentify/_scan/detectors/cpp_dependencies.py
   type: file
-reviewed: null
+reviewed: ruckAw3igLiH4uOZZm9NKV9vQVv58P-hJeUMK3Gms0g=
 text: |
   Slygentify shall inspect bounded static vcpkg.json dependencies, requested features,
   explicit default-feature and host flags, minimum-version constraints, named feature
