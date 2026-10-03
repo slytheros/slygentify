@@ -41,7 +41,8 @@ class Command:
 @implements("REQ057")
 def commands(text: str, checkpoint: Callable[[], bool]) -> tuple[Command, ...]:
     """Tokenize supported calls, retaining conditional and deferred source context."""
-    position = 0
+    # CMake permits exactly one leading UTF-8 BOM; keep source line locators intact.
+    position = int(text.startswith("\ufeff"))
     line = 1
     length = len(text)
     result: list[Command] = []

@@ -38,18 +38,34 @@ _VERSION = re.compile(r"[0-9]+(?:\.[0-9]+){0,3}(?:\.\.\.[0-9]+(?:\.[0-9]+){0,3})
 _CONTROL = frozenset({"if", "foreach", "while", "function", "macro"})
 
 
-def _project_languages(call: Command) -> tuple[str, ...]:
+def _project_languages(call: Command) -> tuple[str, ...] | None:
     """Only explicit language arguments, never CMake's implicit defaults."""
     args = [arg.value for arg in call.arguments]
-    args = args[args.index("LANGUAGES") + 1 :] if "LANGUAGES" in args else args[1:]
+    args = args[1:]
     languages: list[str] = []
+    options: set[str] = set()
     index = 0
     while index < len(args):
-        if args[index] in _PROJECT_OPTIONS:
+        option = args[index]
+        if option in _PROJECT_OPTIONS or option == "LANGUAGES":
+            if option in options:
+                return None
+            options.add(option)
+            if option == "LANGUAGES":
+                index += 1
+                continue
+            if index + 1 == len(args) or args[index + 1] in _PROJECT_OPTIONS | {"LANGUAGES"}:
+                return None
+            if option in {"VERSION", "COMPAT_VERSION"} and not re.fullmatch(
+                r"[0-9]+(?:\.[0-9]+){0,3}", args[index + 1]
+            ):
+                return None
             index += 2
         else:
             languages.append(args[index])
             index += 1
+    if "COMPAT_VERSION" in options and "VERSION" not in options:
+        return None
     return tuple(languages)
 
 
@@ -162,11 +178,12 @@ def detect_cmake(view: RepositoryView, context: DetectionContext) -> DetectionRe
             ):
                 projects.add(parent(path))
 
-    # A declaration in an ordinary build directory belongs to its nearest project.
+    # Ordinary build directories belong to the nearest independently established component.
     roots = frozenset(projects)
+    owners = roots | context.component_paths
     references: list[tuple[str, str, tuple[str, str, str | None, str]]] = []
     for path, calls in parsed.items():
-        subject = nearest_ancestor(parent(path), roots)
+        subject = nearest_ancestor(parent(path), owners)
         for call in calls:
             if view.checkpoint():
                 break
@@ -297,7 +314,23 @@ def detect_cmake(view: RepositoryView, context: DetectionContext) -> DetectionRe
                     scope=call.scope,
                 )
                 languages = _project_languages(call)
-                if languages:
+                if languages is None:
+                    emit(
+                        "declaration.unresolved",
+                        path,
+                        call.locator,
+                        subject,
+                        "Project options have unsupported or malformed arguments; explicit languages remain unresolved.",
+                        unknown=True,
+                        scope=call.scope,
+                    )
+                    issue(
+                        "unsupported-declaration",
+                        path,
+                        "A project declaration has unsupported option arguments",
+                        subject=subject,
+                    )
+                elif languages:
                     key = emit(
                         "language.declaration",
                         path,
@@ -489,10 +522,10 @@ def detect_cmake(view: RepositoryView, context: DetectionContext) -> DetectionRe
                 "CMakeLists.txt" if source == "." else f"{source}/CMakeLists.txt",
                 "A cyclic subdirectory relationship was omitted",
                 partial=True,
-                subject=nearest_ancestor(source, roots),
+                subject=nearest_ancestor(source, owners),
             )
             continue
-        owner = nearest_ancestor(source, roots)
+        owner = nearest_ancestor(source, owners)
         if owner is not None and target in roots and owner != target:
             relationships.append(
                 RelationshipCandidate("cmake-subdirectory", owner, target, "verified", (key,))
@@ -504,7 +537,7 @@ def detect_cmake(view: RepositoryView, context: DetectionContext) -> DetectionRe
         if view.checkpoint():
             break
         name = PurePosixPath(path).name
-        subject = nearest_ancestor(parent(path), roots)
+        subject = nearest_ancestor(parent(path), owners)
         if name.startswith(".clang-"):
             if subject is not None and view.read_bytes(path) is not None:
                 emit(
@@ -710,7 +743,7 @@ def detect_cmake(view: RepositoryView, context: DetectionContext) -> DetectionRe
             problems = {
                 "invalid-ci-workflow": "CI workflow content is not supported static YAML",
                 "ci-scope-unresolved": "A CI command has an invalid, dynamic, or external checkout/working-directory scope",
-                "ci-include-cycle": "A GitLab local include repeats an already visited source",
+                "ci-include-cycle": "A GitLab local include refers back to an active ancestor",
                 "ci-include-depth": "GitLab local include nesting exceeds the supported depth of 16",
                 "invalid-ci-include": "A GitLab local include is missing, unsafe, excluded, or escaping",
                 "external-ci-include": "An external or dynamic GitLab include was not fetched",

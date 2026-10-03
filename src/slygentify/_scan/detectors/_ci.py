@@ -112,14 +112,23 @@ def inspect_commands(
             continue
         workflow = document(path)
         jobs = workflow.get("jobs") if workflow is not None else None
-        if not isinstance(jobs, dict):
+        if workflow is None or not isinstance(jobs, dict):
             continue
+        defaults = workflow.get("defaults")
+        run = defaults.get("run") if isinstance(defaults, dict) else None
+        workflow_directory_value = (
+            run.get("working-directory", ".") if isinstance(run, dict) else "."
+        )
         for job_name, job in jobs.items():
             if not isinstance(job, dict) or not isinstance(job.get("steps"), list):
                 continue
             defaults = job.get("defaults")
             run = defaults.get("run") if isinstance(defaults, dict) else None
-            directory = run.get("working-directory", ".") if isinstance(run, dict) else "."
+            directory = (
+                run.get("working-directory", workflow_directory_value)
+                if isinstance(run, dict)
+                else workflow_directory_value
+            )
             ownership: dict[str, bool | None] = {}
             checkout_seen = False
             for index, step in enumerate(job["steps"]):
@@ -159,12 +168,15 @@ def inspect_commands(
                         )
 
     visited: set[str] = set()
+    active: set[str] = set()
 
     def gitlab(path: str, depth: int) -> Iterator[CICommand]:
         if view.checkpoint():
             return
-        if path in visited:
+        if path in active:
             issue("ci-include-cycle", path, False)
+            return
+        if path in visited:
             return
         if depth > 16:
             issue("ci-include-depth", path, True)
@@ -173,6 +185,7 @@ def inspect_commands(
         doc = document(path)
         if doc is None:
             return
+        active.add(path)
         includes = doc.get("include", [])
         for include in includes if isinstance(includes, list) else [includes]:
             local = (
@@ -223,6 +236,7 @@ def inspect_commands(
             for field in ("before_script", "script", "after_script", "run"):
                 if field in job:
                     yield from values(job[field], (name, field))
+        active.remove(path)
 
     if ".gitlab-ci.yml" in paths:
         yield from gitlab(".gitlab-ci.yml", 0)

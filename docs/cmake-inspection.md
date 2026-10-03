@@ -36,8 +36,9 @@ retains the written name, version and modifiers; the dynamic path is withheld an
 unresolved. Dynamic versions remain unknown rather than being expanded. Requests with
 dynamic package names or credential-shaped/host-specific values remain withheld.
 
-The parser recognizes multiline calls, line/bracket comments, quoted/bracket arguments,
-and escapes. Literal declarations inside conditions, loops, functions, and macros remain
+The parser recognizes a leading UTF-8 BOM, multiline calls, line/bracket comments,
+quoted/bracket arguments, and escapes. Malformed project option/value pairs leave
+language selections unresolved. Literal declarations inside conditions, loops, functions, and macros remain
 verified source observations with explicit conditional/deferred wording. They may never
 take effect and do not establish unconditional boundaries. Variables, generator
 expressions, unsupported argument forms, and malformed syntax remain unknown or diagnostic.
@@ -54,6 +55,8 @@ conditional references remain source declarations.
 Missing, excluded, escaping, linked, unreadable, and cyclic references produce explicit
 limitations. Inspection never follows a reference around containment, ignore, sensitive
 content, or resource guards. Co-located Python/JavaScript and generic facets remain intact.
+CMake declarations and auxiliary files inside independently established nested components
+belong to those components rather than an outer CMake project.
 
 ## Shared presets
 
@@ -77,6 +80,8 @@ not synthesized runnable or preferred commands.
 
 Supported GitHub Actions, Gitea Actions and GitLab CI files contribute safely attributable
 literal commands. Checkout ownership and working directories constrain attribution;
+workflow-level run directories apply unless a job or step overrides them. Repeated
+GitLab local includes are inspected once; only references to active ancestors are cycles.
 external/dynamic scopes and includes remain unresolved. Credential-shaped literals are
 withheld. Commands are declared evidence and are never executed or promoted to preferred
 workflows.

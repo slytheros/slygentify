@@ -70,6 +70,116 @@ def test_explicit_languages_add_facet_without_changing_identity(
 
 
 @pytest.mark.verifies("TST058")
+def test_leading_bom_preserves_both_detection_paths_and_source_lines(tmp_path: Path) -> None:
+    source = "# source\nproject(example LANGUAGES CXX)\nset(CMAKE_CXX_STANDARD 20)\n"
+    root = _root(tmp_path, source)
+    before = scan_repository(root)
+    _write(root, "CMakeLists.txt", "\ufeff" + source)
+    result = scan_repository(root)
+    assert result == before
+    assert result.completion == "complete"
+    assert result.components[0].ecosystems == ("cmake", "generic")
+    assert any(e.locator == "line:2:project" for e in result.evidence)
+
+
+@pytest.mark.verifies("TST058")
+@pytest.mark.parametrize(
+    "source", ["\ufeff\ufeffproject(a C)", " \ufeffproject(a C)", "project(a C)\n\ufeff"]
+)
+def test_bom_is_only_accepted_once_at_start(source: str) -> None:
+    with pytest.raises(CMakeSyntaxError):
+        commands(source, lambda: False)
+
+
+@pytest.mark.verifies("TST058")
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        "VERSION LANGUAGES CXX",
+        "VERSION nope LANGUAGES CXX",
+        "CXX VERSION",
+        "CXX VERSION nope",
+        "DESCRIPTION LANGUAGES CXX",
+        "CXX HOMEPAGE_URL",
+        "VERSION 1.2 VERSION 2 LANGUAGES CXX",
+        "LANGUAGES CXX LANGUAGES C",
+        "COMPAT_VERSION 1.2 LANGUAGES CXX",
+        "VERSION 1 COMPAT_VERSION nope LANGUAGES CXX",
+        "VERSION 1.2...3.0 LANGUAGES CXX",
+    ],
+)
+def test_malformed_project_options_cannot_verify_languages(tmp_path: Path, arguments: str) -> None:
+    result = scan_repository(_root(tmp_path, f"project(example {arguments})\n"))
+    assert result.components[0].ecosystems == ("generic",)
+    assert not any(f.code == "cmake.language.declaration" for f in result.findings)
+    assert any(f.code == "cmake.declaration.unresolved" for f in result.findings)
+    assert any(d.code == "cmake.unsupported-declaration" for d in result.diagnostics)
+
+
+@pytest.mark.verifies("TST058")
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        'VERSION 1.2.3.4 COMPAT_VERSION 1.2 SPDX_LICENSE MIT DESCRIPTION "example project" LANGUAGES CXX',
+        'CXX VERSION 1 DESCRIPTION "example project" HOMEPAGE_URL example.org',
+        "VERSION 1 LANGUAGES",
+    ],
+)
+def test_valid_project_options_retain_only_explicit_languages(
+    tmp_path: Path, arguments: str
+) -> None:
+    result = scan_repository(_root(tmp_path, f"project(example {arguments})\n"))
+    assert not any(d.code == "cmake.unsupported-declaration" for d in result.diagnostics)
+    assert ("cmake" in result.components[0].ecosystems) is ("CXX" in arguments)
+
+
+@pytest.mark.verifies("TST058")
+@pytest.mark.parametrize("ecosystem", ["python", "javascript", "configured"])
+def test_nested_component_owns_cmake_declarations_and_auxiliary_files(
+    tmp_path: Path, ecosystem: str
+) -> None:
+    root = _root(tmp_path, "project(parent LANGUAGES NONE)\n")
+    if ecosystem == "python":
+        _write(root, "child/pyproject.toml", '[project]\nname="child"\nversion="1"\n')
+    elif ecosystem == "javascript":
+        _write(root, "child/package.json", '{"name":"child","version":"1.0.0"}')
+    else:
+        _write(
+            root,
+            "slygentify.toml",
+            'schema_version=1\n[[scan.components]]\npath="child"\necosystem="other"\n',
+        )
+    _write(
+        root,
+        "child/buildpart/CMakeLists.txt",
+        "set(CMAKE_CXX_STANDARD 20)\nfind_package(ZLIB REQUIRED)\n",
+    )
+    _write(root, "child/CMakePresets.json", '{"version":3,"configurePresets":[{"name":"child"}]}')
+    _write(root, "child/.clang-tidy", "Checks: '*'\n")
+    result = scan_repository(root)
+    components = {c.path: c for c in result.components}
+    assert "cmake" not in components["."].ecosystems
+    assert "cmake" in components["child"].ecosystems
+    for code in (
+        "standard.declaration",
+        "dependency.request",
+        "preset.declaration",
+        "tool.configuration",
+    ):
+        findings = [f for f in result.findings if f.code == "cmake." + code]
+        assert findings and all(f.subject_id == components["child"].id for f in findings)
+    assert "child/buildpart" not in components
+    projection = map_repository(
+        root,
+        scope="child",
+        sections=["orientation", "architecture", "workflows"],
+        max_bytes="unlimited",
+    )
+    assert any(f.code == "cmake.standard.declaration" for f in projection.findings)
+    assert any(f.code == "cmake.preset.declaration" for f in projection.findings)
+
+
+@pytest.mark.verifies("TST058")
 def test_target_standards_and_header_only_source_are_distinct(tmp_path: Path) -> None:
     root = _root(
         tmp_path,
@@ -544,6 +654,98 @@ def test_ci_attribution_redaction_and_supported_platforms(tmp_path: Path) -> Non
     )
     assert any(d.code == "cmake.external-ci-include" for d in result.diagnostics)
     assert any(e.location == "ci/local.yml" for e in result.evidence)
+
+
+@pytest.mark.verifies("TST058")
+@pytest.mark.parametrize("platform", [".github", ".gitea"])
+def test_workflow_defaults_obey_job_and_step_precedence(tmp_path: Path, platform: str) -> None:
+    root = _root(tmp_path)
+    _write(root, "child/CMakeLists.txt", "project(child CXX)\n")
+    _write(
+        root,
+        f"{platform}/workflows/build.yml",
+        """defaults:
+  run:
+    working-directory: source/child
+jobs:
+  inherited:
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: source}
+      - run: inherited-command
+  shell_only:
+    defaults:
+      run: {shell: bash}
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: source}
+      - run: shell-command
+  job_override:
+    defaults:
+      run: {working-directory: source}
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: source}
+      - run: job-command
+      - run: step-command
+        working-directory: source/child
+""",
+    )
+    result = scan_repository(root)
+    components = {c.path: c for c in result.components}
+    commands_by_owner = {
+        command: next(
+            f.subject_id
+            for f in result.findings
+            if f.code == "cmake.ci.command" and command in f.summary
+        )
+        for command in ("inherited-command", "shell-command", "job-command", "step-command")
+    }
+    assert commands_by_owner == {
+        "inherited-command": components["child"].id,
+        "shell-command": components["child"].id,
+        "job-command": components["."].id,
+        "step-command": components["child"].id,
+    }
+
+
+@pytest.mark.verifies("TST058")
+@pytest.mark.parametrize(
+    "directory", ["${{ inputs.directory }}", "../outside", "/private/directory"]
+)
+def test_unresolved_workflow_defaults_do_not_attribute_to_root(
+    tmp_path: Path, directory: str
+) -> None:
+    root = _root(tmp_path)
+    _write(
+        root,
+        ".github/workflows/build.yml",
+        json.dumps(
+            {
+                "defaults": {"run": {"working-directory": directory}},
+                "jobs": {"build": {"steps": [{"run": "unresolved-command"}]}},
+            }
+        ),
+    )
+    result = scan_repository(root)
+    assert not any(f.code == "cmake.ci.command" for f in result.findings)
+    assert any(d.code == "cmake.ci-scope-unresolved" for d in result.diagnostics)
+
+
+@pytest.mark.verifies("TST058")
+def test_gitlab_shared_includes_are_deduplicated_without_cycle_diagnostic(tmp_path: Path) -> None:
+    root = _root(tmp_path)
+    _write(root, ".gitlab-ci.yml", "include: [ci/a.yml, ci/b.yml, ci/a.yml]\n")
+    _write(root, "ci/a.yml", "include: ci/common.yml\n")
+    _write(root, "ci/b.yml", "include: ci/common.yml\n")
+    _write(root, "ci/common.yml", "build:\n  script: shared-command\n")
+    result = scan_repository(root)
+    assert not any(d.code == "cmake.ci-include-cycle" for d in result.diagnostics)
+    shared = [
+        f for f in result.findings if f.code == "cmake.ci.command" and "shared-command" in f.summary
+    ]
+    assert len(shared) == 1
+    assert result.completion == "complete"
 
 
 @pytest.mark.verifies("TST058")
