@@ -11,8 +11,8 @@ an unfamiliar local Git repository:
 
 It builds a bounded, evidence-backed operating map from static repository evidence
 instead of guessing from conventions or executing discovered project commands.
-First-class ecosystem inspection covers Python and JavaScript/TypeScript repositories,
-including mixed repositories and workspaces.
+First-class ecosystem inspection covers Python, JavaScript/TypeScript, and supported
+static CMake declarations, including mixed repositories and workspaces.
 
 Slygentify `1.0.0` is the first stable public release. Install the exact release from
 PyPI or use a reviewed source checkout.
@@ -72,13 +72,14 @@ dependencies, or connects to its hosted service.
 | Rust and Cargo | Component boundaries | Cargo package and workspace boundaries and safe workspace-member relationships from `Cargo.toml` |
 | Go | Component boundaries | Module and workspace boundaries and safe workspace-member relationships from `go.mod` and `go.work` |
 | Java and Maven | Component boundaries | Maven project and module boundaries and safe module relationships from `pom.xml` |
-| CMake and ESP-IDF | Project boundaries | Static `project(...)` and `idf_component_register(...)` markers in `CMakeLists.txt`; ecosystem-specific metadata remains unsupported |
+| CMake | Static declarations | Explicit project identity/languages, minimum versions, variable/target standards, safe subdirectories, dependency requests, tools, shared presets, and attributable CI commands; effective configuration remains unknown |
+| ESP-IDF | Project boundaries | Static `project(...)` and `idf_component_register(...)` markers; deeper ESP-IDF metadata remains unsupported |
 | KiCad | Project boundaries | Valid `.kicad_pro` project boundaries and associated `.kicad_pcb` and `.kicad_sch` artifact evidence |
 | Other ecosystems | Explicit declaration | A maintainer can declare a component boundary in root `slygentify.toml`; unsupported ecosystem-specific metadata remains unknown |
 
-See the detailed [Python](docs/python-inspection.md) and
-[JavaScript/TypeScript](docs/javascript-inspection.md) inspection references for exact
-fields, tools, frameworks, and deliberate exclusions.
+See the detailed [Python](docs/python-inspection.md),
+[JavaScript/TypeScript](docs/javascript-inspection.md), and [CMake](docs/cmake-inspection.md)
+inspection references for exact fields, tools, frameworks, and deliberate exclusions.
 
 ### CI configuration
 

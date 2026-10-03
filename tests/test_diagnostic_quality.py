@@ -345,7 +345,7 @@ def test_every_scan_diagnostic_producer_has_an_explicit_reviewed_disposition() -
             ):
                 observed.setdefault(node.args[0].value, set()).add(disposition.value)
 
-    assert producer_calls == 99
+    assert producer_calls == 101
     assert observed == {code: {disposition} for code, disposition in expected.items()}
     python_source = Path("src/slygentify/_scan/detectors/python.py").read_text(encoding="utf-8")
     assert '"python.unsupported-configuration"' in python_source

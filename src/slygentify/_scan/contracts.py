@@ -78,6 +78,7 @@ class DetectionContext:
     """Previously detected context available to the next ordered detector."""
 
     generic_component_paths: frozenset[str] = frozenset()
+    component_paths: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True, slots=True)

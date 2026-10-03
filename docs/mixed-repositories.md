@@ -22,19 +22,26 @@ Relationships are directed and deterministic:
 
 - `contains` connects the nearest component ancestor to its direct component descendant;
   it is inferred from evidence-backed paths.
+- `cmake-subdirectory` connects unconditional safe build-subdirectory references between
+  independently established CMake project components; ordinary build directories do not
+  become components.
 - `workspace-member` connects a parsed workspace root to each verified member and retains
   the workspace declaration evidence.
 
-Both relationships may connect the same pair because filesystem containment and declared
-workspace membership are different facts. Multiple distinct workspace parents are all
-retained and produce an actionable overlap diagnostic; no owner is selected silently.
+Different relationships may connect the same pair because filesystem containment, build
+subdirectory references, and declared workspace membership are different facts. Multiple
+distinct workspace parents are all retained and produce an actionable overlap diagnostic;
+no owner is selected silently.
 
 Generic engineering evidence remains deliberately narrow. A static CMake `project(...)`
 or `idf_component_register(...)` marker may establish a generic project boundary. A valid
 unique-key UTF-8 `.kicad_pro` JSON object may establish a generic engineering-project
 boundary, and sibling `.kicad_sch` and `.kicad_pcb` files corroborate it. Those artifacts
-alone do not establish a component. None of these observations claims first-class CMake,
-ESP-IDF, or KiCad support, installation, runtime use, or build success.
+alone do not establish a component. These boundary observations alone do not claim
+language use, installation, runtime use, or build success. Supported explicit C/C++
+declarations additionally contribute the `cmake` facet; generic evidence remains attached.
+See [static CMake inspection](cmake-inspection.md). Deeper ESP-IDF and KiCad metadata
+remains unsupported.
 
 Ambiguous CMake or KiCad boundaries identify the exact path that can be declared with
 `[[scan.components]]` in the root `slygentify.toml`. Scan loads and applies those

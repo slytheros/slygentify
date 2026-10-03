@@ -1,0 +1,32 @@
+active: true
+derived: false
+header: |
+  Static CMake declarations
+level: 1.57
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ057
+  path: src/slygentify/_scan/detectors/cmake.py
+  type: file
+- keyword: REQ057
+  path: src/slygentify/_scan/detectors/_cmake_syntax.py
+  type: file
+reviewed: 6HSs_btPPO_HrXyYha_qbym3eo7YLjKRqQTX5cJqwjI=
+text: |
+  Slygentify shall inspect bounded literal CMake project identity, explicitly declared
+  C/C++ languages, minimum versions, variable and target standards, safe subdirectory
+  references, dependency requests, test/tool declarations, shared configure/build/test/
+  workflow presets and attributable supported CI commands without evaluating or executing
+  project code. Conditional and deferred declarations shall retain their source scope
+  without asserting effective configuration or unconditional boundaries. Static C/C++
+  evidence shall add a cmake facet to independently established project components,
+  preserving generic and co-located ecosystem evidence. Presets versions 1 through 12
+  shall expose supported literal fields with locators; inheritance, conditions, macros,
+  includes, package presets and unsupported versions shall remain explicit limitations.
+  CMakeUserPresets.json shall not be inspected. All reads and references shall preserve
+  repository containment, ignore, link, sensitive-content and resource guards.
+  Dependency requests with literal package names shall retain safe literal arguments
+  while withholding and identifying dynamic arguments as unresolved, without expanding
+  variables or asserting effective dependency resolution.

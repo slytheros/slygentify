@@ -42,6 +42,7 @@ nav:
       - Mixed repositories: mixed-repositories.md
       - Python inspection: python-inspection.md
       - JavaScript and TypeScript inspection: javascript-inspection.md
+      - Static CMake inspection: cmake-inspection.md
       - Inspection accounting: inspection-accounting.md
   - Project:
       - Maintainer release process: releasing.md

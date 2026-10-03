@@ -281,7 +281,7 @@ class ScanPresentation:
             return "Attention & limitations", "Recommendations"
         if "ci" in code_tokens:
             return "Automation", "CI workflows & commands"
-        if code_tokens & {"command", "script"}:
+        if code_tokens & {"command", "script", "preset"}:
             task_tokens = (
                 ("Setup", {"bootstrap", "init", "install", "setup", "sync"}),
                 ("Run", {"dev", "run", "serve", "start"}),

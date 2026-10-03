@@ -26,7 +26,8 @@ The memory limit is a deterministic logical ledger, not a process RSS limit. It 
 - the compact canonical JSON byte length of each accumulated candidate record.
 
 JavaScript and TypeScript manifest, workspace, tool, and workflow inputs and generic
-CMake/ESP-IDF and KiCad inputs use the same catalogue, lazy-read, raw-buffer, parsed-copy,
+CMake/ESP-IDF and KiCad inputs, including supported CMake source and shared preset
+declarations, use the same catalogue, lazy-read, raw-buffer, parsed-copy,
 and normalized-candidate accounting rules as Python inspection. Normalized component
 relationship records count toward the same deterministic model-record ledger. The elapsed
 deadline is shared by Git discovery, traversal, detector work, normalization, relationship

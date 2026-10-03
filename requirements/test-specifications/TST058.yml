@@ -1,0 +1,24 @@
+active: true
+derived: false
+header: |
+  Static CMake inspection tests
+level: 1.58
+links:
+- REQ057: 6HSs_btPPO_HrXyYha_qbym3eo7YLjKRqQTX5cJqwjI=
+normative: true
+ref: ''
+references:
+- keyword: TST058
+  path: tests/test_cmake_inspection.py
+  type: file
+reviewed: 9G4xgltlpQD5XTl1b4MxWVJlh-RXvaO8irrBuEShsJw=
+text: |
+  Verify pure C, C++, mixed, header-only, nested and co-located CMake declarations,
+  comment/multiline/escaped/bracket syntax, conditional and deferred scope, malformed
+  and dynamic values, target standards, dependency/tool distinctions, shared preset
+  versions and unresolved constructs, CI attribution and redaction, and safe subdirectory
+  relationships. Verify deterministic evidence closure, resource-limited partial results,
+  ignored/tracked evidence, JSON/text/explorer/map integration, initialization provenance,
+  doctor drift and preservation of human guidance without project execution or networking.
+  Verify partially dynamic dependency requests retain literal names, versions and request
+  modifiers with source locators while preserving dynamic-name, credential and host-path guards.
