@@ -51,6 +51,8 @@ _COMPONENT_CODES = frozenset(
         "composition.overlapping-workspace-membership",
         "composition.unresolved-relationship",
         "generic.cmake",
+        "cmake.identity.declaration",
+        "cmake.language.declaration",
         "generic.kicad",
         "generic.manifest",
         "javascript.component.unknown",
@@ -63,6 +65,14 @@ _COMPONENT_CODES = frozenset(
 )
 _TOOLING_CODES = frozenset(
     {
+        "cmake.version.declaration",
+        "cmake.standard.declaration",
+        "cmake.preset.declaration",
+        "cmake.preset.selection",
+        "cmake.tool.declaration",
+        "cmake.tool.configuration",
+        "cmake.dependency.request",
+        "cmake.ci.command",
         "javascript.ci.command",
         "javascript.framework.declaration",
         "javascript.manager-conflict",

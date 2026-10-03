@@ -6,6 +6,11 @@ major versions are independent compatibility surfaces.
 
 ## Unreleased
 
+- Add bounded static CMake declarations, language and target-standard evidence, safe
+  subdirectory relationships, shared presets, dependency requests, tool/test evidence,
+  and attributable CI commands, with source scope, unresolved constructs, operating-map
+  integration, and doctor/provenance drift checks.
+
 ## [1.0.0] - 2026-08-30
 
 - Promote the fully verified `1.0.0rc3` product and compatibility surfaces to the first

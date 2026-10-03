@@ -146,11 +146,19 @@ def _normalize(
     view = _RepositoryView(inspection)
     detector_results: list[DetectionResult] = []
     generic_component_paths: frozenset[str] = frozenset()
+    component_paths = (
+        frozenset(item.path for item in configuration.components)
+        if configuration is not None
+        else frozenset()
+    )
     for detector in BUILTIN_DETECTORS:
         if view.checkpoint():
             break
-        detector_result = detector(view, DetectionContext(generic_component_paths))
+        detector_result = detector(view, DetectionContext(generic_component_paths, component_paths))
         detector_results.append(detector_result)
+        component_paths = frozenset(
+            {*component_paths, *(item.path for item in detector_result.components)}
+        )
         generic_component_paths = frozenset(
             {
                 *generic_component_paths,

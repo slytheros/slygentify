@@ -22,6 +22,7 @@ from slygentify._scan.contracts import (
     RelationshipCandidate,
     RepositoryView,
 )
+from slygentify._scan.detectors._ci import owned_directory, workflow_directory
 from slygentify._scan.detectors._support import StaticStructureError as _StaticStructureError
 from slygentify._scan.detectors._support import evidence_key as _key
 from slygentify._scan.detectors._support import pointer as _pointer
@@ -1203,37 +1204,6 @@ def detect_javascript(view: RepositoryView, context: DetectionContext) -> Detect
 
     def component_for(directory: str) -> str | None:
         return _nearest_ancestor(directory, component_roots)
-
-    def workflow_directory(value: object) -> str | None:
-        if not isinstance(value, str) or "${{" in value or "\\" in value:
-            return None
-        stripped = value.strip()
-        if stripped in {"", ".", "./"}:
-            return "."
-        return _safe_member(".", stripped[2:] if stripped.startswith("./") else stripped)
-
-    def owned_directory(
-        directory: object, ownership: dict[str, bool | None], checkout_seen: bool
-    ) -> str | None:
-        normalized = workflow_directory(directory)
-        if normalized is None:
-            return None
-        if not checkout_seen:
-            return normalized
-        candidates = [
-            path
-            for path in ownership
-            if path == "." or normalized == path or normalized.startswith(f"{path}/")
-        ]
-        if not candidates:
-            return None
-        owner = max(candidates, key=len)
-        if ownership[owner] is not True:
-            return None
-        if owner == ".":
-            return normalized
-        remainder = normalized[len(owner) :].lstrip("/")
-        return remainder or "."
 
     def emit_command(path: str, locator: str, command: str, subject: str) -> None:
         key = add_evidence(

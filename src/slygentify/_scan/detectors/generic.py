@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import fnmatch
 import json
-import re
 import tomllib
 import xml.etree.ElementTree as ET
+from collections.abc import Callable
 from pathlib import PurePosixPath
 from typing import cast
 
@@ -30,6 +30,7 @@ from slygentify._scan.contracts import (
 from slygentify._scan.contracts import (
     RelationshipCandidate as _RelationshipCandidate,
 )
+from slygentify._scan.detectors._cmake_syntax import CMakeSyntaxError, commands
 from slygentify._scan.detectors._support import decode as _decode
 from slygentify._scan.detectors._support import evidence_key as _evidence_key
 from slygentify._scan.paths import parent as _parent
@@ -320,7 +321,10 @@ def _maven(
 
 
 def _cmake(
-    path: str, data: bytes, available: frozenset[str]
+    path: str,
+    data: bytes,
+    available: frozenset[str],
+    checkpoint: Callable[[], bool] = lambda: False,
 ) -> tuple[list[_EvidenceCandidate], list[_ComponentCandidate], list[_DiagnosticCandidate]]:
     del available
     try:
@@ -339,8 +343,42 @@ def _cmake(
                 )
             ],
         )
-    project = re.search(r"(?im)^\s*project\s*\(\s*[^)$\s][^)]*\)", text)
-    component = re.search(r"(?im)^\s*idf_component_register\s*\(", text)
+    try:
+        calls = commands(text, checkpoint)
+    except CMakeSyntaxError:
+        return (
+            [],
+            [],
+            [
+                _DiagnosticCandidate(
+                    "inspection.invalid-manifest",
+                    path,
+                    "CMake source has malformed or unsupported syntax.",
+                    True,
+                    disposition="problem",
+                )
+            ],
+        )
+    project = next(
+        (
+            call
+            for call in calls
+            if call.name == "project"
+            and call.arguments
+            and call.arguments[0].literal
+            and not set(call.scope) & {"if", "foreach", "while", "function", "macro"}
+        ),
+        None,
+    )
+    component = next(
+        (
+            call
+            for call in calls
+            if call.name == "idf_component_register"
+            and not set(call.scope) & {"if", "foreach", "while", "function", "macro"}
+        ),
+        None,
+    )
     if project is None and component is None:
         return (
             [],
@@ -548,7 +586,11 @@ def detect_generic(view: RepositoryView, context: DetectionContext) -> Detection
         data = view.read_bytes(path)
         if data is None:
             continue
-        parsed_evidence, parsed_components, parsed_diagnostics = parser(path, data, available)
+        parsed_evidence, parsed_components, parsed_diagnostics = (
+            _cmake(path, data, available, view.checkpoint)
+            if name == "CMakeLists.txt"
+            else parser(path, data, available)
+        )
         evidence.extend(parsed_evidence)
         components.extend(parsed_components)
         diagnostics.extend(parsed_diagnostics)

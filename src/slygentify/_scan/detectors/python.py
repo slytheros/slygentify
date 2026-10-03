@@ -40,6 +40,16 @@ from slygentify._scan.contracts import (
 from slygentify._scan.contracts import (
     RelationshipCandidate as _RelationshipCandidate,
 )
+from slygentify._scan.detectors._ci import (
+    contains_literal_credential as _contains_literal_credential,
+)
+from slygentify._scan.detectors._ci import (
+    expression_only as _expression_only,
+)
+from slygentify._scan.detectors._ci import (
+    owned_directory,
+    workflow_directory,
+)
 from slygentify._scan.detectors._support import StaticStructureError as _YamlStructureError
 from slygentify._scan.detectors._support import decode as _decode
 from slygentify._scan.detectors._support import evidence_key as _evidence_key
@@ -66,12 +76,6 @@ _PYTHON_TOOLS = {
 }
 _PYTHON_FRAMEWORKS = frozenset({"fastapi", "flask", "django", "sqlalchemy", "alembic"})
 _TOML_BARE_KEY = re.compile(r"[A-Za-z0-9_-]+")
-_CREDENTIAL_ASSIGNMENT = re.compile(
-    r"(?i)(?<![A-Za-z0-9_])"
-    r"[A-Za-z0-9_]*(?:token|password|passwd|secret|api[_-]?key)[A-Za-z0-9_]*"
-    r"\s*=\s*(?P<value>\"[^\"\r\n]*\"|'[^'\r\n]*'|[^\s;&|]+)"
-)
-_CREDENTIAL_URL = re.compile(r"(?i)https?://[^/\s:@]+:(?P<value>[^/\s@]+)@")
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,10 +132,6 @@ def _template_path(path: str) -> bool:
 
 def _template_content(data: bytes) -> bool:
     return re.search(rb"{{.*?}}|{%.*?%}", data, flags=re.DOTALL) is not None
-
-
-def _expression_only(value: str) -> bool:
-    return re.fullmatch(r"\s*\$\{\{(?:(?!}}).)*}}\s*", value, flags=re.DOTALL) is not None
 
 
 def _pip_compile_generated(lines: list[str]) -> bool:
@@ -240,23 +240,6 @@ def _strip_requirement_comment(value: str) -> str:
         elif character == "#" and index > 0 and value[index - 1].isspace():
             return value[:index].rstrip()
     return value
-
-
-def _contains_literal_credential(command: str) -> bool:
-    def is_literal(value: str) -> bool:
-        unquoted = value.strip().strip("\"'")
-        is_function_call = re.match(r"^[A-Za-z_][A-Za-z0-9_.]*\(", unquoted) is not None
-        return (
-            bool(unquoted)
-            and not is_function_call
-            and not any(
-                marker in unquoted for marker in ("$", "%", "{", "}", "`", "$(", "{{", "}}")
-            )
-        )
-
-    return any(
-        is_literal(match.group("value")) for match in _CREDENTIAL_ASSIGNMENT.finditer(command)
-    ) or any(is_literal(match.group("value")) for match in _CREDENTIAL_URL.finditer(command))
 
 
 def _checkpoint(view: RepositoryView) -> bool:
@@ -1140,37 +1123,6 @@ def detect_python(view: RepositoryView, context: DetectionContext) -> DetectionR
 
     def component_for(directory: str) -> str | None:
         return _nearest_ancestor(directory, component_roots)
-
-    def workflow_directory(value: object) -> str | None:
-        if not isinstance(value, str) or "${{" in value or "\\" in value:
-            return None
-        stripped = value.strip()
-        if stripped in {"", ".", "./"}:
-            return "."
-        return _safe_member(".", stripped[2:] if stripped.startswith("./") else stripped)
-
-    def owned_directory(
-        directory: object, ownership: dict[str, bool | None], checkout_seen: bool
-    ) -> str | None:
-        normalized = workflow_directory(directory)
-        if normalized is None:
-            return None
-        if not checkout_seen:
-            return normalized
-        candidates = [
-            path
-            for path in ownership
-            if path == "." or normalized == path or normalized.startswith(f"{path}/")
-        ]
-        if not candidates:
-            return None
-        owner = max(candidates, key=len)
-        if ownership[owner] is not True:
-            return None
-        if owner == ".":
-            return normalized
-        remainder = normalized[len(owner) :].lstrip("/")
-        return remainder or "."
 
     def emit_command(path: str, locator: str, command: str, subject: str) -> None:
         item = _python_evidence(

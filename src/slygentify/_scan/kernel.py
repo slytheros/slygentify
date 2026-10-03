@@ -28,7 +28,9 @@ from slygentify._scan.paths import path_metadata as _path_metadata
 from slygentify.models import ScanResult, SkippedScope
 from slygentify.traceability import implements
 
-_RELEVANT_NAMES = frozenset({"Cargo.toml", "CMakeLists.txt", "go.mod", "go.work", "pom.xml"})
+_RELEVANT_NAMES = frozenset(
+    {"Cargo.toml", "CMakeLists.txt", "CMakePresets.json", "go.mod", "go.work", "pom.xml"}
+)
 _BUILTIN_DIRECTORIES = frozenset(
     {".mypy_cache", ".pytest_cache", ".ruff_cache", ".tox", ".venv", "__pycache__", "node_modules"}
 )

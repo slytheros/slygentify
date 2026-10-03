@@ -144,7 +144,7 @@ def _finding_section(finding: Finding) -> ProjectionSection:
         return "boundaries"
     if "ci" in tokens:
         return "automation"
-    if tokens & {"command", "script"}:
+    if tokens & {"command", "script", "preset"}:
         return "workflows"
     if tokens & {"entry", "entrypoint", "bin", "framework", "dependency", "dependencies", "tool"}:
         return "architecture"

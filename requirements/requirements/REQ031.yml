@@ -16,7 +16,8 @@ references:
 reviewed: fe9H7Hr-tpcAbQnX9s0FE2csT7aD8xJJD68RXNXegws=
 text: |
   Slygentify shall recognize bounded static CMake and ESP-IDF project markers and
-  valid KiCad project documents only as generic component evidence. KiCad schematic
-  and board artifacts shall corroborate a sibling project boundary but shall not
-  establish one alone. Unsupported evidence shall never claim installation, runtime
+  valid KiCad project documents as generic component evidence. Supported CMake
+  declarations may add a first-class facet while retaining generic boundary evidence.
+  KiCad schematic and board artifacts shall corroborate a sibling project boundary
+  but shall not establish one alone. Unsupported evidence shall never claim installation, runtime
   use, command success, or first-class ecosystem support.

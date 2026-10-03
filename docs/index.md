@@ -35,6 +35,7 @@ evidence-backed repository operating maps and safe agent guidance. It implements
 - [Mixed repository composition](mixed-repositories.md)
 - [Python inspection](python-inspection.md)
 - [JavaScript and TypeScript inspection](javascript-inspection.md)
+- [Static CMake inspection](cmake-inspection.md)
 - [Inspection accounting](inspection-accounting.md)
 
 The public site deliberately excludes internal acceptance evidence and architecture
