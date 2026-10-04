@@ -38,7 +38,6 @@ _RELEVANT_NAMES = frozenset(
         "pom.xml",
         "vcpkg.json",
         "conanfile.txt",
-        "conanfile.py",
     }
 )
 _BUILTIN_DIRECTORIES = frozenset(
@@ -416,10 +415,14 @@ class _RepositoryView:
         return None
 
     def content_fingerprints(self) -> dict[str, str]:
-        """Return digests for files already read through this bounded view."""
-        return {
+        """Return captured content digests and metadata-only recipe presence digests."""
+        fingerprints = {
             path: hashlib.sha256(data).hexdigest() for path, data in sorted(self._files.items())
         }
+        for path in self._paths:
+            if PurePosixPath(path).name == "conanfile.py":
+                fingerprints[path] = hashlib.sha256(b"catalogued-file-presence:v1").hexdigest()
+        return fingerprints
 
 
 def _relative(parent: str, name: str) -> str:

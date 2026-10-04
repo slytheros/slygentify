@@ -45,6 +45,10 @@ _REFERENCE = re.compile(
 _SECTIONS = frozenset({"requires", "tool_requires", "test_requires", "build_requires"})
 
 
+class _CandidateMemoryBoundary(Exception):
+    """The view recorded a resource boundary before allocating another candidate."""
+
+
 def _document(data: bytes, checkpoint: Callable[[], bool]) -> dict[str, object]:
     """Reject duplicate keys, nonfinite numbers and non-scalar Unicode; cap depth."""
 
@@ -65,7 +69,7 @@ def _document(data: bytes, checkpoint: Callable[[], bool]) -> dict[str, object]:
     pending: list[tuple[object, int]] = [(result, 0)]
     while pending:
         if checkpoint():
-            raise ValueError("inspection interrupted")
+            raise TimeoutError("inspection interrupted")
         value, depth = pending.pop()
         if depth > 32:
             raise ValueError("JSON nesting exceeds 32")
@@ -134,13 +138,23 @@ def detect_cpp_dependencies(view: RepositoryView, context: DetectionContext) -> 
     path = ""
     subject: str | None = None
 
+    def retain(*values: str) -> None:
+        # Keep candidate objects, strings, keys, list slots, and conflict indexes
+        # charged while normalization also retains the detector result. This is
+        # separate from the temporary parser reservation, which can be released.
+        if not view.reserve_memory(path, 4096 + 16 * sum(map(len, values))):
+            raise _CandidateMemoryBoundary
+
     def emit(code: str, locator: str, summary: str, *, unknown: bool = False) -> EvidenceKey:
+        retain(manager, path, subject or "", code, locator, summary)
         item = EvidenceCandidate(
             manager + "-declaration",
             path,
             locator,
             "A dependency-manager source declaration is present.",
-            "bounded static inspection",
+            "non-following metadata inspection"
+            if path.endswith("conanfile.py")
+            else "bounded static inspection",
             "cpp-dependencies.inspect.v1",
             f"{manager}.{code}:{locator}:{hashlib.sha256(summary.encode()).hexdigest()}",
         )
@@ -156,6 +170,7 @@ def detect_cpp_dependencies(view: RepositoryView, context: DetectionContext) -> 
     def issue(
         code: str, problem: str, *, partial: bool = False, keys: tuple[EvidenceKey, ...] = ()
     ) -> None:
+        retain(manager, path, subject or "", code, problem)
         diagnostics.append(
             DiagnosticCandidate(
                 manager + "." + code,
@@ -437,7 +452,6 @@ def detect_cpp_dependencies(view: RepositoryView, context: DetectionContext) -> 
     def conan(data: bytes) -> None:
         try:
             text = data.decode("utf-8")
-            text.encode("utf-8")
         except UnicodeError:
             invalid("file")
             return
@@ -500,53 +514,60 @@ def detect_cpp_dependencies(view: RepositoryView, context: DetectionContext) -> 
         path = candidate.path
         manager = "vcpkg" if candidate.name == "vcpkg.json" else "conan"
         subject = nearest_ancestor(candidate.parent, context.component_paths)
-        data = view.read_bytes(path)
+        data = b"" if candidate.name == "conanfile.py" else view.read_bytes(path)
         if data is None:
             continue
-        emit(
-            "manager.evidence",
-            "file",
-            f"A {manager} manifest/recipe is present; installation and effective configuration are unknown.",
-        )
-        if subject is None:
+        try:
             emit(
-                "manager.unresolved",
+                "manager.evidence",
                 "file",
-                "No established component owns this manifest; declarations remain repository-scoped.",
-                unknown=True,
+                f"A {manager} manifest/recipe is present; installation and effective configuration are unknown.",
             )
-            issue(
-                "ownership-unresolved", "The dependency manifest has no established component owner"
-            )
-        if candidate.name == "conanfile.py":
-            emit(
-                "dependency.unresolved",
-                "file",
-                "A Conan Python recipe is present; Python contents were not parsed, imported, or executed and dependencies remain unknown.",
-                unknown=True,
-            )
-            issue("dynamic-recipe", "Python recipe dependency contents were not inspected")
-        elif candidate.name == "conanfile.txt":
-            conan(data)
-        else:
-            # Reserve before UTF-8 decoding or json.loads materializes any objects.
-            # 256 bytes per source byte conservatively covers Unicode, JSON containers,
-            # scalar objects, object_pairs_hook tuples, and validation work lists.
-            parser_memory = 4096 + 256 * len(data)
-            if not view.reserve_memory(path, parser_memory):
-                continue
-            try:
-                try:
-                    document = _document(data, view.checkpoint)
-                except (ValueError, UnicodeError, RecursionError):
-                    invalid("file")
+            if subject is None:
+                emit(
+                    "manager.unresolved",
+                    "file",
+                    "No established component owns this manifest; declarations remain repository-scoped.",
+                    unknown=True,
+                )
+                issue(
+                    "ownership-unresolved",
+                    "The dependency manifest has no established component owner",
+                )
+            if candidate.name == "conanfile.py":
+                emit(
+                    "dependency.unresolved",
+                    "file",
+                    "A Conan Python recipe is present; Python contents were not parsed, imported, or executed and dependencies remain unknown.",
+                    unknown=True,
+                )
+                issue("dynamic-recipe", "Python recipe dependency contents were not inspected")
+            else:
+                # Reserve before decoding JSON or Conan text. The allowance covers
+                # Unicode, JSON containers/scalars, pairs, validation work lists,
+                # and the complete Conan line list. Retained candidates are separate.
+                parser_memory = 4096 + 256 * len(data)
+                if not view.reserve_memory(path, parser_memory):
                     continue
                 try:
-                    vcpkg(document)
+                    if candidate.name == "conanfile.txt":
+                        conan(data)
+                        continue
+                    try:
+                        document = _document(data, view.checkpoint)
+                    except TimeoutError:
+                        continue
+                    except (ValueError, UnicodeError, RecursionError):
+                        invalid("file")
+                        continue
+                    try:
+                        vcpkg(document)
+                    finally:
+                        del document
                 finally:
-                    del document
-            finally:
-                view.release_memory(parser_memory)
+                    view.release_memory(parser_memory)
+        except _CandidateMemoryBoundary:
+            continue
     return DetectionResult(
         evidence=tuple(evidence), findings=tuple(findings), diagnostics=tuple(diagnostics)
     )

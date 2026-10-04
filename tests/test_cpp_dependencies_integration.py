@@ -23,7 +23,7 @@ from slygentify._doctor import doctor_repository
 from slygentify._git_tracking import _TrackedPaths
 from slygentify._presentation import ScanPresentation, render_scan_report
 from slygentify._provenance import load_state_json
-from slygentify._scan import orchestration
+from slygentify._scan import kernel, orchestration
 
 
 def _write(root: Path, path: str, source: str) -> None:
@@ -179,10 +179,14 @@ def test_unsafe_links_never_expose_external_dependency_sources(tmp_path: Path) -
     outside.write_text('{"dependencies":["outside-secret-package"]}')
     (root / "vcpkg.json").symlink_to(outside)
     (root / "conanfile.txt").symlink_to(outside)
+    (root / "conanfile.py").symlink_to(outside)
     result = scan_repository(root)
     assert b"outside-secret-package" not in dump_scan_json(result)
     assert not any(f.code.endswith("dependency.declaration") for f in result.findings)
-    assert {"vcpkg.json", "conanfile.txt"} <= {s.scope for s in result.skipped_scopes}
+    assert not any(f.code == "conan.manager.evidence" for f in result.findings)
+    assert {"vcpkg.json", "conanfile.txt", "conanfile.py"} <= {
+        s.scope for s in result.skipped_scopes
+    }
 
 
 @pytest.mark.verifies("TST059")
@@ -274,7 +278,7 @@ def test_recipes_and_dependency_tools_never_execute_or_access_network(
 
 
 @pytest.mark.verifies("TST059")
-@pytest.mark.parametrize("filename", ["vcpkg.json", "conanfile.txt", "conanfile.py"])
+@pytest.mark.parametrize("filename", ["vcpkg.json", "conanfile.txt"])
 def test_manifest_file_budget_is_partial_and_preserves_human_guidance(
     tmp_path: Path, filename: str
 ) -> None:
@@ -287,3 +291,36 @@ def test_manifest_file_budget_is_partial_and_preserves_human_guidance(
     assert any(s.scope == filename and s.reason == "max_file_bytes" for s in result.skipped_scopes)
     assert not plan_initialization(root).can_apply
     assert (root / "AGENTS.md").read_text() == "Human guidance.\n"
+
+
+@pytest.mark.verifies("TST059")
+def test_recipe_presence_never_reads_content_or_consumes_content_budgets(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = _root(tmp_path)
+    _write(root, "conanfile.py", "private-recipe-content" * 100_000)
+    _write(root, "vcpkg.json", '{"dependencies":["fmt"]}')
+    _write(
+        root,
+        "slygentify.toml",
+        "schema_version=1\n[scan.limits]\nmax_file_bytes=256\nmax_total_bytes=512\nmax_memory_bytes=100000\n",
+    )
+    original_read = kernel._read_file
+
+    def guarded_read(repository: Path, entry: kernel._Entry, limits: kernel._Limits) -> bytes:
+        assert not entry.path.endswith("conanfile.py"), "Presence-only recipes must never be opened"
+        return original_read(repository, entry, limits)
+
+    monkeypatch.setattr(kernel, "_read_file", guarded_read)
+    result = scan_repository(root)
+    assert result.completion == "complete"
+    assert any(e.location == "conanfile.py" for e in result.evidence)
+    assert any(f.code == "conan.dependency.unresolved" for f in result.findings)
+    assert any(f.code == "vcpkg.dependency.declaration" for f in result.findings)
+    assert not any(s.scope == "conanfile.py" for s in result.skipped_scopes)
+    state = load_state_json(plan_initialization(root).state_json)
+    assert any(i.location == "conanfile.py" for i in state.inputs)
+    _write(root, "conanfile.py", "entirely different unread contents")
+    assert dump_scan_json(scan_repository(root)) == dump_scan_json(result)
+    assert load_state_json(plan_initialization(root).state_json).inputs == state.inputs

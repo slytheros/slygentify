@@ -116,8 +116,10 @@ Slygentify does not evaluate them.
 Legacy `[build_requires]` entries are explicitly qualified as legacy declarations.
 Section/line locators identify each observation. Unsupported sections and dynamic
 entries remain explicit limitations. `conanfile.py` supplies recipe-presence evidence
-only: dependency contents remain unknown, and its Python is never parsed, imported,
-or executed.
+only from safely catalogued metadata: its contents are never read, parsed, imported,
+or executed and dependencies remain unknown. A recipe's size does not consume file-content
+budgets or prevent other manifests from being inspected. Initialization records a stable
+presence fingerprint rather than a digest of recipe contents.
 
 Malformed encoding, duplicate JSON keys, invalid supported value types, and unsafe
 values produce diagnostics; independent valid declarations are retained where possible.
@@ -128,10 +130,12 @@ do not establish a conflict. Credential-shaped values are withheld.
 Inspection does not install or resolve dependencies, read external includes, inspect
 registries or profiles, execute discovered commands, or access the network. Working-tree,
 tracked ignored file, containment, link, sensitive-content, and resource guards apply.
-Before decoding a vcpkg manifest, inspection reserves a conservative allowance for the
-JSON object tree and temporary parser allocations against `max_memory_bytes`. A manifest
+Before decoding vcpkg JSON or Conan text, inspection reserves a conservative allowance
+for the object tree or line list and temporary parser allocations against `max_memory_bytes`. A manifest
 that cannot fit is skipped with a memory boundary and a partial result; the reservation
-is released after inspection so other manifests can still be inspected.
+is released after inspection so other manifests can still be inspected. Retained findings,
+evidence and diagnostics keep a separate memory charge through normalization. An elapsed-time
+interruption is reported as a resource boundary rather than malformed input.
 See the [vcpkg manifest reference](https://learn.microsoft.com/en-us/vcpkg/reference/vcpkg-json)
 and [Conan text reference](https://docs.conan.io/2.29/reference/conanfile_txt.html) for the
 managers' evaluation semantics.

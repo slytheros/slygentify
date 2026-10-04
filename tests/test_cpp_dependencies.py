@@ -207,7 +207,7 @@ def test_recipes_unreadable_other_files_unowned_and_nested_attribution() -> None
 
 @pytest.mark.verifies("TST059")
 def test_checkpoint_interrupts_document_validation() -> None:
-    with pytest.raises(ValueError, match="interrupted"):
+    with pytest.raises(TimeoutError, match="interrupted"):
         _document(b"{}", lambda: True)
 
 
@@ -550,13 +550,16 @@ def test_in_memory_detector_view_tracks_temporary_reservations() -> None:
 
 
 @pytest.mark.verifies("TST059")
-def test_json_budget_rejects_dense_tree_before_decoding_and_keeps_other_manifest() -> None:
+@pytest.mark.parametrize("filename", ["vcpkg.json", "conanfile.txt"])
+def test_parser_budget_rejects_dense_input_before_decoding_and_keeps_other_manifest(
+    filename: str,
+) -> None:
     class UndecodableBytes(bytes):
         def decode(self, *args: object, **kwargs: object) -> str:
-            raise AssertionError("Over-budget JSON must not be decoded or materialized")
+            raise AssertionError("Over-budget input must not be decoded or materialized")
 
     dense = UndecodableBytes(b'{"ignored":[' + b"0," * 1000 + b"0]}")
-    files = {"a/vcpkg.json": dense, "b/vcpkg.json": b'{"dependencies":["fmt"]}'}
+    files = {f"a/{filename}": dense, "b/vcpkg.json": b'{"dependencies":["fmt"]}'}
     view = _RepositoryView(
         _Inspection(
             files=files,
@@ -570,21 +573,79 @@ def test_json_budget_rejects_dense_tree_before_decoding_and_keeps_other_manifest
     retained = view._memory_consumed
     result = cpp_dependencies.detect_cpp_dependencies(view, DetectionContext())
     assert view.partial
-    assert view.skipped[0].scope == "a/vcpkg.json"
+    assert view.skipped[0].scope == f"a/{filename}"
     assert view.skipped[0].reason == "max_memory_bytes"
-    assert view._memory_consumed == retained
+    assert view._memory_consumed > retained
     assert any('"fmt"' in finding.summary for finding in result.findings)
 
 
 @pytest.mark.verifies("TST059")
+@pytest.mark.parametrize("filename", ["vcpkg.json", "conanfile.txt"])
 @pytest.mark.parametrize("data", [b'{"dependencies":["fmt"]}', b"bad", b"\xff"])
-def test_json_reservation_lives_through_parse_and_is_released_on_all_results(data: bytes) -> None:
+def test_parser_reservation_lives_through_parse_and_releases_only_temporary_capacity(
+    filename: str, data: bytes
+) -> None:
     class ReservedBytes(bytes):
         def decode(self, encoding: str = "utf-8", errors: str = "strict") -> str:
-            assert view.memory_reserved == 4096 + 256 * len(self)
+            assert view.memory_reserved > 4096 + 256 * len(self)
             return super().decode(encoding, errors)
 
-    view = InMemoryDetectorView({"vcpkg.json": ReservedBytes(data)})
+    class RecordingView(InMemoryDetectorView):
+        releases: list[int] = []
+
+        def release_memory(self, amount: int) -> None:
+            self.releases.append(amount)
+            super().release_memory(amount)
+
+    view = RecordingView({filename: ReservedBytes(data)})
     result = cpp_dependencies.detect_cpp_dependencies(view, DetectionContext())
     assert result.findings
-    assert view.memory_reserved == 0
+    assert view.memory_reserved > 0
+    assert view.releases == [4096 + 256 * len(data)]
+
+
+@pytest.mark.verifies("TST059")
+def test_document_timeout_has_only_resource_boundary_diagnostics() -> None:
+    times = iter([0.5, 1.5])
+    view = _RepositoryView(
+        _Inspection(
+            {"vcpkg.json": b'{"dependencies":["fmt"]}'},
+            (),
+            (),
+            False,
+            limits=_Limits(max_elapsed_seconds=1),
+            clock=lambda: next(times),
+        )
+    )
+    result = detect_cpp_dependencies(view, DetectionContext(component_paths=frozenset({"."})))
+    assert view.partial
+    assert view.skipped[0].reason == "max_elapsed_seconds"
+    assert not result.diagnostics
+    assert not any(f.code == "vcpkg.dependency.unresolved" for f in result.findings)
+
+
+@pytest.mark.verifies("TST059")
+@pytest.mark.parametrize("filename", ["vcpkg.json", "conanfile.txt"])
+def test_retained_candidates_reduce_capacity_for_subsequent_manifests(filename: str) -> None:
+    data = (
+        json.dumps({"dependencies": [f"pkg-{i}" for i in range(40)]}).encode()
+        if filename == "vcpkg.json"
+        else ("[requires]\n" + "".join(f"pkg{i}/1\n" for i in range(40))).encode()
+    )
+    files = {f"a/{filename}": data, f"b/{filename}": data}
+    view = _RepositoryView(
+        _Inspection(
+            files,
+            (),
+            (),
+            False,
+            limits=_Limits(max_memory_bytes=200_000, max_elapsed_seconds=None),
+        )
+    )
+    result = detect_cpp_dependencies(view, DetectionContext(component_paths=frozenset({"."})))
+    assert view.partial
+    assert 0 < view._memory_consumed <= 200_000
+    assert any(s.scope == f"b/{filename}" for s in view.skipped)
+    declarations = [f for f in result.findings if f.code.endswith("dependency.declaration")]
+    assert 0 < len(declarations) < 80
+    assert all(s.reason == "max_memory_bytes" for s in view.skipped)
