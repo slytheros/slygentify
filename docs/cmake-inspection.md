@@ -81,6 +81,65 @@ versions remain explicit limitations. Literal selections are reported even when 
 construct prevents determining their effective value. Preset names are declarations,
 not synthesized runnable or preferred commands.
 
+## vcpkg and Conan declarations
+
+Slygentify inspects `vcpkg.json`, `conanfile.txt`, and `conanfile.py` through the same
+bounded repository view. These files declare dependency managers and dependencies for
+the nearest existing component, including components without a CMake facet. Co-located
+facets share one owner and independently established nested components take precedence.
+The files do not create components or add ecosystem facets. If no component owns a
+manifest, its declarations remain repository-level evidence with an explicit ownership
+limitation.
+
+For `vcpkg.json`, supported declarations include:
+
+- string dependencies and object dependencies with a literal `name`;
+- requested `features`, explicit `default-features` and `host` flags, and minimum-version
+  constraints written as `version>=`;
+- named feature dependencies and root `default-features` declarations;
+- literal dependency `platform` and manifest/feature `supports` expressions;
+- version overrides, preserving the declared version field and any `port-version`.
+
+JSON Pointer locators identify the written declarations. Feature scope and platform or
+support expressions are retained without determining which dependencies are active.
+Expression syntax is validated with bounded grouping depth; malformed operators or
+unbalanced groups make the scan partial. Named features require a string or string-array
+description. Overrides validate `version-semver` and `version-date` against their
+declared formats; generic `version` and `version-string` retain safe literal versions.
+Slygentify does not choose defaults, evaluate expressions, select a triplet, resolve a
+baseline, or determine effective versions.
+
+For `conanfile.txt`, literal references in `[requires]`, `[tool_requires]`, and
+`[test_requires]` retain their requirement category, version ranges, and revisions.
+Ranges retain written comparison, tilde, caret, OR, and `include_prerelease` forms;
+Slygentify does not evaluate them.
+Legacy `[build_requires]` entries are explicitly qualified as legacy declarations.
+Section/line locators identify each observation. Unsupported sections and dynamic
+entries remain explicit limitations. `conanfile.py` supplies recipe-presence evidence
+only from safely catalogued metadata: its contents are never read, parsed, imported,
+or executed and dependencies remain unknown. A recipe's size does not consume file-content
+budgets or prevent other manifests from being inspected. Initialization records a stable
+presence fingerprint rather than a digest of recipe contents.
+
+Malformed encoding, duplicate JSON keys, invalid supported value types, and unsafe
+values produce diagnostics; independent valid declarations are retained where possible.
+Malformed supported declarations make the scan partial. Conflicting declarations remain
+visible without choosing a winner; different managers or feature/platform scopes alone
+do not establish a conflict. Credential-shaped values are withheld.
+
+Inspection does not install or resolve dependencies, read external includes, inspect
+registries or profiles, execute discovered commands, or access the network. Working-tree,
+tracked ignored file, containment, link, sensitive-content, and resource guards apply.
+Before decoding vcpkg JSON or Conan text, inspection reserves a conservative allowance
+for the object tree or line list and temporary parser allocations against `max_memory_bytes`. A manifest
+that cannot fit is skipped with a memory boundary and a partial result; the reservation
+is released after inspection so other manifests can still be inspected. Retained findings,
+evidence and diagnostics keep a separate memory charge through normalization. An elapsed-time
+interruption is reported as a resource boundary rather than malformed input.
+See the [vcpkg manifest reference](https://learn.microsoft.com/en-us/vcpkg/reference/vcpkg-json)
+and [Conan text reference](https://docs.conan.io/2.29/reference/conanfile_txt.html) for the
+managers' evaluation semantics.
+
 ## Workflows and operating maps
 
 Supported GitHub Actions, Gitea Actions and GitLab CI files contribute safely attributable
@@ -95,12 +154,13 @@ workflows.
 
 `scan` text, interactive exploration and JSON share these canonical records. `map` places
 identity/language/version/standard declarations in orientation, presets in workflows,
-dependencies/tools in architecture, CI commands in automation, and unknowns/limitations
-in boundaries. Initialization captures deterministic provenance; doctor compares fresh
+dependency managers in orientation, dependencies/tools in architecture, CI commands in
+automation, and unknowns/limitations in boundaries. Initialization captures deterministic
+provenance; doctor compares fresh
 component and tooling declarations while preserving human guidance.
 
 See the [CMake language reference](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html)
 and [preset format](https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html) for CMake's
-evaluation semantics. Dependency managers, other build systems, arbitrary `.cmake`
+evaluation semantics. Other build systems, arbitrary `.cmake`
 includes, deeper ESP-IDF inspection, and effective-build verification are not supported
 by this stage.

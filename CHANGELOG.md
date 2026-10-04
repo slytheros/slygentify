@@ -6,6 +6,9 @@ major versions are independent compatibility surfaces.
 
 ## Unreleased
 
+- Add bounded static vcpkg and Conan dependency-manager declarations with literal
+  dependency qualifiers, nearest-component ownership, recognition-only Python recipes,
+  and canonical scan/map, doctor, and initialization-provenance integration.
 - Add bounded static CMake declarations, language and target-standard evidence, safe
   subdirectory relationships, shared presets, dependency requests, tool/test evidence,
   and attributable CI commands, with source scope, unresolved constructs, operating-map

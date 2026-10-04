@@ -43,6 +43,16 @@ declarations additionally contribute the `cmake` facet; generic evidence remains
 See [static CMake inspection](cmake-inspection.md). Deeper ESP-IDF and KiCad metadata
 remains unsupported.
 
+Supported `vcpkg.json` and Conan manifest evidence belongs to the nearest existing
+component, even when that component has no CMake facet. Co-located ecosystem facets
+share that owner; independently established nested components take precedence over an
+ancestor. Dependency manifests do not create a component, change its identity, or add
+an ecosystem facet. Manifests without an existing owner retain repository-level
+declarations and an explicit ownership limitation. These are static source declarations:
+conditional feature/platform scopes do not assert activation, and `conanfile.py` presence
+does not reveal its dependency contents. See the
+[vcpkg and Conan inspection reference](cmake-inspection.md#vcpkg-and-conan-declarations).
+
 Ambiguous CMake or KiCad boundaries identify the exact path that can be declared with
 `[[scan.components]]` in the root `slygentify.toml`. Scan loads and applies those
 declarations today, retaining configured and detected evidence together. Component

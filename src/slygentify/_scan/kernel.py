@@ -29,7 +29,16 @@ from slygentify.models import ScanResult, SkippedScope
 from slygentify.traceability import implements
 
 _RELEVANT_NAMES = frozenset(
-    {"Cargo.toml", "CMakeLists.txt", "CMakePresets.json", "go.mod", "go.work", "pom.xml"}
+    {
+        "Cargo.toml",
+        "CMakeLists.txt",
+        "CMakePresets.json",
+        "go.mod",
+        "go.work",
+        "pom.xml",
+        "vcpkg.json",
+        "conanfile.txt",
+    }
 )
 _BUILTIN_DIRECTORIES = frozenset(
     {".mypy_cache", ".pytest_cache", ".ruff_cache", ".tox", ".venv", "__pycache__", "node_modules"}
@@ -275,6 +284,34 @@ class _RepositoryView:
     def has_path(self, path: str) -> bool:
         return path in self._entries or path in self._files
 
+    @implements("REQ058")
+    def reserve_memory(self, path: str, amount: int) -> bool:
+        """Charge temporary detector allocations before they are constructed."""
+
+        if (
+            self._limits is not None
+            and self._limits.max_memory_bytes is not None
+            and self._memory_consumed + amount > self._limits.max_memory_bytes
+        ):
+            skipped = _skip(
+                path,
+                "max_memory_bytes",
+                self._limits.max_memory_bytes,
+                self._memory_consumed,
+            )
+            self.skipped.append(skipped)
+            self.partial_skipped.append(skipped)
+            self.partial = True
+            return False
+        self._memory_consumed += amount
+        return True
+
+    @implements("REQ058")
+    def release_memory(self, amount: int) -> None:
+        """Release a completed detector's temporary memory reservation."""
+
+        self._memory_consumed -= amount
+
     def release_path_catalog(self) -> None:
         """Release detector-only index accounting before normalized records are retained."""
 
@@ -378,10 +415,14 @@ class _RepositoryView:
         return None
 
     def content_fingerprints(self) -> dict[str, str]:
-        """Return digests for files already read through this bounded view."""
-        return {
+        """Return captured content digests and metadata-only recipe presence digests."""
+        fingerprints = {
             path: hashlib.sha256(data).hexdigest() for path, data in sorted(self._files.items())
         }
+        for path in self._paths:
+            if PurePosixPath(path).name == "conanfile.py":
+                fingerprints[path] = hashlib.sha256(b"catalogued-file-presence:v1").hexdigest()
+        return fingerprints
 
 
 def _relative(parent: str, name: str) -> str:
