@@ -404,7 +404,7 @@ def test_typescript_project_references_resolve_and_aggregate_by_cause(tmp_path: 
 
 @pytest.mark.verifies("TST027")
 def test_typescript_unreadable_catalogued_target_remains_unavailable() -> None:
-    class UnreadableView:
+    class UnreadableView(InMemoryDetectorView):
         def paths(self) -> tuple[str, ...]:
             return ("configs/unreadable.json",)
 
@@ -422,7 +422,7 @@ def test_typescript_unreadable_catalogued_target_remains_unavailable() -> None:
             return False
 
     assert javascript._resolve_typescript_reference(
-        UnreadableView(),
+        UnreadableView({}),
         frozenset({"configs/unreadable.json"}),
         ".",
         "configs/unreadable.json",

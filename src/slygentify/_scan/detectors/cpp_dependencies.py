@@ -26,6 +26,16 @@ from slygentify.traceability import implements
 _NAME = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 _VERSION = re.compile(r"[^#\x00-\x1f\x7f$`{}\\/]+(?:#[0-9]+)?")
 _PLATFORM = re.compile(r"[A-Za-z0-9_ !&|(),]+")
+_SEMVER_NUMBER = r"(?:0|[1-9][0-9]*)"
+_SEMVER_PRERELEASE = r"(?:0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)"
+_OVERRIDE_VERSIONS = {
+    "version-semver": re.compile(
+        rf"{_SEMVER_NUMBER}\.{_SEMVER_NUMBER}\.{_SEMVER_NUMBER}"
+        rf"(?:-{_SEMVER_PRERELEASE}(?:\.{_SEMVER_PRERELEASE})*)?"
+        r"(?:\+[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*)?(?:#[0-9]+)?"
+    ),
+    "version-date": re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}(?:\.[0-9]+)*(?:#[0-9]+)?"),
+}
 _REFERENCE = re.compile(
     r"[A-Za-z0-9_][A-Za-z0-9_.+-]*/"
     r"(?:[A-Za-z0-9_][A-Za-z0-9_.+*-]*|\[[A-Za-z0-9_.+*<>=!| &~,^-]+\])"
@@ -80,6 +90,37 @@ def _literal(value: object, pattern: re.Pattern[str]) -> bool:
         and bool(pattern.fullmatch(value))
         and not contains_literal_credential(value)
     )
+
+
+def _platform(value: object) -> bool:
+    """Validate bounded expression syntax without interpreting identifiers or activation."""
+    if not _literal(value, _PLATFORM):
+        return False
+    assert isinstance(value, str)
+    depth = 0
+    operand = True
+    for match in re.finditer(r"[A-Za-z0-9_]+|[!&|(),]", value):
+        token = match.group()
+        if operand:
+            if token in {"!", "not"}:
+                continue
+            if token == "(":
+                depth += 1
+                if depth > 32:
+                    return False
+            elif token in {"&", "|", ",", ")", "and", "or"}:
+                return False
+            else:
+                operand = False
+        elif token == ")":
+            if depth == 0:
+                return False
+            depth -= 1
+        elif token in {"&", "|", ",", "and"}:
+            operand = True
+        else:
+            return False
+    return not operand and depth == 0
 
 
 @implements("REQ058")
@@ -165,7 +206,7 @@ def detect_cpp_dependencies(view: RepositoryView, context: DetectionContext) -> 
             elif (
                 isinstance(value, dict)
                 and _literal(value.get("name"), _NAME)
-                and ("platform" not in value or _literal(value["platform"], _PLATFORM))
+                and ("platform" not in value or _platform(value["platform"]))
                 and not (
                     set(value)
                     - {"name", "platform"}
@@ -210,7 +251,7 @@ def detect_cpp_dependencies(view: RepositoryView, context: DetectionContext) -> 
                 elif field == "version>=":
                     accepted = _literal(item, _VERSION)
                 elif field == "platform":
-                    accepted = _literal(item, _PLATFORM)
+                    accepted = _platform(item)
                 elif field.startswith("$"):
                     continue
                 else:
@@ -264,7 +305,7 @@ def detect_cpp_dependencies(view: RepositoryView, context: DetectionContext) -> 
     def vcpkg(document: dict[str, object]) -> None:
         if "supports" in document:
             value = document["supports"]
-            if _literal(value, _PLATFORM):
+            if _platform(value):
                 emit(
                     "dependency.supports",
                     "/supports",
@@ -301,11 +342,12 @@ def detect_cpp_dependencies(view: RepositoryView, context: DetectionContext) -> 
                     if not isinstance(feature, dict):
                         invalid(location)
                         continue
-                    if "description" in feature and not (
-                        isinstance(feature["description"], str)
+                    description = feature.get("description")
+                    if not (
+                        isinstance(description, str)
                         or (
-                            isinstance(feature["description"], list)
-                            and all(isinstance(item, str) for item in feature["description"])
+                            isinstance(description, list)
+                            and all(isinstance(item, str) for item in description)
                         )
                     ):
                         invalid(location + "/description")
@@ -323,12 +365,12 @@ def detect_cpp_dependencies(view: RepositoryView, context: DetectionContext) -> 
                             + " supports="
                             + (
                                 quoted(feature["supports"])
-                                if _literal(feature.get("supports"), _PLATFORM)
+                                if _platform(feature.get("supports"))
                                 else "unknown"
                             ),
                         )
                     if "supports" in feature:
-                        if _literal(feature["supports"], _PLATFORM):
+                        if _platform(feature["supports"]):
                             emit(
                                 "dependency.supports",
                                 location + "/supports",
@@ -374,7 +416,9 @@ def detect_cpp_dependencies(view: RepositoryView, context: DetectionContext) -> 
                     continue
                 if (
                     len(versions) != 1
-                    or not _literal(override[versions[0]], _VERSION)
+                    or not _literal(
+                        override[versions[0]], _OVERRIDE_VERSIONS.get(versions[0], _VERSION)
+                    )
                     or (
                         "port-version" in override
                         and (
@@ -485,12 +529,24 @@ def detect_cpp_dependencies(view: RepositoryView, context: DetectionContext) -> 
         elif candidate.name == "conanfile.txt":
             conan(data)
         else:
-            try:
-                document = _document(data, view.checkpoint)
-            except (ValueError, UnicodeError, RecursionError):
-                invalid("file")
+            # Reserve before UTF-8 decoding or json.loads materializes any objects.
+            # 256 bytes per source byte conservatively covers Unicode, JSON containers,
+            # scalar objects, object_pairs_hook tuples, and validation work lists.
+            parser_memory = 4096 + 256 * len(data)
+            if not view.reserve_memory(path, parser_memory):
                 continue
-            vcpkg(document)
+            try:
+                try:
+                    document = _document(data, view.checkpoint)
+                except (ValueError, UnicodeError, RecursionError):
+                    invalid("file")
+                    continue
+                try:
+                    vcpkg(document)
+                finally:
+                    del document
+            finally:
+                view.release_memory(parser_memory)
     return DetectionResult(
         evidence=tuple(evidence), findings=tuple(findings), diagnostics=tuple(diagnostics)
     )

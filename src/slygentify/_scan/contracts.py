@@ -35,6 +35,10 @@ class RepositoryView(Protocol):
 
     def read_bytes(self, path: str) -> bytes | None: ...
 
+    def reserve_memory(self, path: str, amount: int) -> bool: ...
+
+    def release_memory(self, amount: int) -> None: ...
+
 
 @dataclass(frozen=True, slots=True)
 class EvidenceCandidate:

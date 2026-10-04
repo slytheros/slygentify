@@ -221,13 +221,16 @@ def test_credential_values_are_withheld_across_scan_map_and_text(tmp_path: Path)
 
 
 @pytest.mark.verifies("TST059")
+@pytest.mark.parametrize("newline", [b"\n", b"\r\n"])
 def test_provenance_and_doctor_detect_dependency_changes_preserving_human_guidance(
     tmp_path: Path,
+    newline: bytes,
 ) -> None:
     root = _root(tmp_path)
     _write(root, "vcpkg.json", '{"dependencies":["zlib"]}')
     _write(root, "conanfile.txt", "[requires]\nfmt/10.0.0\n")
-    _write(root, "AGENTS.md", "# Human guidance\nKeep this paragraph.\n")
+    human_guidance = newline.join([b"# Human guidance", b"Keep this paragraph.", b""])
+    (root / "AGENTS.md").write_bytes(human_guidance)
     plan = plan_initialization(root, adopt=True)
     state = load_state_json(plan.state_json)
     assert {"vcpkg.json", "conanfile.txt"} <= {i.location for i in state.inputs}
@@ -236,7 +239,7 @@ def test_provenance_and_doctor_detect_dependency_changes_preserving_human_guidan
     }
     apply_initialization(plan)
     guidance = (root / "AGENTS.md").read_bytes()
-    assert guidance.startswith(b"# Human guidance\nKeep this paragraph.\n")
+    assert guidance.startswith(human_guidance)
     _write(root, "conanfile.txt", "[requires]\nfmt/11.0.0\n")
     doctor = doctor_repository(root)
     assert any(d.code == "doctor.tooling.drift" for d in doctor.diagnostics)

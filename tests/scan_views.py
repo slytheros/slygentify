@@ -20,6 +20,7 @@ class InMemoryDetectorView:
         self._files = dict(files)
         self._paths = tuple(sorted(paths if paths is not None else self._files))
         self._candidates = tuple(PathCandidate(path, *path_metadata(path)) for path in self._paths)
+        self.memory_reserved = 0
 
     def paths(self) -> tuple[str, ...]:
         return self._paths
@@ -35,3 +36,10 @@ class InMemoryDetectorView:
 
     def read_bytes(self, path: str) -> bytes | None:
         return self._files.get(path)
+
+    def reserve_memory(self, path: str, amount: int) -> bool:
+        self.memory_reserved += amount
+        return True
+
+    def release_memory(self, amount: int) -> None:
+        self.memory_reserved -= amount

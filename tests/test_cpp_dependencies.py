@@ -7,7 +7,9 @@ import json
 import pytest
 
 from slygentify._scan.contracts import DetectionContext, DetectionResult
+from slygentify._scan.detectors import cpp_dependencies
 from slygentify._scan.detectors.cpp_dependencies import _document, detect_cpp_dependencies
+from slygentify._scan.kernel import _Inspection, _Limits, _RepositoryView
 from tests.scan_views import InMemoryDetectorView
 
 
@@ -38,7 +40,10 @@ def test_rich_declarations_scopes_and_conflicts() -> None:
                     "default-features": False,
                 },
             ],
-            "features": {"extra": {"dependencies": ["fmt"], "supports": "linux"}, "empty": {}},
+            "features": {
+                "extra": {"description": "Extra", "dependencies": ["fmt"], "supports": "linux"},
+                "empty": {"description": []},
+            },
             "overrides": [
                 {"name": "fmt", "version-semver": "1.2.3", "port-version": 2},
                 {"name": "fmt", "version-date": "2025-01-01"},
@@ -63,7 +68,9 @@ def test_identical_declarations_host_platform_and_feature_scopes_are_not_conflic
                 {"name": "a", "host": True},
                 {"name": "a", "platform": "linux"},
             ],
-            "features": {"b": {"dependencies": [{"name": "a", "version>=": "2"}]}},
+            "features": {
+                "b": {"description": "B", "dependencies": [{"name": "a", "version>=": "2"}]}
+            },
         }
     )
     assert not result.diagnostics
@@ -358,3 +365,226 @@ def test_feature_loop_interruption() -> None:
                 return self.calls >= self.limit
 
         detect_cpp_dependencies(LimitedView({"vcpkg.json": data}), DetectionContext())
+
+
+@pytest.mark.verifies("TST059")
+@pytest.mark.parametrize(
+    "expression",
+    [
+        "&&",
+        ")(",
+        "()",
+        "linux &",
+        "|linux",
+        "(linux",
+        "linux)",
+        "linux windows",
+        "linux or windows",
+        "linux (windows)",
+        "linux !windows",
+        "and",
+        "not",
+        "linux && windows",
+        "(" * 33 + "linux" + ")" * 33,
+    ],
+)
+@pytest.mark.parametrize("field", ["supports", "platform", "feature-supports", "feature-platform"])
+def test_malformed_platform_expressions_are_partial(expression: str, field: str) -> None:
+    document: dict[str, object]
+    if field == "supports":
+        document = {"supports": expression, "dependencies": ["valid"]}
+    elif field == "platform":
+        document = {"dependencies": [{"name": "bad", "platform": expression}, "valid"]}
+    elif field == "feature-supports":
+        document = {
+            "features": {"extra": {"description": "Extra", "supports": expression}},
+            "dependencies": ["valid"],
+        }
+    else:
+        document = {
+            "default-features": [{"name": "bad", "platform": expression}],
+            "dependencies": ["valid"],
+        }
+    result = _vcpkg(document)
+    assert any(d.partial for d in result.diagnostics)
+    assert any('"valid"' in f.summary for f in result.findings)
+    assert not any(
+        json.dumps(expression) in f.summary
+        for f in result.findings
+        if f.classification == "verified"
+    )
+
+
+@pytest.mark.verifies("TST059")
+@pytest.mark.parametrize(
+    "expression",
+    [
+        "windows & !arm",
+        "(windows & arm64) | (linux & x64)",
+        "not arm and windows",
+        "windows,linux",
+        "!!linux",
+        "(" * 32 + "linux" + ")" * 32,
+    ],
+)
+def test_platform_syntax_is_validated_without_activation(expression: str) -> None:
+    result = _vcpkg({"supports": expression})
+    assert not result.diagnostics
+    assert any(expression in f.summary and "not evaluated" in f.summary for f in result.findings)
+
+
+@pytest.mark.verifies("TST059")
+def test_feature_without_description_is_partial_and_keeps_valid_dependencies() -> None:
+    result = _vcpkg({"features": {"ssl": {"dependencies": ["openssl"]}}, "dependencies": ["fmt"]})
+    assert any(d.partial for d in result.diagnostics)
+    assert any(e.locator == "/features/ssl/description" for e in result.evidence)
+    assert {"openssl", "fmt"} <= {
+        name for name in ("openssl", "fmt") if any(name in f.summary for f in result.findings)
+    }
+
+
+@pytest.mark.verifies("TST059")
+@pytest.mark.parametrize(
+    "field,version",
+    [
+        ("version-semver", "not-semver"),
+        ("version-semver", "1.2"),
+        ("version-semver", "01.2.3"),
+        ("version-semver", "1.2.3-01"),
+        ("version-semver", "1.2.3+"),
+        ("version-date", "not-a-date"),
+        ("version-date", "2024-1-02"),
+        ("version-date", "2024-01-02."),
+        ("version-date", "2024-01-02#bad"),
+    ],
+)
+def test_override_versions_obey_their_declared_scheme(field: str, version: str) -> None:
+    result = _vcpkg(
+        {"overrides": [{"name": "bad", field: version}, {"name": "good", "version": "1"}]}
+    )
+    assert any(d.partial for d in result.diagnostics)
+    declarations = [f for f in result.findings if f.code == "vcpkg.dependency.override"]
+    assert len(declarations) == 1
+    assert '"good"' in declarations[0].summary
+
+
+@pytest.mark.verifies("TST059")
+@pytest.mark.parametrize(
+    "field,version",
+    [
+        ("version-semver", "0.1.2"),
+        ("version-semver", "1.2.3-alpha.1+build.9#2"),
+        ("version-semver", "1.2.3-0.1a.-foo+123"),
+        ("version-date", "2024-01-02"),
+        ("version-date", "2024-01-02.1.2#3"),
+        ("version", "custom version#2"),
+        ("version-string", "custom version#3"),
+    ],
+)
+def test_valid_override_version_schemes_preserve_literal_values(field: str, version: str) -> None:
+    result = _vcpkg({"overrides": [{"name": "fmt", field: version}]})
+    assert not result.diagnostics
+    assert any(version in f.summary for f in result.findings)
+
+
+@pytest.mark.verifies("TST059")
+def test_detector_reservation_charges_before_allocation_and_releases() -> None:
+    view = _RepositoryView(
+        _Inspection(
+            files={"vcpkg.json": b"{}"},
+            skipped=(),
+            diagnostics=(),
+            partial=False,
+            limits=_Limits(max_memory_bytes=1000),
+            memory_consumed=100,
+        )
+    )
+    retained = view._memory_consumed
+    assert view.reserve_memory("vcpkg.json", 1000 - retained)
+    assert view._memory_consumed == 1000
+    assert not view.reserve_memory("vcpkg.json", 1)
+    assert view._memory_consumed == 1000
+    assert view.partial
+    assert view.skipped == view.partial_skipped
+    assert len(view.skipped) == 1
+    boundary = view.skipped[0]
+    assert boundary.scope == "vcpkg.json"
+    assert boundary.reason == "max_memory_bytes"
+    assert boundary.effective_limit == 1000
+    assert boundary.consumed == 1000
+    view.release_memory(1000 - retained)
+    assert view._memory_consumed == retained
+    assert view.reserve_memory("conanfile.txt", 1)
+    assert view._memory_consumed == retained + 1
+    view.release_memory(1)
+    assert view._memory_consumed == retained
+
+
+@pytest.mark.verifies("TST059")
+@pytest.mark.parametrize("configured", [False, True])
+def test_detector_reservation_without_memory_limit(configured: bool) -> None:
+    view = _RepositoryView(
+        _Inspection(
+            files={},
+            skipped=(),
+            diagnostics=(),
+            partial=False,
+            limits=_Limits(max_memory_bytes=None) if configured else None,
+        )
+    )
+    assert view.reserve_memory("vcpkg.json", 10**12)
+    assert view._memory_consumed == 10**12
+    view.release_memory(10**12)
+    assert view._memory_consumed == 0
+    assert not view.partial
+    assert view.skipped == view.partial_skipped == []
+
+
+@pytest.mark.verifies("TST059")
+def test_in_memory_detector_view_tracks_temporary_reservations() -> None:
+    view = InMemoryDetectorView({})
+    assert view.reserve_memory("vcpkg.json", 100)
+    assert view.memory_reserved == 100
+    view.release_memory(100)
+    assert view.memory_reserved == 0
+
+
+@pytest.mark.verifies("TST059")
+def test_json_budget_rejects_dense_tree_before_decoding_and_keeps_other_manifest() -> None:
+    class UndecodableBytes(bytes):
+        def decode(self, *args: object, **kwargs: object) -> str:
+            raise AssertionError("Over-budget JSON must not be decoded or materialized")
+
+    dense = UndecodableBytes(b'{"ignored":[' + b"0," * 1000 + b"0]}")
+    files = {"a/vcpkg.json": dense, "b/vcpkg.json": b'{"dependencies":["fmt"]}'}
+    view = _RepositoryView(
+        _Inspection(
+            files=files,
+            skipped=(),
+            diagnostics=(),
+            partial=False,
+            limits=_Limits(max_memory_bytes=60_000, max_elapsed_seconds=None),
+            memory_consumed=sum(map(len, files.values())),
+        )
+    )
+    retained = view._memory_consumed
+    result = cpp_dependencies.detect_cpp_dependencies(view, DetectionContext())
+    assert view.partial
+    assert view.skipped[0].scope == "a/vcpkg.json"
+    assert view.skipped[0].reason == "max_memory_bytes"
+    assert view._memory_consumed == retained
+    assert any('"fmt"' in finding.summary for finding in result.findings)
+
+
+@pytest.mark.verifies("TST059")
+@pytest.mark.parametrize("data", [b'{"dependencies":["fmt"]}', b"bad", b"\xff"])
+def test_json_reservation_lives_through_parse_and_is_released_on_all_results(data: bytes) -> None:
+    class ReservedBytes(bytes):
+        def decode(self, encoding: str = "utf-8", errors: str = "strict") -> str:
+            assert view.memory_reserved == 4096 + 256 * len(self)
+            return super().decode(encoding, errors)
+
+    view = InMemoryDetectorView({"vcpkg.json": ReservedBytes(data)})
+    result = cpp_dependencies.detect_cpp_dependencies(view, DetectionContext())
+    assert result.findings
+    assert view.memory_reserved == 0

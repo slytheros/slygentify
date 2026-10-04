@@ -102,6 +102,10 @@ For `vcpkg.json`, supported declarations include:
 
 JSON Pointer locators identify the written declarations. Feature scope and platform or
 support expressions are retained without determining which dependencies are active.
+Expression syntax is validated with bounded grouping depth; malformed operators or
+unbalanced groups make the scan partial. Named features require a string or string-array
+description. Overrides validate `version-semver` and `version-date` against their
+declared formats; generic `version` and `version-string` retain safe literal versions.
 Slygentify does not choose defaults, evaluate expressions, select a triplet, resolve a
 baseline, or determine effective versions.
 
@@ -124,6 +128,10 @@ do not establish a conflict. Credential-shaped values are withheld.
 Inspection does not install or resolve dependencies, read external includes, inspect
 registries or profiles, execute discovered commands, or access the network. Working-tree,
 tracked ignored file, containment, link, sensitive-content, and resource guards apply.
+Before decoding a vcpkg manifest, inspection reserves a conservative allowance for the
+JSON object tree and temporary parser allocations against `max_memory_bytes`. A manifest
+that cannot fit is skipped with a memory boundary and a partial result; the reservation
+is released after inspection so other manifests can still be inspected.
 See the [vcpkg manifest reference](https://learn.microsoft.com/en-us/vcpkg/reference/vcpkg-json)
 and [Conan text reference](https://docs.conan.io/2.29/reference/conanfile_txt.html) for the
 managers' evaluation semantics.

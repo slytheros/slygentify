@@ -285,6 +285,34 @@ class _RepositoryView:
     def has_path(self, path: str) -> bool:
         return path in self._entries or path in self._files
 
+    @implements("REQ058")
+    def reserve_memory(self, path: str, amount: int) -> bool:
+        """Charge temporary detector allocations before they are constructed."""
+
+        if (
+            self._limits is not None
+            and self._limits.max_memory_bytes is not None
+            and self._memory_consumed + amount > self._limits.max_memory_bytes
+        ):
+            skipped = _skip(
+                path,
+                "max_memory_bytes",
+                self._limits.max_memory_bytes,
+                self._memory_consumed,
+            )
+            self.skipped.append(skipped)
+            self.partial_skipped.append(skipped)
+            self.partial = True
+            return False
+        self._memory_consumed += amount
+        return True
+
+    @implements("REQ058")
+    def release_memory(self, amount: int) -> None:
+        """Release a completed detector's temporary memory reservation."""
+
+        self._memory_consumed -= amount
+
     def release_path_catalog(self) -> None:
         """Release detector-only index accounting before normalized records are retained."""
 
