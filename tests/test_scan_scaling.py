@@ -13,6 +13,7 @@ import slygentify._scan.detectors.cpp_dependencies as cpp_dependencies
 import slygentify._scan.detectors.generic as generic
 import slygentify._scan.detectors.javascript as javascript
 import slygentify._scan.detectors.python as python
+import slygentify._scan.detectors.visual_studio as visual_studio
 import slygentify._scan.kernel as scan
 import slygentify._scan.normalization as normalization
 from slygentify import dump_scan_json
@@ -115,6 +116,7 @@ def test_detector_registry_is_ordered_and_normalization_propagates_generic_conte
         python.detect_python,
         javascript.detect_javascript,
         cmake.detect_cmake,
+        visual_studio.detect_msbuild_make,
         cpp_dependencies.detect_cpp_dependencies,
     ) == BUILTIN_DETECTORS
     assert all(len(inspect.signature(detector).parameters) == 2 for detector in BUILTIN_DETECTORS)

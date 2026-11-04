@@ -1272,3 +1272,56 @@ def test_long_tokens_and_whitespace_honor_shared_deadline() -> None:
         assert isinstance(commands(source, lambda: False), tuple)
         checks = iter([False, False, True])
         assert commands(source, checks.__next__) == ()
+
+
+@pytest.mark.verifies("TST061")
+def test_presets_utf8_bom_preserves_complete_canonical_scan_and_map(tmp_path: Path) -> None:
+    root = _root(tmp_path)
+    document = json.dumps(
+        {
+            "version": 6,
+            "configurePresets": [{"name": "débug", "generator": "Ninja"}],
+            "buildPresets": [{"name": "build", "configurePreset": "débug"}],
+            "testPresets": [{"name": "test", "configurePreset": "débug"}],
+            "workflowPresets": [{"name": "workflow"}],
+        },
+        ensure_ascii=False,
+    ).encode("utf-8")
+    path = root / "CMakePresets.json"
+    path.write_bytes(document)
+    before = scan_repository(root)
+    before_map = map_repository(root, sections=["workflows"], max_bytes="unlimited")
+    path.write_bytes(b"\xef\xbb\xbf" + document)
+    result = scan_repository(root)
+    assert result == before
+    assert result.completion == "complete"
+    assert map_repository(root, sections=["workflows"], max_bytes="unlimited") == before_map
+    assert sum(f.code == "cmake.preset.declaration" for f in result.findings) == 4
+    assert any(e.locator == "/configurePresets/0/generator" for e in result.evidence)
+    assert path.read_bytes() == b"\xef\xbb\xbf" + document
+
+
+@pytest.mark.verifies("TST061")
+@pytest.mark.parametrize(
+    "document",
+    [
+        b'\xef\xbb\xbf{"version":6,"version":6}',
+        b'\xef\xbb\xbf{"version":6,"vendor":{"bad":"\\ud800"}}',
+        b'\xef\xbb\xbf{"version":6,"invalid":"\xff"}',
+        b"\xef\xbb\xbf{",
+        b'\xef\xbb\xbf\xef\xbb\xbf{"version":6}',
+        b' \xef\xbb\xbf{"version":6}',
+        b'{"version":6}\xef\xbb\xbf',
+        '{"version":6}'.encode("utf-16"),
+    ],
+)
+def test_presets_bom_does_not_relax_json_unicode_or_encoding_guards(
+    tmp_path: Path, document: bytes
+) -> None:
+    root = _root(tmp_path)
+    (root / "CMakePresets.json").write_bytes(document)
+    result = scan_repository(root)
+    assert result.completion == "partial"
+    assert any(d.code == "cmake.invalid-presets" for d in result.diagnostics)
+    assert not any(f.code == "cmake.preset.declaration" for f in result.findings)
+    assert any(f.code == "cmake.identity.declaration" for f in result.findings)

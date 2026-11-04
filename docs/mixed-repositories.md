@@ -61,3 +61,13 @@ workspace roots, narrow or exclude the overlapping workspace declarations instea
 
 See the complete [`slygentify.toml` reference](configuration-and-provenance.md) for path
 rules, conflict behavior, and examples.
+
+## Visual Studio/MSBuild and Make
+
+Validated C++ `.vcxproj` files add an `msbuild` facet while preserving co-located
+CMake/Python/JavaScript and configured evidence in one component per directory.
+Project-file declarations retain separate locators; directory ownership cannot select
+one project file. Classic and XML solutions supply safe directory membership without
+turning logical folders into components. Makefiles attach tooling evidence to the nearest
+independent owner and never establish C/C++ boundaries alone. See
+[static Visual Studio/MSBuild and Make inspection](msbuild-make-inspection.md).

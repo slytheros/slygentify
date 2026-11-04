@@ -1,0 +1,35 @@
+active: true
+derived: false
+header: |
+  Static MSBuild, solution and Make inspection tests
+level: 1.591
+links:
+- REQ059: YI59D5d9urWbEiNrKBGLN2eZtLgKR3NNEEMurx9HnRI=
+normative: true
+ref: ''
+references:
+- keyword: TST060
+  path: tests/test_visual_studio_make.py
+  type: file
+- keyword: TST060
+  path: tests/test_visual_studio_make_integration.py
+  type: file
+reviewed: null
+text: |
+  Verify standalone and solution-associated C++ projects, classic sln and XML slnx
+  membership with logical folders, conditional declarations, conflicts, unique locators,
+  co-located projects and ecosystem facets, safe ownership and absence of self-relationships.
+  Verify exact-path precedence, uniquely case-insensitive solution references, ambiguous
+  and invalid/unreadable collisions, bounded lookup failure and canonical target spelling
+  without bypassing ignored, sensitive or unsafe paths.
+  Verify property/metadata/item expressions are withheld in every supported field and
+  solution format, while literal at-sign values remain supported. Verify independent
+  compiler items and default/per-item overrides do not conflict, repeated unconditional
+  declarations within one scope retain conflicts, and conditional or unknown-overlap
+  item scopes are not evaluated.
+  Verify Make tooling without independent boundaries and configured/corroborated owners.
+  Verify malformed and dynamic evidence, unsafe/missing references, XML DTD/entities,
+  encoding, links, ignored/tracked evidence, sensitive-value withholding and bounded partial
+  results. Verify deterministic canonical records, map/text/explorer/JSON parity, dependency
+  attribution, initialization provenance and doctor drift while preserving human guidance.
+  Verify that inspection does not evaluate configuration, execute recipes or contact networks.

@@ -1,0 +1,20 @@
+active: true
+derived: false
+header: |
+  CMake presets UTF-8 signature compatibility
+level: 1.591
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ060
+  path: src/slygentify/_scan/detectors/cmake.py
+  type: file
+reviewed: null
+text: |
+  Slygentify shall accept CMakePresets.json encoded as UTF-8 with or without one
+  leading byte-order mark, retaining identical canonical declarations and source locators.
+  Acceptance shall preserve duplicate-key, Unicode scalar, supported-value, containment,
+  link, sensitive-content and resource guards. Repeated or misplaced signatures,
+  malformed JSON and malformed UTF-8 shall remain invalid; no alternate encoding,
+  import following, evaluation, command execution or network access shall be introduced.

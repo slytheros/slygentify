@@ -69,6 +69,7 @@ def _project_languages(call: Command) -> tuple[str, ...] | None:
     return tuple(languages)
 
 
+@implements("REQ060")
 def _unique_object(data: bytes) -> dict[str, object]:
     def unicode_scalars(value: object) -> None:
         if isinstance(value, str):
@@ -89,7 +90,7 @@ def _unique_object(data: bytes) -> dict[str, object]:
             result[key] = value
         return result
 
-    result = json.loads(data.decode("utf-8"), object_pairs_hook=pairs)
+    result = json.loads(data.decode("utf-8-sig"), object_pairs_hook=pairs)
     if not isinstance(result, dict):
         raise ValueError("not an object")
     unicode_scalars(result)

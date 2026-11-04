@@ -6,6 +6,17 @@ major versions are independent compatibility surfaces.
 
 ## Unreleased
 
+- Keep MSBuild item expressions unresolved and distinguish compiler defaults from
+  per-item metadata when reporting declaration conflicts.
+
+- Accept UTF-8 BOM-prefixed CMake presets and resolve unique case-insensitive Visual
+  Studio solution project references while retaining declared/canonical spellings,
+  exact-path precedence, ambiguity limitations and bounded inspection guards.
+
+- Recognize static Visual Studio/MSBuild C++ projects, classic/XML solution membership,
+  and Make tooling with bounded parsing, explicit uncertainty, mixed-component evidence,
+  and scan/map, initialization-provenance and doctor integration.
+
 - Add bounded static vcpkg and Conan dependency-manager declarations with literal
   dependency qualifiers, nearest-component ownership, recognition-only Python recipes,
   and canonical scan/map, doctor, and initialization-provenance integration.
