@@ -4,7 +4,7 @@ header: |
   Static MSBuild, solution and Make inspection tests
 level: 1.591
 links:
-- REQ059: GsOdGKrS7n1UajbojLP19bnZGhm0xIYv02rVOJOiadc=
+- REQ059: YI59D5d9urWbEiNrKBGLN2eZtLgKR3NNEEMurx9HnRI=
 normative: true
 ref: ''
 references:
@@ -22,6 +22,11 @@ text: |
   Verify exact-path precedence, uniquely case-insensitive solution references, ambiguous
   and invalid/unreadable collisions, bounded lookup failure and canonical target spelling
   without bypassing ignored, sensitive or unsafe paths.
+  Verify property/metadata/item expressions are withheld in every supported field and
+  solution format, while literal at-sign values remain supported. Verify independent
+  compiler items and default/per-item overrides do not conflict, repeated unconditional
+  declarations within one scope retain conflicts, and conditional or unknown-overlap
+  item scopes are not evaluated.
   Verify Make tooling without independent boundaries and configured/corroborated owners.
   Verify malformed and dynamic evidence, unsafe/missing references, XML DTD/entities,
   encoding, links, ignored/tracked evidence, sensitive-value withholding and bounded partial

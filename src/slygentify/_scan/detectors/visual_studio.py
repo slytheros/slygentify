@@ -99,6 +99,7 @@ def _literal(value: str) -> bool:
         and len(value) <= 4096
         and value.isprintable()
         and not any(c in value for c in "$%{};`")
+        and "@(" not in value
         and not contains_literal_credential(value)
     )
 
@@ -209,7 +210,7 @@ def detect_msbuild_make(view: RepositoryView, context: DetectionContext) -> Dete
         projects.add(path)
         project_roots.add(parent(path))
         roots.add(parent(path))
-        seen: dict[tuple[str, bool], tuple[str, EvidenceKey]] = {}
+        seen: dict[tuple[str, str], tuple[str, EvidenceKey]] = {}
         for node, locator, conditional, owner in _walk(document, namespace):
             if view.checkpoint():
                 raise _Stopped
@@ -228,18 +229,29 @@ def detect_msbuild_make(view: RepositoryView, context: DetectionContext) -> Dete
                 )
                 continue
             summary = f"{name} {quoted(value)} is declared in this project file; effective selection is unknown."
+            scope = "project-properties"
+            if owner == "ClCompile":
+                scope = locator.rsplit("/", 1)[0]
+                if re.search(r"/ItemDefinitionGroup\[\d+\]/ClCompile\[\d+\]$", scope):
+                    scope = "compiler-defaults"
+                    summary += " Source is compiler-default metadata."
+                else:
+                    # Item selectors and overlap are not evaluated. Only repeated
+                    # metadata within this exact item can establish a conflict.
+                    summary += " Source is compiler-item metadata; item overlap remains unknown."
             if conditional:
                 summary += " Source is conditional or deferred and may not take effect."
             key = emit(_FIELDS[name] + ".declaration", locator, summary)
             # Conditional scopes are not compared: different configurations are legitimate.
-            identity = (name, conditional)
-            if not conditional and identity in seen and seen[identity][0] != value:
-                issue(
-                    "declaration-conflict",
-                    "Different unconditional declarations coexist in one project file; no winner was selected",
-                    keys=(seen[identity][1], key),
-                )
-            seen[identity] = (value, key)
+            identity = (name, scope)
+            if not conditional:
+                if identity in seen and seen[identity][0] != value:
+                    issue(
+                        "declaration-conflict",
+                        "Different unconditional declarations coexist in the same property or compiler-metadata scope; no winner was selected",
+                        keys=(seen[identity][1], key),
+                    )
+                seen[identity] = (value, key)
 
     def solution_entries(data: bytes) -> list[tuple[str, str]]:
         if path.lower().endswith(".slnx"):

@@ -6,6 +6,9 @@ major versions are independent compatibility surfaces.
 
 ## Unreleased
 
+- Keep MSBuild item expressions unresolved and distinguish compiler defaults from
+  per-item metadata when reporting declaration conflicts.
+
 - Accept UTF-8 BOM-prefixed CMake presets and resolve unique case-insensitive Visual
   Studio solution project references while retaining declared/canonical spellings,
   exact-path precedence, ambiguity limitations and bounded inspection guards.

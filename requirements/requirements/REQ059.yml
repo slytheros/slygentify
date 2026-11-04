@@ -15,7 +15,12 @@ text: |
   Slygentify shall recognize valid vcxproj project boundaries and literal ProjectName,
   PlatformToolset, LanguageStandard and LanguageStandard_C declarations with unique XML
   locators, preserving conditional/deferred scope and conflicting source declarations
-  without choosing effective settings. Classic sln and XML slnx solution membership shall
+  without choosing effective settings. Property, metadata and item expressions shall
+  remain unresolved and their values withheld. Conflict comparisons shall distinguish
+  project properties, compiler defaults and individual compiler-item declarations;
+  independent item metadata and defaults/overrides shall not produce false conflicts.
+  Item selectors and their overlap shall not be evaluated.
+  Classic sln and XML slnx solution membership shall
   establish workspace boundaries and safe relationships only for validated C++ projects.
   Exact paths shall take precedence; otherwise a unique case-insensitive match among
   safely catalogued project paths may resolve to a validated project. Reports shall

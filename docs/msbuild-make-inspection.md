@@ -16,10 +16,15 @@ proof of a successful build. Source files are not read.
 
 Conditions on a declaration or any enclosing element, and declarations inside
 `Choose`/`When`/`Otherwise` or `Target`, retain conditional/deferred wording. Different
-unconditional values for the same field in one file retain a conflict without selecting
-a winner. Different configurations and different project files are separate source scopes.
+unconditional values for the same field within one property or compiler-metadata scope
+retain a conflict without selecting a winner. Project properties, compiler defaults and
+individual compiler-item elements are separate scopes. Different source items and a
+compiler default with a per-item override do not create conflicts. Item selectors and
+possible overlaps between separate elements are not evaluated. Different configurations
+and different project files remain separate source scopes.
 Imports and executable extensions remain unresolved; `.props`, `.targets`, SDKs and
-`Directory.Build.*` are not loaded. Dynamic and sensitive values are withheld.
+`Directory.Build.*` are not loaded. Property (`$(...)`), metadata (`%(...)`) and item
+(`@(...)`) expressions remain unresolved; their values and sensitive literals are withheld.
 
 Multiple projects in one directory retain separate file evidence in one component,
 with an explicit file-attribution limitation. Existing CMake, Python, JavaScript and

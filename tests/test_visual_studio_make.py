@@ -438,3 +438,159 @@ def test_memory_failure_after_case_index_and_parser_reservations(
     assert not result.evidence
     assert not result.components
     assert not result.diagnostics
+
+
+@pytest.mark.verifies("TST060")
+@pytest.mark.parametrize(
+    "field", ["ProjectName", "PlatformToolset", "LanguageStandard", "LanguageStandard_C"]
+)
+@pytest.mark.parametrize(
+    "expression",
+    [
+        "$(UnresolvedProperty)",
+        "%(UnresolvedMetadata)",
+        "@(UnresolvedItems)",
+        "prefix@(UnresolvedItems)suffix",
+        "@(UnresolvedItems->'metadata')",
+    ],
+)
+def test_msbuild_expressions_never_become_literal_settings(field: str, expression: str) -> None:
+    result = _detect(
+        {
+            "a.vcxproj": f"<Project><PropertyGroup><{field}>{expression}</{field}></PropertyGroup></Project>".encode()
+        }
+    )
+    assert len(result.components) == 1
+    assert not any(f.code.endswith(".declaration") for f in result.findings)
+    assert any(
+        f.code == "msbuild.declaration.unresolved" and f.classification == "unknown"
+        for f in result.findings
+    )
+    assert "Unresolved" not in repr(result)
+
+
+@pytest.mark.verifies("TST060")
+def test_item_expression_in_compiler_metadata_is_withheld() -> None:
+    result = _detect(
+        {
+            "a.vcxproj": b"<Project><ItemDefinitionGroup><ClCompile><LanguageStandard>@(Standards)</LanguageStandard></ClCompile></ItemDefinitionGroup></Project>"
+        }
+    )
+    assert not any(f.code == "msbuild.standard.declaration" for f in result.findings)
+    assert any(f.code == "msbuild.declaration.unresolved" for f in result.findings)
+    assert "@(Standards)" not in repr(result)
+
+
+@pytest.mark.verifies("TST060")
+@pytest.mark.parametrize("extension", ["sln", "slnx"])
+def test_solution_item_expression_cannot_match_a_catalogued_project(extension: str) -> None:
+    source = (
+        _HEADER + _entry("@(Projects).vcxproj")
+        if extension == "sln"
+        else '<Solution><Project Path="@(Projects).vcxproj"/></Solution>'
+    )
+    result = _detect({f"a.{extension}": source.encode(), "@(Projects).vcxproj": b"<Project/>"})
+    assert not any(f.code == "msbuild.solution.member" for f in result.findings)
+    assert not any(c.kind == "workspace" for c in result.components)
+    assert any("unsafe or dynamic" in f.summary for f in result.findings)
+
+
+@pytest.mark.verifies("TST060")
+def test_literal_at_sign_in_project_name_is_not_an_item_expression() -> None:
+    result = _detect(
+        {
+            "a.vcxproj": b"<Project><PropertyGroup><ProjectName>tools@home</ProjectName></PropertyGroup></Project>"
+        }
+    )
+    assert any(
+        f.code == "msbuild.identity.declaration" and "tools@home" in f.summary
+        for f in result.findings
+    )
+
+
+@pytest.mark.verifies("TST060")
+@pytest.mark.parametrize("field", ["LanguageStandard", "LanguageStandard_C"])
+def test_compiler_defaults_and_distinct_item_metadata_do_not_conflict(field: str) -> None:
+    source = f"""<Project>
+    <PropertyGroup><{field}>propertyValue</{field}></PropertyGroup>
+    <ItemDefinitionGroup><ClCompile><{field}>stdcpp14</{field}></ClCompile></ItemDefinitionGroup>
+    <ItemGroup>
+      <ClCompile Include="a.cpp"><{field}>stdcpp17</{field}></ClCompile>
+      <ClCompile Include="b.cpp"><{field}>stdcpp20</{field}></ClCompile>
+      <ClCompile Update="@(Files)"><{field}>stdcpplatest</{field}></ClCompile>
+    </ItemGroup></Project>"""
+    result = _detect({"a.vcxproj": source.encode()})
+    assert not any(d.code == "msbuild.declaration-conflict" for d in result.diagnostics)
+    declarations = [f for f in result.findings if f.code == "msbuild.standard.declaration"]
+    assert len(declarations) == 5
+    assert sum("compiler-item metadata" in f.summary for f in declarations) == 3
+    assert sum("compiler-default metadata" in f.summary for f in declarations) == 1
+    assert "@(Files)" not in repr(result)
+
+
+@pytest.mark.verifies("TST060")
+@pytest.mark.parametrize("scope", ["item", "defaults", "properties"])
+def test_repeated_unconditional_values_in_same_scope_still_conflict(scope: str) -> None:
+    repeated = (
+        "<LanguageStandard>stdcpp17</LanguageStandard><LanguageStandard>stdcpp20</LanguageStandard>"
+    )
+    bodies = {
+        "item": f'<ItemGroup><ClCompile Include="a.cpp">{repeated}</ClCompile></ItemGroup>',
+        "defaults": "<ItemDefinitionGroup><ClCompile><LanguageStandard>stdcpp17</LanguageStandard></ClCompile></ItemDefinitionGroup><ItemDefinitionGroup><ClCompile><LanguageStandard>stdcpp20</LanguageStandard></ClCompile></ItemDefinitionGroup>",
+        "properties": f"<PropertyGroup>{repeated}</PropertyGroup>",
+    }
+    result = _detect({"a.vcxproj": ("<Project>" + bodies[scope] + "</Project>").encode()})
+    conflicts = [d for d in result.diagnostics if d.code == "msbuild.declaration-conflict"]
+    assert len(conflicts) == 1
+    assert len(conflicts[0].evidence_keys) == 2
+    assert len([f for f in result.findings if f.code == "msbuild.standard.declaration"]) == 2
+
+
+@pytest.mark.verifies("TST060")
+def test_separate_overlapping_or_conditional_item_elements_do_not_imply_conflicts() -> None:
+    result = _detect(
+        {
+            "a.vcxproj": b"""<Project><ItemGroup>
+    <ClCompile Include="a.cpp"><LanguageStandard>stdcpp17</LanguageStandard></ClCompile>
+    <ClCompile Update="a.cpp"><LanguageStandard>stdcpp20</LanguageStandard></ClCompile>
+    <ClCompile Include="b.cpp"><LanguageStandard>stdcpp17</LanguageStandard><LanguageStandard Condition="unknown">stdcpp20</LanguageStandard></ClCompile>
+    </ItemGroup></Project>"""
+        }
+    )
+    assert not any(d.code == "msbuild.declaration-conflict" for d in result.diagnostics)
+    assert any("conditional or deferred" in f.summary for f in result.findings)
+
+
+@pytest.mark.verifies("TST060")
+@pytest.mark.parametrize("compiler_item", [False, True])
+@pytest.mark.parametrize(
+    "values,expected",
+    [
+        ([("stdcpp20", True), ("stdcpp17", False)], 0),
+        ([("stdcpp17", False), ("stdcpp20", True), ("stdcpp17", False)], 0),
+        ([("stdcpp17", False), ("stdcpp20", True), ("stdcpplatest", False)], 1),
+    ],
+)
+def test_conditional_values_do_not_replace_unconditional_conflict_evidence(
+    compiler_item: bool, values: list[tuple[str, bool]], expected: int
+) -> None:
+    declarations = ""
+    for value, conditional in values:
+        condition = ' Condition="unknown"' if conditional else ""
+        declarations += f"<LanguageStandard{condition}>{value}</LanguageStandard>"
+    body = (
+        f'<ItemGroup><ClCompile Include="a.cpp">{declarations}</ClCompile></ItemGroup>'
+        if compiler_item
+        else f"<PropertyGroup>{declarations}</PropertyGroup>"
+    )
+    result = _detect({"a.vcxproj": ("<Project>" + body + "</Project>").encode()})
+    conflicts = [d for d in result.diagnostics if d.code == "msbuild.declaration-conflict"]
+    assert len(conflicts) == expected
+    declarations_by_key = {
+        f.evidence_keys[0]: f for f in result.findings if f.code == "msbuild.standard.declaration"
+    }
+    assert all(
+        "conditional or deferred" not in declarations_by_key[key].summary
+        for d in conflicts
+        for key in d.evidence_keys
+    )
