@@ -36,6 +36,7 @@ evidence-backed repository operating maps and safe agent guidance. It implements
 - [Python inspection](python-inspection.md)
 - [JavaScript and TypeScript inspection](javascript-inspection.md)
 - [Static CMake inspection](cmake-inspection.md)
+- [Static Visual Studio/MSBuild and Make inspection](msbuild-make-inspection.md)
 - [Inspection accounting](inspection-accounting.md)
 
 The public site deliberately excludes internal acceptance evidence and architecture

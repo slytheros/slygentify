@@ -51,6 +51,9 @@ _COMPONENT_CODES = frozenset(
         "composition.overlapping-workspace-membership",
         "composition.unresolved-relationship",
         "generic.cmake",
+        "msbuild.project.evidence",
+        "msbuild.solution.evidence",
+        "msbuild.solution.member",
         "cmake.identity.declaration",
         "cmake.language.declaration",
         "generic.kicad",
@@ -65,6 +68,10 @@ _COMPONENT_CODES = frozenset(
 )
 _TOOLING_CODES = frozenset(
     {
+        "msbuild.identity.declaration",
+        "msbuild.toolset.declaration",
+        "msbuild.standard.declaration",
+        "make.tool.evidence",
         "vcpkg.manager.evidence",
         "vcpkg.dependency.declaration",
         "vcpkg.dependency.feature",

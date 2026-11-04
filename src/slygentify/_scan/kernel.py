@@ -38,6 +38,9 @@ _RELEVANT_NAMES = frozenset(
         "pom.xml",
         "vcpkg.json",
         "conanfile.txt",
+        "Makefile",
+        "makefile",
+        "GNUmakefile",
     }
 )
 _BUILTIN_DIRECTORIES = frozenset(
@@ -74,7 +77,11 @@ _IS_WINDOWS = os.name == "nt"
 
 
 def _generic_content_relevant(name: str) -> bool:
-    return name in _RELEVANT_NAMES or name.endswith(".kicad_pro")
+    return (
+        name in _RELEVANT_NAMES
+        or name.endswith(".kicad_pro")
+        or name.lower().endswith((".vcxproj", ".sln", ".slnx"))
+    )
 
 
 def _gitignore_bases(path: str) -> Iterator[str]:

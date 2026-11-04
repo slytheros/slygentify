@@ -161,6 +161,6 @@ component and tooling declarations while preserving human guidance.
 
 See the [CMake language reference](https://cmake.org/cmake/help/latest/manual/cmake-language.7.html)
 and [preset format](https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html) for CMake's
-evaluation semantics. Other build systems, arbitrary `.cmake`
-includes, deeper ESP-IDF inspection, and effective-build verification are not supported
-by this stage.
+evaluation semantics. Visual Studio/MSBuild and Make have separate [static recognition](msbuild-make-inspection.md).
+Arbitrary `.cmake` includes, deeper ESP-IDF inspection, and effective-build verification
+remain unsupported.

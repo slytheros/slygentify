@@ -1,0 +1,32 @@
+active: true
+derived: false
+header: |
+  Static MSBuild, solution and Make recognition
+level: 1.59
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ059
+  path: src/slygentify/_scan/detectors/visual_studio.py
+  type: file
+reviewed: null
+text: |
+  Slygentify shall recognize valid vcxproj project boundaries and literal ProjectName,
+  PlatformToolset, LanguageStandard and LanguageStandard_C declarations with unique XML
+  locators, preserving conditional/deferred scope and conflicting source declarations
+  without choosing effective settings. Classic sln and XML slnx solution membership shall
+  establish workspace boundaries and safe relationships only for validated C++ projects.
+  Logical solution folders shall not become filesystem boundaries. Co-located projects
+  shall retain separate evidence within one stable path-based component and preserve
+  other ecosystem facets; same-directory membership shall not create self-relationships.
+  Makefile, makefile and GNUmakefile shall provide tooling evidence attached to an existing
+  owner or retained at repository scope, without establishing boundaries or language facets.
+  Imports, properties, conditions, variables, includes, computed targets and recipes shall
+  remain unevaluated and unresolved. Malformed supported documents shall produce partial
+  results while retaining independent valid evidence. DTD/entity expansion shall be
+  prevented before parsing content; unsafe, sensitive and unavailable references shall not
+  be followed or exposed. Inspection shall preserve containment, ignore, link, sensitive-file,
+  memory and deadline guards and shall not execute discovered commands or access networks.
+  Canonical records shall remain available across scan presentations and JSON, map,
+  initialization provenance and doctor comparisons without public API or schema changes.

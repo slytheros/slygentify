@@ -6,6 +6,10 @@ major versions are independent compatibility surfaces.
 
 ## Unreleased
 
+- Recognize static Visual Studio/MSBuild C++ projects, classic/XML solution membership,
+  and Make tooling with bounded parsing, explicit uncertainty, mixed-component evidence,
+  and scan/map, initialization-provenance and doctor integration.
+
 - Add bounded static vcpkg and Conan dependency-manager declarations with literal
   dependency qualifiers, nearest-component ownership, recognition-only Python recipes,
   and canonical scan/map, doctor, and initialization-provenance integration.

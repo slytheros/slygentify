@@ -6,12 +6,14 @@ from slygentify._scan.detectors.cpp_dependencies import detect_cpp_dependencies
 from slygentify._scan.detectors.generic import detect_generic
 from slygentify._scan.detectors.javascript import detect_javascript
 from slygentify._scan.detectors.python import detect_python
+from slygentify._scan.detectors.visual_studio import detect_msbuild_make
 
 BUILTIN_DETECTORS: tuple[Detector, ...] = (
     detect_generic,
     detect_python,
     detect_javascript,
     detect_cmake,
+    detect_msbuild_make,
     detect_cpp_dependencies,
 )
 

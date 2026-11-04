@@ -719,7 +719,7 @@ def build_report_tree(index: ScanPresentation) -> Tree:
     at_a_glance.add(
         Text(
             "Inspection support: Python, JavaScript/TypeScript, and generic Cargo, Go, "
-            "Maven, CMake/ESP-IDF, and KiCad evidence"
+            "Maven, CMake/ESP-IDF, Visual Studio/MSBuild, Make, and KiCad evidence"
         )
     )
 
