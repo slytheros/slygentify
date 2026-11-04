@@ -196,3 +196,52 @@ def test_resource_limited_scan_retains_partial_boundary(tmp_path: Path, limit: s
     result = scan_repository(root)
     assert result.completion == "partial"
     assert result.skipped_scopes
+
+
+@pytest.mark.verifies("TST060")
+@pytest.mark.parametrize("blocked", ["ignored", "symlink", "sensitive"])
+def test_case_matching_does_not_admit_blocked_project_targets(tmp_path: Path, blocked: str) -> None:
+    root = _root(tmp_path)
+    target = "private/project.vcxproj" if blocked != "sensitive" else ".ssh/project.vcxproj"
+    _write(root, "a.slnx", f'<Solution><Project Path="{target.upper()}"/></Solution>')
+    if blocked == "symlink":
+        outside = tmp_path / "external.vcxproj"
+        outside.write_text("<Project/>")
+        (root / "private").mkdir()
+        (root / target).symlink_to(outside)
+    else:
+        _write(root, target, "<Project/>")
+        if blocked == "ignored":
+            _write(root, ".gitignore", "private/\n")
+    result = scan_repository(root)
+    assert not result.components
+    assert not result.relationships
+    assert not any(f.code == "msbuild.solution.member" for f in result.findings)
+
+
+@pytest.mark.verifies("TST060")
+def test_case_matched_membership_uses_canonical_component_path_in_json_and_map(
+    tmp_path: Path,
+) -> None:
+    root = _root(tmp_path)
+    _write(
+        root,
+        "a.slnx",
+        '<Solution><Project Path="XWBTool/XWBTool_Desktop_2022.vcxproj"/></Solution>',
+    )
+    _write(root, "XWBTool/xwbtool_Desktop_2022.vcxproj", "<Project/>")
+    result = scan_repository(root)
+    assert load_scan_json(dump_scan_json(result)) == result
+    assert dump_scan_json(scan_repository(root)) == dump_scan_json(result)
+    component = next(c for c in result.components if c.path == "XWBTool")
+    assert any(
+        r.kind == "workspace-member" and r.target_id == component.id for r in result.relationships
+    )
+    projection = map_repository(
+        root, scope="XWBTool", sections=["orientation"], max_bytes="unlimited"
+    )
+    assert any(
+        f.code == "msbuild.solution.member" and "ignoring case" in f.summary
+        for f in projection.findings
+    )
+    assert component in projection.components

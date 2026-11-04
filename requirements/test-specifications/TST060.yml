@@ -4,7 +4,7 @@ header: |
   Static MSBuild, solution and Make inspection tests
 level: 1.591
 links:
-- REQ059: Q4HJ0Ep3C7j8uJwVM1oW8shp70QhXzIrDWDi_3M9MbY=
+- REQ059: GsOdGKrS7n1UajbojLP19bnZGhm0xIYv02rVOJOiadc=
 normative: true
 ref: ''
 references:
@@ -19,6 +19,9 @@ text: |
   Verify standalone and solution-associated C++ projects, classic sln and XML slnx
   membership with logical folders, conditional declarations, conflicts, unique locators,
   co-located projects and ecosystem facets, safe ownership and absence of self-relationships.
+  Verify exact-path precedence, uniquely case-insensitive solution references, ambiguous
+  and invalid/unreadable collisions, bounded lookup failure and canonical target spelling
+  without bypassing ignored, sensitive or unsafe paths.
   Verify Make tooling without independent boundaries and configured/corroborated owners.
   Verify malformed and dynamic evidence, unsafe/missing references, XML DTD/entities,
   encoding, links, ignored/tracked evidence, sensitive-value withholding and bounded partial

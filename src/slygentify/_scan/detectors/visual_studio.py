@@ -130,6 +130,9 @@ def detect_msbuild_make(view: RepositoryView, context: DetectionContext) -> Dete
     relationships: list[RelationshipCandidate] = []
     projects: set[str] = set()
     project_roots: set[str] = set()
+    project_spellings: dict[str, str | None] = {}
+    case_lookup_complete = True
+    case_lookup_memory = 0
     roots = set(context.component_paths)
     path = ""
     subject: str | None = None
@@ -306,6 +309,16 @@ def detect_msbuild_make(view: RepositoryView, context: DetectionContext) -> Dete
             path = candidate.path
             family = "make" if phase == "make" else "msbuild"
             subject = parent(path) if phase == "project" else nearest_ancestor(parent(path), roots)
+            if phase == "project":
+                # Include unreadable/invalid catalogued projects in collision detection.
+                # A partial index cannot establish that a spelling is unique.
+                index_memory = 4096 + 32 * len(path)
+                if not view.reserve_memory(path, index_memory):
+                    case_lookup_complete = False
+                    continue
+                case_lookup_memory += index_memory
+                folded = path.casefold()
+                project_spellings[folded] = path if folded not in project_spellings else None
             data = view.read_bytes(path)
             if data is None:
                 continue
@@ -322,6 +335,18 @@ def detect_msbuild_make(view: RepositoryView, context: DetectionContext) -> Dete
                         if view.checkpoint():
                             raise _Stopped
                         target = _member(parent(path), value)
+                        declared_target = target
+                        if target is not None and target not in projects and case_lookup_complete:
+                            folded = target.casefold()
+                            if folded in project_spellings:
+                                resolved = project_spellings[folded]
+                                if resolved is None:
+                                    unresolved(
+                                        locator,
+                                        "A solution project path has ambiguous case-insensitive matches; no target was selected",
+                                    )
+                                    continue
+                                target = resolved
                         if target is None:
                             unresolved(locator, "A solution project path is unsafe or dynamic")
                         elif not target.lower().endswith(".vcxproj"):
@@ -336,11 +361,10 @@ def detect_msbuild_make(view: RepositoryView, context: DetectionContext) -> Dete
                             )
                         else:
                             subject = parent(path)
-                            key = emit(
-                                "solution.member",
-                                locator,
-                                f"Literal solution membership of {quoted(target)} is declared; build ordering and activation are unknown.",
-                            )
+                            summary = f"Literal solution membership of {quoted(target)} is declared; build ordering and activation are unknown."
+                            if target != declared_target:
+                                summary = f"Solution reference {quoted(value)} matches the unique catalogued C++ project {quoted(target)} ignoring case; build ordering and activation are unknown."
+                            key = emit("solution.member", locator, summary)
                             members.append((parent(target), key))
                     if members:
                         subject = parent(path)
@@ -395,6 +419,8 @@ def detect_msbuild_make(view: RepositoryView, context: DetectionContext) -> Dete
                     )
             finally:
                 view.release_memory(parser_memory)
+    project_spellings.clear()
+    view.release_memory(case_lookup_memory)
     return DetectionResult(
         tuple(evidence),
         tuple(components),

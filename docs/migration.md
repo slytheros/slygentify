@@ -58,3 +58,10 @@ and limitations can change fresh scan results and initialization provenance. Pub
 Python signatures and JSON schema versions remain unchanged. Review doctor findings and
 `init --dry-run` before explicitly regenerating managed guidance; human-edited guidance
 is preserved by default. See [inspection details](msbuild-make-inspection.md).
+
+Solution project references can now match uniquely ignoring case within the safe
+catalogue; exact matches take precedence and ambiguous or invalid targets remain
+unresolved. Findings report both spellings when they differ. UTF-8 BOM-prefixed
+CMake presets are accepted without changing declaration IDs or locators. These fixes
+may add membership/preset findings and remove prior limitations from a fresh scan;
+no public interface or schema migration is required.

@@ -330,3 +330,111 @@ def test_classic_solution_leading_blank_lines_preserve_source_line_locators() ->
         }
     )
     assert any(e.locator == "line:4" for e in result.evidence)
+
+
+@pytest.mark.verifies("TST060")
+@pytest.mark.parametrize("extension", ["sln", "slnx"])
+def test_solution_reference_uses_unique_case_insensitive_catalogue_match(extension: str) -> None:
+    declared = "XWBTOOL/XWBTool_Desktop_2022.vcxproj"
+    source = (
+        _HEADER + _entry(declared.replace("/", "\\"))
+        if extension == "sln"
+        else f'<Solution><Project Path="{declared}"/></Solution>'
+    )
+    result = _detect(
+        {f"a.{extension}": source.encode(), "XWBTool/xwbtool_Desktop_2022.vcxproj": b"<Project/>"}
+    )
+    member = next(f for f in result.findings if f.code == "msbuild.solution.member")
+    assert "XWBTool/xwbtool_Desktop_2022.vcxproj" in member.summary
+    assert "XWBTOOL" in member.summary and "ignoring case" in member.summary
+    assert member.classification == "verified"
+    assert result.relationships[0].target_path == "XWBTool"
+    assert any(c.path == "." and c.kind == "workspace" for c in result.components)
+
+
+@pytest.mark.verifies("TST060")
+def test_exact_solution_path_wins_over_other_case_spellings() -> None:
+    result = _detect(
+        {
+            "a.slnx": b'<Solution><Project Path="src/project.vcxproj"/></Solution>',
+            "src/project.vcxproj": b"<Project/>",
+            "SRC/PROJECT.VCXPROJ": b"<Project/>",
+        }
+    )
+    assert result.relationships[0].target_path == "src"
+    member = next(f for f in result.findings if f.code == "msbuild.solution.member")
+    assert '"src/project.vcxproj"' in member.summary
+    assert "ignoring case" not in member.summary
+
+
+@pytest.mark.verifies("TST060")
+@pytest.mark.parametrize("other", [b"<Project/>", b"<Wrong/>", None])
+def test_ambiguous_case_matches_never_select_even_when_one_project_is_invalid(
+    other: bytes | None,
+) -> None:
+    result = _detect(
+        {
+            "a.slnx": b'<Solution><Project Path="SRC/PROJECT.vcxproj"/></Solution>',
+            "src/project.vcxproj": b"<Project/>",
+            "src/Project.vcxproj": other,
+        }
+    )
+    assert not result.relationships
+    assert not any(f.code == "msbuild.solution.member" for f in result.findings)
+    assert any(
+        "ambiguous case-insensitive" in f.summary and f.classification == "unknown"
+        for f in result.findings
+    )
+    assert not any(c.kind == "workspace" for c in result.components)
+
+
+@pytest.mark.verifies("TST060")
+@pytest.mark.parametrize("data", [None, b"<Wrong/>"])
+def test_unique_case_match_still_requires_a_valid_readable_project(data: bytes | None) -> None:
+    result = _detect(
+        {
+            "a.slnx": b'<Solution><Project Path="SRC/PROJECT.vcxproj"/></Solution>',
+            "src/project.vcxproj": data,
+        }
+    )
+    assert not result.components
+    assert not result.relationships
+    assert not any(f.code == "msbuild.solution.member" for f in result.findings)
+
+
+@pytest.mark.verifies("TST060")
+def test_incomplete_case_index_cannot_resolve_a_seemingly_unique_alias(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    files = {
+        "a.slnx": b'<Solution><Project Path="SRC/PROJECT.vcxproj"/></Solution>',
+        "src/Project.vcxproj": b"<Project/>",
+        "src/project.vcxproj": b"<Project/>",
+    }
+    view = InMemoryDetectorView(files)
+    reserve = view.reserve_memory
+
+    def reserve_memory(path: str, amount: int) -> bool:
+        if path == "src/project.vcxproj" and amount == 4096 + 32 * len(path):
+            return False
+        return reserve(path, amount)
+
+    monkeypatch.setattr(view, "reserve_memory", reserve_memory)
+    result = detect_msbuild_make(view, DetectionContext())
+    assert any(f.code == "msbuild.project.evidence" for f in result.findings)
+    assert not any(f.code == "msbuild.solution.member" for f in result.findings)
+    assert not result.relationships
+
+
+@pytest.mark.verifies("TST060")
+@pytest.mark.parametrize("source", [b"<Project/>", b"<Project>"])
+def test_memory_failure_after_case_index_and_parser_reservations(
+    monkeypatch: pytest.MonkeyPatch, source: bytes
+) -> None:
+    view = InMemoryDetectorView({"a.vcxproj": source})
+    decisions = iter([True, True, False])
+    monkeypatch.setattr(view, "reserve_memory", lambda path, amount: next(decisions))
+    result = detect_msbuild_make(view, DetectionContext())
+    assert not result.evidence
+    assert not result.components
+    assert not result.diagnostics

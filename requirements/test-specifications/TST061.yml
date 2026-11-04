@@ -1,0 +1,20 @@
+active: true
+derived: false
+header: |
+  CMake presets UTF-8 signature regression tests
+level: 1.592
+links:
+- REQ060: W9IlUxrfmHAOH4l66JTplkdT5zd-VIolRKLd0qvCZss=
+normative: true
+ref: ''
+references:
+- keyword: TST061
+  path: tests/test_cmake_inspection.py
+  type: file
+reviewed: null
+text: |
+  Verify UTF-8 CMake presets with and without a leading byte-order mark yield identical
+  complete canonical scans, declarations, source locators and map records. Verify
+  duplicate keys, lone surrogates, malformed bytes and JSON, repeated or misplaced
+  signatures and non-UTF-8 encodings remain partial invalid-presets results while
+  independent component evidence survives. Preserve source content and inspection guards.

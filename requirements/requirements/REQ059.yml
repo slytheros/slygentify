@@ -17,6 +17,11 @@ text: |
   locators, preserving conditional/deferred scope and conflicting source declarations
   without choosing effective settings. Classic sln and XML slnx solution membership shall
   establish workspace boundaries and safe relationships only for validated C++ projects.
+  Exact paths shall take precedence; otherwise a unique case-insensitive match among
+  safely catalogued project paths may resolve to a validated project. Reports shall
+  retain the declared spelling and actual target spelling for such matches. Ambiguous,
+  invalid, unreadable, excluded or unsafe targets shall remain unresolved. An incomplete
+  resource-bounded lookup shall not establish a unique case-insensitive match.
   Logical solution folders shall not become filesystem boundaries. Co-located projects
   shall retain separate evidence within one stable path-based component and preserve
   other ecosystem facets; same-directory membership shall not create self-relationships.

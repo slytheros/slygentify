@@ -36,8 +36,13 @@ outside this inspection feature.
 Project paths resolve relative to the solution file, accepting Windows separators and
 in-root relative parent navigation. Absolute, drive-qualified, UNC, dynamic, sensitive
 and escaping references are rejected. Only projects already validated through the bounded
-repository catalog can become members. Missing, ignored, unsafe or invalid targets retain
-limitations; referencing them never expands inspection scope.
+repository catalog can become members. Exact paths take precedence. When no validated
+exact target exists, a unique case-insensitive match among catalogued project paths can
+resolve to a validated project; the finding reports both the declared spelling and actual
+catalogued spelling. Ambiguous matches remain unknown, including collisions with invalid
+or unreadable catalogued projects. A resource-limited, incomplete lookup cannot establish
+a unique match. Matching never opens an alternate path or expands inspection scope.
+Missing, ignored, unsafe or invalid targets retain limitations.
 
 At least one validated C++ member establishes a workspace boundary at the solution's
 directory. Member relationships connect directory components, with all membership evidence

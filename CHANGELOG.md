@@ -6,6 +6,10 @@ major versions are independent compatibility surfaces.
 
 ## Unreleased
 
+- Accept UTF-8 BOM-prefixed CMake presets and resolve unique case-insensitive Visual
+  Studio solution project references while retaining declared/canonical spellings,
+  exact-path precedence, ambiguity limitations and bounded inspection guards.
+
 - Recognize static Visual Studio/MSBuild C++ projects, classic/XML solution membership,
   and Make tooling with bounded parsing, explicit uncertainty, mixed-component evidence,
   and scan/map, initialization-provenance and doctor integration.

@@ -66,7 +66,10 @@ belong to those components rather than an outer CMake project.
 `CMakePresets.json` follows normal working-tree inspection rules, just like Python and
 JavaScript manifests. Git tracking is not required; tracked ignored files retain the
 existing bounded Git discovery behavior. `CMakeUserPresets.json` is excluded from CMake
-inspection.
+inspection. UTF-8 presets accept one optional leading byte-order mark (BOM);
+canonical declarations and JSON Pointer locators are identical with or without it.
+Repeated or misplaced BOMs, malformed UTF-8, duplicate keys and invalid JSON remain
+invalid. Other encodings are not accepted.
 
 For preset format versions 1–12, Slygentify surfaces named configure presets, build/test
 presets from version 2, and workflow presets from version 6. It retains hidden status and
