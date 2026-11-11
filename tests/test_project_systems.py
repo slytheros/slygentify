@@ -584,3 +584,171 @@ def test_later_oversized_document_preserves_an_independent_boundary(
     view = MemoryView({f"a/{name}": source, f"z/{name}": source * 1000})
     result = detector(view, DetectionContext())
     assert {c.path for c in result.components} == {"a"}
+
+
+@pytest.mark.verifies("TST062")
+@pytest.mark.parametrize(
+    "pattern",
+    [
+        "linux* | darwin*)",
+        "(linux*)",
+        "(esac)",
+        r"a\))",
+        "linux*|\\\n darwin*)",
+        "a|\n esac)",
+        "'esac')",
+        '"a)b")',
+        "[a-z]*)",
+        "linux*|\n darwin*)",
+    ],
+)
+@pytest.mark.parametrize("terminator", [";;", ";&", ";;&"])
+def test_autoconf_case_arms_preserve_conditional_and_later_declarations(
+    pattern: str, terminator: str
+) -> None:
+    source = f"""AC_INIT([parent],[1])
+case "$host_os" in
+ {pattern} AC_PROG_CC; AC_CONFIG_SUBDIRS([conditional]) {terminator}
+ *) ignored=yes ;;
+esac
+AC_CONFIG_SUBDIRS([child])
+AC_PROG_CXX
+"""
+    result = _detect(
+        detect_autotools,
+        {
+            "configure.ac": source.encode(),
+            "child/configure.ac": b"AC_INIT([child],[1])",
+            "conditional/configure.ac": b"AC_INIT([conditional],[1])",
+        },
+    )
+    assert {(r.source_path, r.target_path) for r in result.relationships} == {(".", "child")}
+    assert not any(d.partial for d in result.diagnostics)
+    cc = [
+        f
+        for f in result.findings
+        if f.code == "autotools.language.declaration" and "AC_PROG_CC " in f.summary
+    ]
+    cxx = [
+        f
+        for f in result.findings
+        if f.code == "autotools.language.declaration" and "AC_PROG_CXX " in f.summary
+    ]
+    assert cc and all("conditional" in f.summary for f in cc)
+    assert cxx and all("conditional" not in f.summary for f in cxx)
+
+
+@pytest.mark.verifies("TST062")
+def test_nested_and_inline_autoconf_cases_and_quoted_macro_bodies() -> None:
+    source = b"""AC_INIT([parent],[1])
+AC_DEFUN([HIDDEN],[case "$x" in *) AC_INIT([hidden],[1]);; esac])
+case "$x" in first) case "$y" in second) AC_PROG_CC;; esac ;; esac
+if enabled; then
+case "$x" in
+ *) AC_PROG_CXX ;;
+esac
+fi
+if enabled; then case "$x" in *) AC_PROG_CXX;; esac; fi
+for value in one; do case "$value" in *) AC_PROG_CXX;; esac; done
+AC_CONFIG_SUBDIRS([child])
+"""
+    result = _detect(
+        detect_autotools, {"configure.ac": source, "child/configure.ac": b"AC_INIT([child],[1])"}
+    )
+    assert {c.path for c in result.components} == {".", "child"}
+    assert not any(d.partial for d in result.diagnostics)
+    assert len(result.relationships) == 1
+    assert all(
+        "conditional" in f.summary
+        for f in result.findings
+        if f.code == "autotools.language.declaration"
+    )
+
+
+@pytest.mark.verifies("TST062")
+@pytest.mark.parametrize(
+    "source",
+    [
+        b"AC_INIT([x],[1])\ncase x in\n *) AC_PROG_CC",
+        b"AC_INIT([x],[1])\nAC_PROG_CC)\n",
+        b"AC_INIT([x],[1])\ncase x in\n *) f( ;;\nesac\n",
+    ],
+)
+def test_incomplete_cases_and_unmatched_macro_delimiters_stay_partial(source: bytes) -> None:
+    result = _detect(detect_autotools, {"configure.ac": source})
+    assert {c.path for c in result.components} == {"."}
+    assert any(d.partial for d in result.diagnostics)
+
+
+@pytest.mark.verifies("TST062")
+def test_generic_limits_are_aggregated_by_owner_and_category_with_all_source_evidence() -> None:
+    result = _detect(
+        detect_meson,
+        {
+            "meson.build": b"project('root','c')\nx=1\ny=2\nsubdir(computed)",
+            "fragment/meson.build": b"a=1\nb=2\n",
+            "child/meson.build": b"project('child','cpp')\nc=1\nd=2\n",
+            "child/fragment/meson.build": b"x=1\ny=2\n",
+        },
+    )
+    generic = [f for f in result.findings if "Additional Meson syntax" in f.summary]
+    assert {f.subject_path for f in generic} == {".", "child"}
+    assert len(generic) == 2
+    assert {e.location for e in result.evidence} == {
+        "meson.build",
+        "fragment/meson.build",
+        "child/meson.build",
+        "child/fragment/meson.build",
+    }
+    assert any("subdirectory reference" in f.summary for f in result.findings)
+    assert any(d.code == "meson.unsupported-declaration" for d in result.diagnostics)
+
+
+@pytest.mark.verifies("TST062")
+def test_aggregation_retains_specific_dynamic_and_unsafe_diagnostics() -> None:
+    result = _detect(
+        detect_bazel,
+        {
+            "MODULE.bazel": b"module(name='x')\nbazel_dep(name='one')\nbazel_dep(name='two')",
+            "BUILD": b"load('//:one.bzl','macro')\nload('//:two.bzl','other')\npackage()\ncc_library(name=dynamic)\ncc_test(name=computed)",
+        },
+    )
+    unknown = [f for f in result.findings if f.code == "bazel.declaration.unresolved"]
+    assert len(unknown) == 4  # one generic-expression limit, one load limit, two specific calls
+    assert sum("shadowed, computed" in f.summary for f in unknown) == 2
+    assert {e.location for e in result.evidence} == {"BUILD", "MODULE.bazel"}
+
+
+@pytest.mark.verifies("TST062")
+@pytest.mark.parametrize(
+    "prefix,suffix", [("{ ", "; }"), ("{ a='x'\n", "; }"), ("true && ", ""), ("true | ", "")]
+)
+def test_cases_in_shell_groups_and_pipelines_do_not_discard_later_macros(
+    prefix: str, suffix: str
+) -> None:
+    source = f"""AC_INIT([parent],[1])
+{prefix}case `git --version | sed -e 's/^[^0-9]*//'` in
+ 0.* | 1.[0-5].*) AC_INIT([hidden],[1]); AC_PROG_CC ;;
+ *) true ;;
+esac{suffix}
+AC_CONFIG_SUBDIRS([child])
+AC_PROG_CXX
+"""
+    result = _detect(
+        detect_autotools,
+        {"configure.ac": source.encode(), "child/configure.ac": b"AC_INIT([child],[1])"},
+    )
+    assert {c.path for c in result.components} == {".", "child"}
+    assert not any(d.partial for d in result.diagnostics)
+    assert {(r.source_path, r.target_path) for r in result.relationships} == {(".", "child")}
+    assert any(
+        f.code == "autotools.language.declaration"
+        and "AC_PROG_CXX" in f.summary
+        and "conditional" not in f.summary
+        for f in result.findings
+    )
+    assert all(
+        "conditional" in f.summary
+        for f in result.findings
+        if f.code == "autotools.language.declaration" and "AC_PROG_CC " in f.summary
+    )

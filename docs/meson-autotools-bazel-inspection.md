@@ -34,6 +34,9 @@ Comments, m4 quotations and macro bodies are kept separate from declarations. Ma
 definitions, nested macro expansion, includes and shell expressions are not evaluated.
 Conditional declarations retain uncertainty. Generated `configure`, `Makefile.in`,
 `aclocal.m4` and external macro files are not interpreted.
+Shell `case` arm boundaries are recognized structurally without evaluating patterns or
+commands. Declarations inside arms remain conditional; independent literal declarations
+after `esac` remain available, including local subpackage references.
 
 `Makefile.am` contributes literal `SUBDIRS` and `*_SOURCES` declarations, including
 continuations and append assignments. Ordinary fragments do not establish boundaries.
@@ -76,6 +79,13 @@ guards. Parsing and retained records consume the memory budget and check the dea
 Inputs are strict UTF-8. Unsupported or malformed syntax remains explicit; independently
 retained declarations survive failures. Names, values and locators are evidence of source
 declarations, not effective settings or verified execution.
+
+Routine syntax outside this boundary-focused inspection is summarized once per owning
+component and limitation category, citing a representative source. Every contributing
+file retains separate evidence and initialization provenance. Specific computed values,
+unsafe or missing references, conflicts and malformed inputs retain individual
+diagnostics. Summaries keep repeated capability notices from displacing useful known
+facts in the default bounded map.
 
 Scan text, interactive exploration and JSON expose the same canonical records. Map
 places identity and language declarations in orientation and unknowns in boundaries.

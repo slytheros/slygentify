@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import socket
 import subprocess
 from io import StringIO
@@ -150,7 +151,7 @@ def test_no_execution_network_or_unbounded_source_macro_reads(
     _write(
         root,
         "configure.ac",
-        "AC_INIT([app],[1])\nm4_esyscmd([touch SENTINEL])\nAC_CONFIG_SUBDIRS([.ssh blocked])",
+        "AC_INIT([app],[1])\nm4_esyscmd([touch SENTINEL])\ncase $x in\n *) touch SENTINEL ;;\nesac\nAC_CONFIG_SUBDIRS([.ssh blocked])",
     )
     _write(
         root,
@@ -215,3 +216,65 @@ def test_resource_limited_partial_results(tmp_path: Path, limit: str) -> None:
     result = scan_repository(root)
     assert result.completion == "partial"
     assert result.skipped_scopes
+
+
+@pytest.mark.verifies("TST062")
+def test_shell_case_retains_later_literal_membership_in_scan_and_map(tmp_path: Path) -> None:
+    root = _root(tmp_path)
+    _write(
+        root,
+        "configure.ac",
+        """AC_INIT([parent],[1])
+case "$host_os" in
+ mingw* | windows* | cygwin*) enabled=yes ;;
+ *) enabled=no ;;
+esac
+AC_CONFIG_SUBDIRS([libasprintf])
+AC_PROG_CXX
+""",
+    )
+    _write(root, "libasprintf/configure.ac", "AC_INIT([libasprintf],[1])\n")
+    result = scan_repository(root)
+    assert result.completion == "complete"
+    names = {c.id: c.path for c in result.components}
+    assert any(
+        r.kind == "workspace-member"
+        and names[r.source_id] == "."
+        and names[r.target_id] == "libasprintf"
+        for r in result.relationships
+    )
+    projection = map_repository(root, max_bytes="unlimited")
+    assert any(r.kind == "workspace-member" for r in projection.relationships)
+    assert any(
+        f.code == "autotools.language.declaration" and "AC_PROG_CXX" in f.summary
+        for f in projection.findings
+    )
+    assert dump_scan_json(result) == dump_scan_json(scan_repository(root))
+
+
+@pytest.mark.verifies("TST062")
+def test_repetitive_unsupported_syntax_preserves_default_orientation_and_provenance(
+    tmp_path: Path,
+) -> None:
+    root = _root(tmp_path)
+    _write(root, "meson.build", "project('example','c',version:'1')\n" + "x=1\n" * 100)
+    fragments = {f"fragment-{i}/meson.build" for i in range(8)}
+    for path in fragments:
+        _write(root, path, "x=1\n" * 50)
+    result = scan_repository(root)
+    assert len(result.components) == 1
+    assert len(result.diagnostics) == 1
+    assert len([f for f in result.findings if f.classification == "unknown"]) == 1
+    assert fragments <= {e.location for e in result.evidence}
+    projection = map_repository(root)
+    codes = {f.code for f in projection.findings}
+    assert {
+        "meson.identity.declaration",
+        "meson.version.declaration",
+        "meson.language.declaration",
+        "meson.declaration.unresolved",
+    } <= codes
+    assert not projection.omissions
+    apply_initialization(plan_initialization(root))
+    state = json.loads((root / ".slygentify/state.json").read_text())
+    assert fragments <= {entry["location"] for entry in state["inputs"]}

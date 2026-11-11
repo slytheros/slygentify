@@ -113,9 +113,8 @@ def detect_bazel(view: RepositoryView, context: DetectionContext) -> DetectionRe
                     bindings[alias] = (
                         rule if standard and rule in _RULES and not call.conditional else None
                     )
-                state.unknown(
+                state.unsupported(
                     path,
-                    call.locator,
                     root,
                     "Bazel load source and implementation remain unresolved; literal standard rules_cc imports identify source spelling only.",
                 )
@@ -193,9 +192,8 @@ def detect_bazel(view: RepositoryView, context: DetectionContext) -> DetectionRe
                             f"Bazel C/C++ rule {quoted(rule)} with target name {quoted(target)} is declared{import_description}; implementation, source types and compilation are unknown.",
                         )
                 else:
-                    state.unknown(
+                    state.unsupported(
                         path,
-                        call.locator,
                         root,
                         "Additional Bazel expressions, macros and external modules remain unevaluated.",
                     )

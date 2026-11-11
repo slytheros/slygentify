@@ -98,9 +98,8 @@ def detect_autotools(view: RepositoryView, context: DetectionContext) -> Detecti
                                 roots,
                             )
                 else:
-                    state.unknown(
+                    state.unsupported(
                         path,
-                        call.locator,
                         owner,
                         "Autoconf macro bodies, includes and shell logic remain unevaluated.",
                     )
@@ -174,9 +173,8 @@ def _automake(state: Inspection, roots: set[str]) -> None:
             match = re.fullmatch(r"([A-Za-z_][A-Za-z_0-9]*)\s*(\+=|:=|\?=|=)\s*(.*)", line)
             call = Call("Makefile.am", start, (), bool(conditional))
             if match is None:
-                state.unknown(
+                state.unsupported(
                     path,
-                    call.locator,
                     owner,
                     "Automake includes, recipes and unsupported syntax remain unresolved.",
                 )

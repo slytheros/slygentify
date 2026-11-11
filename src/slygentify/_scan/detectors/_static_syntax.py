@@ -131,6 +131,8 @@ def lex(text: str, dialect: str, view: RepositoryView) -> tuple[list[Token], boo
     line = 1
     column = 0
     stack: list[str] = []
+    cases: list[str] = []
+    statement_start = True
     length = len(text)
 
     def advance(end: int) -> None:
@@ -157,8 +159,41 @@ def lex(text: str, dialect: str, view: RepositoryView) -> tuple[list[Token], boo
             continue
         if char == "\n":
             result.append(Token("\n", "newline", line, column))
+            if not stack or (dialect == "m4" and all(opening == "{" for opening in stack)):
+                statement_start = True
             advance(position + 1)
             continue
+        # Shell case arms are opaque syntax, not m4 call parentheses. Keep their
+        # boundary so declarations in an arm remain conditional, then resume after
+        # esac. Never inspect quoted macro bodies or evaluate a shell expression.
+        shell = dialect == "m4" and all(opening == "{" for opening in stack)
+        pattern = shell and bool(cases) and cases[-1] in {"pattern", "pattern-part"}
+        if pattern and char == "\\" and position + 1 < length:
+            result.append(Token(text[position : position + 2], "opaque", line, column))
+            cases[-1] = "pattern-part"
+            statement_start = False
+            advance(position + 2)
+            continue
+        if pattern and char in "()":
+            result.append(Token(char, "opaque", line, column))
+            if char == ")":
+                cases[-1] = "body"
+                result.append(Token(";", "symbol", line, column))
+                statement_start = True
+            else:
+                cases[-1] = "pattern-part"
+            advance(position + 1)
+            continue
+        if shell and cases and cases[-1] == "body":
+            terminator = next(
+                (value for value in (";;&", ";;", ";&") if text.startswith(value, position)), None
+            )
+            if terminator is not None:
+                cases[-1] = "pattern"
+                result.append(Token(";", "symbol", line, column))
+                statement_start = True
+                advance(position + len(terminator))
+                continue
         if char in "\"'" or (dialect == "m4" and char == "["):
             delimiter = char
             if dialect != "m4" and text.startswith(char * 3, position):
@@ -198,11 +233,44 @@ def lex(text: str, dialect: str, view: RepositoryView) -> tuple[list[Token], boo
             result.append(
                 Token(value, "string" if supported else "opaque", start_line, start_column)
             )
+            if pattern:
+                cases[-1] = "pattern-part"
+            statement_start = False
             continue
         match = re.compile(r"[A-Za-z_][A-Za-z_0-9]*").match(text, position)
         if match:
             value = match[0]
-            result.append(Token(value, "word", line, column))
+            case_end = False
+            if shell and statement_start and not pattern and value in {"then", "do", "else"}:
+                result.append(Token(value, "opaque", line, column))
+                result.append(Token(";", "symbol", line, column))
+                advance(position + len(value))
+                continue
+            if shell:
+                if (
+                    value == "case"
+                    and statement_start
+                    and not pattern
+                    and (not cases or cases[-1] == "body")
+                ):
+                    result.append(Token(";", "symbol", line, column))
+                    cases.append("header")
+                elif value == "in" and cases and cases[-1] == "header":
+                    cases[-1] = "pattern"
+                elif (
+                    value == "esac"
+                    and statement_start
+                    and cases
+                    and cases[-1] in {"pattern", "body"}
+                ):
+                    cases.pop()
+                    case_end = True
+                elif pattern:
+                    cases[-1] = "pattern-part"
+            result.append(
+                Token(value, "opaque" if pattern and not case_end else "word", line, column)
+            )
+            statement_start = False
             advance(position + len(value))
             continue
         if char in "([{":
@@ -213,6 +281,9 @@ def lex(text: str, dialect: str, view: RepositoryView) -> tuple[list[Token], boo
             if not stack or stack.pop() != {")": "(", "]": "[", "}": "{"}[char]:
                 return result, True
         result.append(Token(char, "symbol", line, column))
+        if pattern:
+            cases[-1] = "pattern-part"
+        statement_start = shell and char in ";{|&"
         advance(position + 1)
     return result, bool(stack)
 
@@ -331,6 +402,8 @@ class Inspection:
         self.diagnostics: list[DiagnosticCandidate] = []
         self.relationships: list[RelationshipCandidate] = []
         self.temporary = 0
+        self._unsupported_groups: set[tuple[str | None, str]] = set()
+        self._unsupported_sources: set[tuple[str, str | None, str]] = set()
 
     def keep(self, path: str, value: str) -> None:
         if self.view.checkpoint() or not self.view.reserve_memory(path, 2048 + 16 * len(value)):
@@ -446,6 +519,39 @@ class Inspection:
                 disposition="problem" if partial else "limitation",
             )
         )
+
+    def unsupported(self, path: str, subject: str | None, problem: str) -> None:
+        """Summarize a capability limit once per owner, preserving file evidence.
+
+        The summary cites a representative source; other contributing files retain
+        independent evidence and provenance inputs. Specific unresolved declarations
+        continue through unknown(), with their own locators and diagnostics.
+        """
+        if self.view.checkpoint():
+            raise Stopped
+        source = (path, subject, problem)
+        if source in self._unsupported_sources:
+            return
+        self.keep(path, problem)
+        self._unsupported_sources.add(source)
+        group = (subject, problem)
+        digest = hashlib.sha256(problem.encode()).hexdigest()
+        locator = "inspection:unsupported:" + digest[:16]
+        if group not in self._unsupported_groups:
+            self._unsupported_groups.add(group)
+            self.unknown(path, locator, subject, problem)
+        else:
+            self.evidence.append(
+                EvidenceCandidate(
+                    f"{self.prefix}-declaration",
+                    path,
+                    locator,
+                    "Additional source syntax is outside supported literal boundary inspection.",
+                    "bounded literal-only inspection",
+                    f"{self.prefix}.inspect.v1",
+                    "unsupported-source:" + digest,
+                )
+            )
 
     def component(self, path: str, kind: str, key: EvidenceKey) -> None:
         self.keep(path, kind)

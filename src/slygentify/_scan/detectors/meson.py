@@ -145,9 +145,8 @@ def detect_meson(view: RepositoryView, context: DetectionContext) -> DetectionRe
                             reference=target is not None,
                         )
                 else:
-                    state.unknown(
+                    state.unsupported(
                         path,
-                        call.locator,
                         owner,
                         "Additional Meson syntax remains outside literal boundary inspection.",
                     )
