@@ -6,6 +6,10 @@ major versions are independent compatibility surfaces.
 
 ## Unreleased
 
+- Recognize static Meson projects, Autoconf packages, Automake declared source types,
+  and modern/legacy Bazel roots and packages with safe local composition, explicit
+  uncertainty, bounded parsing and scan/map, provenance and doctor integration.
+
 - Keep MSBuild item expressions unresolved and distinguish compiler defaults from
   per-item metadata when reporting declaration conflicts.
 

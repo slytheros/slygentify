@@ -1,0 +1,30 @@
+active: true
+derived: false
+header: |
+  Static Meson, Autotools and Bazel inspection tests
+level: 1.62
+links:
+- REQ061: 8WXLIxo8wEnYDWEM06JcS6qV4wUSo3ROkS4_7oqNuSE=
+normative: true
+ref: ''
+references:
+- keyword: TST062
+  path: tests/test_project_systems.py
+  type: file
+- keyword: TST062
+  path: tests/test_project_systems_integration.py
+  type: file
+reviewed: yhcFdETiIHBuMuNNtrmmS0H8SvpUfu4xcEXR_IBOocs=
+text: |
+  Verify literal Meson project/language/version declarations and safe local subprojects;
+  Autoconf package/compiler/subpackage declarations; literal Automake SUBDIRS and
+  *_SOURCES assignments, continuations, appends, source suffixes and conditional/extra
+  context; and modern/legacy Bazel roots, packages and explicit C/C++ rules, standard
+  imports, aliases and shadowing. Verify comments, multiline strings, opaque macro
+  bodies, computed values, conflicting declarations, malformed syntax/encoding,
+  nested/co-located mixed components, missing/unsafe references, unowned fragments,
+  tracked ignored files, links, sensitive-value withholding and resource-limited
+  partial results. Verify deterministic canonical IDs/order, evidence closure,
+  text/explorer/JSON/map parity, provenance, doctor drift and human-guidance preservation.
+  Prove that source files and loaded macros are not read and build code, discovered
+  commands and network operations are never executed.

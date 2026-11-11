@@ -14,7 +14,7 @@ references:
 - keyword: TST060
   path: tests/test_visual_studio_make_integration.py
   type: file
-reviewed: null
+reviewed: 84-LEhY-a3BpA-l_NRhrF7MHN_yZ10HJO58QrA_iglE=
 text: |
   Verify standalone and solution-associated C++ projects, classic sln and XML slnx
   membership with logical folders, conditional declarations, conflicts, unique locators,

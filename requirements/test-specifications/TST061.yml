@@ -11,7 +11,7 @@ references:
 - keyword: TST061
   path: tests/test_cmake_inspection.py
   type: file
-reviewed: null
+reviewed: IBPyOW1rcDt3NyecBLdbxl9ZQI1JDIHuMEe4fviyQAU=
 text: |
   Verify UTF-8 CMake presets with and without a leading byte-order mark yield identical
   complete canonical scans, declarations, source locators and map records. Verify

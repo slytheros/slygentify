@@ -46,6 +46,16 @@ _MAX_STATE_BYTES = 128 * 1024 * 1024
 
 _COMPONENT_CODES = frozenset(
     {
+        "meson.identity.declaration",
+        "meson.language.declaration",
+        "meson.workspace.member",
+        "autotools.identity.declaration",
+        "autotools.language.declaration",
+        "autotools.workspace.member",
+        "bazel.component.evidence",
+        "bazel.identity.declaration",
+        "bazel.language.declaration",
+        "bazel.workspace.member",
         "configuration.component",
         "composition.auxiliary-component",
         "composition.overlapping-workspace-membership",
@@ -68,6 +78,9 @@ _COMPONENT_CODES = frozenset(
 )
 _TOOLING_CODES = frozenset(
     {
+        "meson.version.declaration",
+        "autotools.version.declaration",
+        "bazel.version.declaration",
         "msbuild.identity.declaration",
         "msbuild.toolset.declaration",
         "msbuild.standard.declaration",
@@ -109,6 +122,9 @@ _TOOLING_CODES = frozenset(
 )
 _PATH_DIAGNOSTIC_CODES = frozenset(
     {
+        "meson.unresolved-reference",
+        "autotools.unresolved-reference",
+        "bazel.unresolved-reference",
         "inspection.invalid-workspace-member",
         "inspection.missing-workspace-member",
         "javascript.missing-workspace-member",

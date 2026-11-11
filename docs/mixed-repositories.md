@@ -71,3 +71,18 @@ one project file. Classic and XML solutions supply safe directory membership wit
 turning logical folders into components. Makefiles attach tooling evidence to the nearest
 independent owner and never establish C/C++ boundaries alone. See
 [static Visual Studio/MSBuild and Make inspection](msbuild-make-inspection.md).
+
+## Meson, Autotools and Bazel
+
+Literal Meson projects and Autoconf packages add `meson` and `autotools` facets to
+their directory components. Bazel root markers and BUILD packages add the `bazel`
+facet. Co-located declarations share stable path identity and retain their independent
+evidence. Ordinary Meson subdirectories and Automake fragments create no components;
+Automake declarations attach to the nearest independently established owner.
+
+Safe declared Meson subprojects, Autoconf subpackages and Bazel root/package membership
+use component relationships without self-edges. Nested Bazel roots delimit package
+membership. Build-system presence alone does not establish C/C++ use; supported language,
+compiler-marker, source-type or explicit rule declarations provide that evidence while
+retaining their source context. See
+[static Meson, Autotools and Bazel inspection](meson-autotools-bazel-inspection.md).

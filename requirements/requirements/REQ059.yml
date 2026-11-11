@@ -10,7 +10,7 @@ references:
 - keyword: REQ059
   path: src/slygentify/_scan/detectors/visual_studio.py
   type: file
-reviewed: null
+reviewed: YI59D5d9urWbEiNrKBGLN2eZtLgKR3NNEEMurx9HnRI=
 text: |
   Slygentify shall recognize valid vcxproj project boundaries and literal ProjectName,
   PlatformToolset, LanguageStandard and LanguageStandard_C declarations with unique XML
