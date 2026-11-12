@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from contextlib import suppress
 from pathlib import PurePosixPath
 
 from slygentify._scan.contracts import (
@@ -103,9 +104,17 @@ def detect_autotools(view: RepositoryView, context: DetectionContext) -> Detecti
                         owner,
                         "Autoconf macro bodies, includes and shell logic remain unevaluated.",
                     )
-        _automake(state, roots)
     except Stopped:
         pass
+    return state.result()
+
+
+@implements("REQ061")
+def detect_automake(view: RepositoryView, context: DetectionContext) -> DetectionResult:
+    """Attribute fragments only after all independent boundaries are established."""
+    state = Inspection(view, context, "autotools")
+    with suppress(Stopped):
+        _automake(state, set(context.component_paths))
     return state.result()
 
 
@@ -142,9 +151,18 @@ def _automake(state: Inspection, roots: set[str]) -> None:
         conditional = 0
         logical = ""
         start = 1
+        recipe_continuation = False
         for number, raw in enumerate(text.splitlines(), 1):
             if state.view.checkpoint():
                 raise Stopped
+            if recipe_continuation or (not logical and raw.startswith("\t")):
+                state.unsupported(
+                    path,
+                    owner,
+                    "Automake includes, recipes and unsupported syntax remain unresolved.",
+                )
+                recipe_continuation = raw.rstrip().endswith("\\")
+                continue
             line = raw.split("#", 1)[0].rstrip()
             if not logical:
                 start = number

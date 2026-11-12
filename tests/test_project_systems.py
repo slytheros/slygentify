@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from slygentify._scan.contracts import DetectionContext, DetectionResult, Detector
-from slygentify._scan.detectors.autotools import detect_autotools
+from slygentify._scan.detectors.autotools import detect_automake, detect_autotools
 from slygentify._scan.detectors.bazel import detect_bazel
 from slygentify._scan.detectors.meson import detect_meson
 from tests.scan_views import InMemoryDetectorView
@@ -14,8 +14,20 @@ from tests.scan_views import InMemoryDetectorView
 def _detect(
     detector: Detector, files: dict[str, bytes | None], owners: tuple[str, ...] = ()
 ) -> DetectionResult:
-    return detector(
-        InMemoryDetectorView(files), DetectionContext(component_paths=frozenset(owners))
+    view = InMemoryDetectorView(files)
+    result = detector(view, DetectionContext(component_paths=frozenset(owners)))
+    if detector is not detect_autotools:
+        return result
+    fragments = detect_automake(
+        view,
+        DetectionContext(component_paths=frozenset(owners) | {c.path for c in result.components}),
+    )
+    return DetectionResult(
+        result.evidence + fragments.evidence,
+        result.components + fragments.components,
+        result.findings + fragments.findings,
+        result.diagnostics + fragments.diagnostics,
+        result.relationships + fragments.relationships,
     )
 
 
@@ -409,6 +421,7 @@ def test_unreadable_and_irrelevant_paths_are_not_interpreted(detector: Detector,
         (detect_meson, "meson.build", b"project('x')"),
         (detect_autotools, "configure.ac", b"AC_INIT([x],[1])"),
         (detect_bazel, "BUILD", b"cc_library(name='x')"),
+        (detect_automake, "Makefile.am", b"app_SOURCES = main.cpp"),
     ],
 )
 @pytest.mark.parametrize("stop", ["catalog", "parse", "parser-memory", "candidate-memory"])
@@ -436,7 +449,7 @@ def test_resource_stops_release_temporary_parser_memory(
             return super().reserve_memory(path, amount)
 
     view = BoundedView()
-    detector(view, DetectionContext())
+    detector(view, DetectionContext(component_paths=frozenset({"."})))
     assert view.memory_reserved == 0
 
 
@@ -526,10 +539,11 @@ def test_unbalanced_control_blocks_are_partial(detector: Detector, name: str, te
         (
             detect_bazel,
             {
-                "BUILD": b"load('@rules_cc//cc:defs.bzl', 'cc_library')\ncc_library(name='x')",
+                "BUILD": b"load('@rules_cc//cc:defs.bzl', 'cc_library')\n[cc_library(name=n) for n in names]\ncc_library(name='x')",
                 "MODULE.bazel": b"module(name='x')",
             },
         ),
+        (detect_automake, {"Makefile.am": b"app_SOURCES = main.cpp\n"}),
     ],
 )
 def test_deadlines_at_every_parser_and_retention_phase_are_bounded(
@@ -562,7 +576,7 @@ def test_automake_unreadable_and_parser_memory_boundaries(stop: str) -> None:
             return False
 
     view = MemoryView({"Makefile.am": b"app_SOURCES = main.cpp" if stop == "memory" else None})
-    assert not detect_autotools(view, DetectionContext()).components
+    assert not detect_automake(view, DetectionContext()).components
 
 
 @pytest.mark.verifies("TST062")
@@ -752,3 +766,114 @@ AC_PROG_CXX
         for f in result.findings
         if f.code == "autotools.language.declaration" and "AC_PROG_CC " in f.summary
     )
+
+
+@pytest.mark.verifies("TST062")
+@pytest.mark.parametrize(
+    "recipe",
+    [
+        "\tapp_SOURCES=not_a_source.cpp\n\tSUBDIRS=child\n",
+        "\tcommand \\\napp_SOURCES=not_a_source.cpp \\\nSUBDIRS=child\n",
+        "\tif optional; then \\\n\tapp_SOURCES=not_a_source.cpp; fi\n",
+    ],
+)
+def test_automake_recipes_cannot_declare_sources_or_members(recipe: str) -> None:
+    result = _detect(
+        detect_autotools,
+        {
+            "configure.ac": b"AC_INIT([app],[1])",
+            "child/configure.ac": b"AC_INIT([child],[1])",
+            "Makefile.am": ("all:\n" + recipe + "app_SOURCES = \\\n\tactual.c\n").encode(),
+        },
+    )
+    languages = _summaries(result, ".language.")
+    assert '".c"' in languages and '".cpp"' not in languages
+    assert not result.relationships
+    assert "recipes" in _summaries(result)
+    assert not any(d.partial for d in result.diagnostics)
+
+
+@pytest.mark.verifies("TST062")
+def test_bazel_complementary_root_markers_preserve_nested_package_membership() -> None:
+    result = _detect(
+        detect_bazel,
+        {
+            "MODULE.bazel": b'module(name="main")',
+            "REPO.bazel": b"",
+            "pkg/BUILD": b"",
+            "nested/MODULE.bazel": b'module(name="nested")',
+            "nested/REPO.bazel": b"",
+            "nested/pkg/BUILD.bazel": b"",
+        },
+    )
+    assert {(r.source_path, r.target_path) for r in result.relationships} == {
+        (".", "pkg"),
+        ("nested", "nested/pkg"),
+    }
+    assert "Ambiguous" not in _summaries(result)
+    assert {c.path for c in result.components} == {".", "pkg", "nested", "nested/pkg"}
+
+
+@pytest.mark.verifies("TST062")
+@pytest.mark.parametrize(
+    "prefix",
+    [
+        'package(default_visibility=["//visibility:public"]); ',
+        '"""module documentation\n"""; ',
+        'load("@rules_cc//cc:defs.bzl", "cc_library"); ',
+        '[cc_library(name=n) for n in ["generated"]]\n',
+        'values = [cc_library(name=n) for n in ["generated"]]\n',
+        'load("@rules_cc//cc:defs.bzl", "cc_library")\n[cc_library(name=n) for n in ["generated"]]\n',
+    ],
+)
+def test_bazel_top_level_calls_survive_semicolons_and_nested_keywords(prefix: str) -> None:
+    result = _detect(detect_bazel, {"BUILD": (prefix + 'cc_library(name="direct")').encode()})
+    languages = [f for f in result.findings if ".language." in f.code]
+    assert len(languages) == 1
+    assert '"direct"' in languages[0].summary
+    assert "conditional" not in languages[0].summary
+
+
+@pytest.mark.verifies("TST062")
+@pytest.mark.parametrize(
+    "source",
+    [
+        'if enabled:\n    package(); cc_library(name="deferred")',
+        'def deferred(): package(); cc_library(name="deferred")',
+        'if enabled: package(); cc_library(name="deferred")',
+    ],
+)
+def test_bazel_indented_semicolon_calls_remain_deferred(source: str) -> None:
+    result = _detect(
+        detect_bazel,
+        {"BUILD": source.encode()},
+    )
+    assert not _summaries(result, ".language.")
+
+
+@pytest.mark.verifies("TST062")
+def test_bazel_package_lookup_work_grows_linearly(monkeypatch: pytest.MonkeyPatch) -> None:
+    from slygentify._scan.detectors import bazel
+    from slygentify._scan.paths import parent
+
+    original = parent
+    calls = 0
+
+    def counted(path: str) -> str:
+        nonlocal calls
+        calls += 1
+        return original(path)
+
+    monkeypatch.setattr(bazel, "parent", counted)
+    sizes = (128, 256)
+    costs = []
+    for size in sizes:
+        calls = 0
+        result = _detect(
+            detect_bazel,
+            {"MODULE.bazel": b"", **{f"pkg{i}/BUILD": b"" for i in range(size)}},
+        )
+        assert len(result.relationships) == size
+        costs.append(calls)
+    assert costs[1] <= 2 * costs[0]
+    assert costs[1] <= 4 * (sizes[1] + 1)

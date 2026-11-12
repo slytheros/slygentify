@@ -38,6 +38,7 @@ class Token:
     kind: str
     line: int
     column: int
+    indentation: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -134,6 +135,14 @@ def lex(text: str, dialect: str, view: RepositoryView) -> tuple[list[Token], boo
     cases: list[str] = []
     statement_start = True
     length = len(text)
+    indents = []
+    for source_line in text.split("\n"):
+        if view.checkpoint():
+            raise Stopped
+        indents.append(len(source_line) - len(source_line.lstrip(" \t\r")))
+
+    def token(value: str, kind: str, at_line: int, at_column: int) -> Token:
+        return Token(value, kind, at_line, at_column, indents[at_line - 1])
 
     def advance(end: int) -> None:
         nonlocal position, line, column
@@ -158,7 +167,7 @@ def lex(text: str, dialect: str, view: RepositoryView) -> tuple[list[Token], boo
             advance(length if end < 0 else end)
             continue
         if char == "\n":
-            result.append(Token("\n", "newline", line, column))
+            result.append(token("\n", "newline", line, column))
             if not stack or (dialect == "m4" and all(opening == "{" for opening in stack)):
                 statement_start = True
             advance(position + 1)
@@ -169,16 +178,16 @@ def lex(text: str, dialect: str, view: RepositoryView) -> tuple[list[Token], boo
         shell = dialect == "m4" and all(opening == "{" for opening in stack)
         pattern = shell and bool(cases) and cases[-1] in {"pattern", "pattern-part"}
         if pattern and char == "\\" and position + 1 < length:
-            result.append(Token(text[position : position + 2], "opaque", line, column))
+            result.append(token(text[position : position + 2], "opaque", line, column))
             cases[-1] = "pattern-part"
             statement_start = False
             advance(position + 2)
             continue
         if pattern and char in "()":
-            result.append(Token(char, "opaque", line, column))
+            result.append(token(char, "opaque", line, column))
             if char == ")":
                 cases[-1] = "body"
-                result.append(Token(";", "symbol", line, column))
+                result.append(token(";", "symbol", line, column))
                 statement_start = True
             else:
                 cases[-1] = "pattern-part"
@@ -190,7 +199,7 @@ def lex(text: str, dialect: str, view: RepositoryView) -> tuple[list[Token], boo
             )
             if terminator is not None:
                 cases[-1] = "pattern"
-                result.append(Token(";", "symbol", line, column))
+                result.append(token(";", "symbol", line, column))
                 statement_start = True
                 advance(position + len(terminator))
                 continue
@@ -231,7 +240,7 @@ def lex(text: str, dialect: str, view: RepositoryView) -> tuple[list[Token], boo
             if dialect == "m4" and re.search(r"[\[\]]|\bm4_[A-Za-z_0-9]+", value):
                 supported = False
             result.append(
-                Token(value, "string" if supported else "opaque", start_line, start_column)
+                token(value, "string" if supported else "opaque", start_line, start_column)
             )
             if pattern:
                 cases[-1] = "pattern-part"
@@ -242,8 +251,8 @@ def lex(text: str, dialect: str, view: RepositoryView) -> tuple[list[Token], boo
             value = match[0]
             case_end = False
             if shell and statement_start and not pattern and value in {"then", "do", "else"}:
-                result.append(Token(value, "opaque", line, column))
-                result.append(Token(";", "symbol", line, column))
+                result.append(token(value, "opaque", line, column))
+                result.append(token(";", "symbol", line, column))
                 advance(position + len(value))
                 continue
             if shell:
@@ -253,7 +262,7 @@ def lex(text: str, dialect: str, view: RepositoryView) -> tuple[list[Token], boo
                     and not pattern
                     and (not cases or cases[-1] == "body")
                 ):
-                    result.append(Token(";", "symbol", line, column))
+                    result.append(token(";", "symbol", line, column))
                     cases.append("header")
                 elif value == "in" and cases and cases[-1] == "header":
                     cases[-1] = "pattern"
@@ -268,7 +277,7 @@ def lex(text: str, dialect: str, view: RepositoryView) -> tuple[list[Token], boo
                 elif pattern:
                     cases[-1] = "pattern-part"
             result.append(
-                Token(value, "opaque" if pattern and not case_end else "word", line, column)
+                token(value, "opaque" if pattern and not case_end else "word", line, column)
             )
             statement_start = False
             advance(position + len(value))
@@ -280,7 +289,7 @@ def lex(text: str, dialect: str, view: RepositoryView) -> tuple[list[Token], boo
         elif char in ")]}":
             if not stack or stack.pop() != {")": "(", "]": "[", "}": "{"}[char]:
                 return result, True
-        result.append(Token(char, "symbol", line, column))
+        result.append(token(char, "symbol", line, column))
         if pattern:
             cases[-1] = "pattern-part"
         statement_start = shell and char in ";{|&"
@@ -316,6 +325,7 @@ def declarations(
         statements.append(tuple(current))
     result: list[Call] = []
     scopes: list[str] = []
+    control_lines: set[int] = set()
     invalid = False
     for statement in statements:
         if view.checkpoint():
@@ -329,7 +339,11 @@ def declarations(
                 invalid = True
             result.append(Call("!control", first.line, (), True))
             continue
-        conditional = first.column > 0 if dialect == "bazel" else bool(scopes)
+        conditional = (
+            first.indentation > 0 or first.line in control_lines
+            if dialect == "bazel"
+            else bool(scopes)
+        )
         if first.kind == "word" and name in {
             "if",
             "foreach",
@@ -340,6 +354,7 @@ def declarations(
             "def",
         }:
             scopes.append(name)
+            control_lines.add(first.line)
             binding = statement[1].value if name == "def" and len(statement) > 1 else None
             result.append(Call("!control", first.line, (), True, binding))
             continue

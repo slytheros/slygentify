@@ -45,10 +45,11 @@ Source suffix `.c` declares C source type; `.C`, `.cc`, `.cpp`, `.cxx` and `.c++
 C++ source type. Headers alone establish neither. Source files are not read, and source
 existence, target activation, assignment precedence, conditional branches and generated,
 extra or distribution-only source participation are not evaluated. Variables,
-substitutions, unsafe paths and sensitive assignment values remain unresolved.
+substitutions, unsafe paths and sensitive assignment values remain unresolved. Recipe
+lines and their continuations are not declaration assignments.
 
 Fragment evidence belongs to the nearest existing component, including configured and
-other-ecosystem components. Without an owner it remains repository-scoped with an
+other-ecosystem components discovered by later boundary detectors. Without an owner it remains repository-scoped with an
 ownership limitation. A generic Autotools file alone does not establish C/C++ use.
 
 ## Bazel
@@ -61,8 +62,9 @@ results without erasing known marker presence. A file alone establishes no C/C++
 
 Packages belong to their nearest catalogued Bazel root, without crossing nested roots.
 Root and package evidence at the same path share one workspace component and do not
-create self-relationships. Competing `BUILD`/`BUILD.bazel`, `MODULE.bazel`/`REPO.bazel`,
-or legacy workspace files retain ambiguity rather than selecting an effective file.
+create self-relationships. `MODULE.bazel` and `REPO.bazel` are complementary markers
+and may coexist. Competing `BUILD`/`BUILD.bazel` or legacy workspace files retain
+ambiguity rather than selecting an effective file.
 
 Supported explicit C/C++ rule names are `cc_binary`, `cc_library`, `cc_test`, `cc_import`
 and `cc_shared_library`. Slygentify recognizes unshadowed legacy calls and literal
@@ -70,7 +72,9 @@ imports from `@rules_cc//cc:defs.bzl` or the corresponding per-rule `.bzl` label
 including literal aliases. Reports identify the declared call/import spelling. Loaded
 implementations, repository mappings, overrides and compilation remain unverified.
 Arbitrary loads, macros, shadowed names, computed target names and deferred calls remain
-unresolved. Targets never become components; source lists are not interpreted.
+unresolved. Top-level calls separated by semicolons retain their source scope; keyword
+arguments inside opaque expressions do not rebind rule names. Targets never become
+components; source lists are not interpreted.
 
 ## Safety and canonical interfaces
 

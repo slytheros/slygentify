@@ -20,11 +20,16 @@ def detect_bazel(view: RepositoryView, context: DetectionContext) -> DetectionRe
         documents = []
         catalog_roots = {c.parent for c in view.path_candidates() if c.name in _ROOTS}
         files: dict[str, set[str]] = {}
+        first_files: dict[str, str] = {}
+        package_files: dict[str, str] = {}
         for path, calls in state.documents(_ROOTS | _BUILDS, "bazel"):
             documents.append((path, calls))
             root = parent(path)
             name = path.rsplit("/", 1)[-1]
             files.setdefault(root, set()).add(name)
+            first_files.setdefault(root, path)
+            if name in _BUILDS:
+                package_files.setdefault(root, path)
             key = state.emit(
                 path,
                 "file:boundary",
@@ -34,18 +39,12 @@ def detect_bazel(view: RepositoryView, context: DetectionContext) -> DetectionRe
             )
             state.component(root, "workspace" if root in catalog_roots else "package", key)
         root_paths = {parent(path) for path, _ in documents if path.rsplit("/", 1)[-1] in _ROOTS}
-        package_paths = {
-            parent(path) for path, _ in documents if path.rsplit("/", 1)[-1] in _BUILDS
-        }
+        package_paths = set(package_files)
         ambiguous = set()
         for root, names in files.items():
-            if (
-                {"BUILD", "BUILD.bazel"} <= names
-                or {"MODULE.bazel", "REPO.bazel"} <= names
-                or {"WORKSPACE", "WORKSPACE.bazel"} <= names
-            ):
+            if {"BUILD", "BUILD.bazel"} <= names or {"WORKSPACE", "WORKSPACE.bazel"} <= names:
                 ambiguous.add(root)
-                path = next(path for path, _ in documents if parent(path) == root)
+                path = first_files[root]
                 state.unknown(
                     path,
                     "file:conflict",
@@ -54,11 +53,7 @@ def detect_bazel(view: RepositoryView, context: DetectionContext) -> DetectionRe
                 )
         for package in sorted(package_paths):
             package_owner = nearest_ancestor(package, catalog_roots)
-            path = next(
-                path
-                for path, _ in documents
-                if parent(path) == package and path.rsplit("/", 1)[-1] in _BUILDS
-            )
+            path = package_files[package]
             if package in ambiguous or package_owner in ambiguous:
                 state.unknown(
                     path,
@@ -85,14 +80,20 @@ def detect_bazel(view: RepositoryView, context: DetectionContext) -> DetectionRe
                     counts[call.binding] = counts.get(call.binding, 0) + 1
                 elif call.name == "!opaque":
                     tokens = call.arguments[0]
-                    assignment = next(
-                        (
-                            i
-                            for i, token in enumerate(tokens)
-                            if token.value == "=" and token.kind == "symbol"
-                        ),
-                        None,
-                    )
+                    assignment = None
+                    depth = 0
+                    for i, token in enumerate(tokens):
+                        if view.checkpoint():
+                            raise Stopped
+                        if token.kind != "symbol":
+                            continue
+                        if token.value in "([{":
+                            depth += 1
+                        elif token.value in ")]}":
+                            depth -= 1
+                        elif token.value == "=" and depth == 0:
+                            assignment = i
+                            break
                     if assignment is not None:
                         for token in tokens[:assignment]:
                             if token.kind == "word":

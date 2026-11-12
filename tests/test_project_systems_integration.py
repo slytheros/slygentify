@@ -278,3 +278,24 @@ def test_repetitive_unsupported_syntax_preserves_default_orientation_and_provena
     apply_initialization(plan_initialization(root))
     state = json.loads((root / ".slygentify/state.json").read_text())
     assert fragments <= {entry["location"] for entry in state["inputs"]}
+
+
+@pytest.mark.verifies("TST062")
+@pytest.mark.parametrize("ancestor", [False, True])
+@pytest.mark.parametrize("boundary", ["BUILD", "native.vcxproj"])
+def test_automake_attribution_waits_for_all_component_boundaries(
+    tmp_path: Path, ancestor: bool, boundary: str
+) -> None:
+    root = _root(tmp_path)
+    if ancestor:
+        _write(root, "pyproject.toml", '[project]\nname="parent"\nversion="1"')
+    _write(root, f"native/{boundary}", "<Project />" if boundary.endswith("vcxproj") else "")
+    _write(root, "native/Makefile.am", "app_SOURCES = main.cpp")
+    result = scan_repository(root)
+    native = next(c for c in result.components if c.path == "native")
+    sources = [f for f in result.findings if f.code.startswith("autotools.language.")]
+    assert len(sources) == 1
+    assert sources[0].subject_id == native.id
+    assert not any("no independently established" in f.summary for f in result.findings)
+    projection = map_repository(root, scope="native", max_bytes="unlimited")
+    assert sources[0] in projection.findings
