@@ -73,6 +73,9 @@ dependencies, or connects to its hosted service.
 | Go | Component boundaries | Module and workspace boundaries and safe workspace-member relationships from `go.mod` and `go.work` |
 | Java and Maven | Component boundaries | Maven project and module boundaries and safe module relationships from `pom.xml` |
 | CMake | Static declarations | Explicit project identity/languages, minimum versions, variable/target standards, safe subdirectories, dependency requests, tools, shared presets, and attributable CI commands; effective configuration remains unknown |
+| Meson | Project boundaries and declarations | Literal project identities, versions and languages, language additions, and safe local subproject/fragment references; dynamic configuration and wraps remain unresolved |
+| Autoconf and Automake | Package boundaries and declarations | Literal package identities, versions, C/C++ compiler markers, safe local subpackages, and literal Automake source-type/composition declarations; macros and assignment effects remain unresolved |
+| Bazel | Root/package boundaries and declarations | Modern and legacy root markers, BUILD packages, literal identities and supported explicit C/C++ rule calls, including standard literal rules_cc imports; loaded implementations remain unresolved |
 | Visual Studio/MSBuild | Static C++ declarations | `.vcxproj` boundaries, literal project/toolset/standard declarations and safe `.sln`/`.slnx` membership; imports and effective configuration remain unresolved |
 | Make | Tool recognition | `GNUmakefile`, `makefile` and `Makefile` presence attached to independently established components; no recipe interpretation or inferred language ownership |
 | vcpkg and Conan | Static dependency declarations | Supported literal `vcpkg.json` dependencies, feature/default/host/version/platform declarations and overrides; Conan text requirement sections; `conanfile.py` presence only, with recipe dependencies unknown |
@@ -84,6 +87,8 @@ See the detailed [Python](docs/python-inspection.md),
 [JavaScript/TypeScript](docs/javascript-inspection.md), and [CMake](docs/cmake-inspection.md), and
 [Visual Studio/MSBuild and Make](docs/msbuild-make-inspection.md)
 inspection references for exact fields, tools, frameworks, and deliberate exclusions.
+See also [Meson, Autotools and Bazel inspection](docs/meson-autotools-bazel-inspection.md)
+for boundary, language and local composition support.
 
 ### CI configuration
 

@@ -1,0 +1,46 @@
+active: true
+derived: false
+header: |
+  Static Meson, Autotools and Bazel boundaries
+level: 1.61
+links: []
+normative: true
+ref: ''
+references:
+- keyword: REQ061
+  path: src/slygentify/_scan/detectors/_static_syntax.py
+  type: file
+- keyword: REQ061
+  path: src/slygentify/_scan/detectors/meson.py
+  type: file
+- keyword: REQ061
+  path: src/slygentify/_scan/detectors/autotools.py
+  type: file
+- keyword: REQ061
+  path: src/slygentify/_scan/detectors/bazel.py
+  type: file
+reviewed: 8WXLIxo8wEnYDWEM06JcS6qV4wUSo3ROkS4_7oqNuSE=
+text: |
+  Slygentify shall recognize literal Meson project names, versions and language
+  declarations; Autoconf AC_INIT package names, versions and direct AC_PROG_CC/CXX
+  compiler markers; and Bazel modern and legacy repository-root markers and BUILD
+  package boundaries. Safe literal Meson subprojects, Autoconf subpackages and Bazel
+  package ownership shall produce evidence-backed component relationships without
+  self-relationships or crossing nested Bazel roots. Ordinary Meson subdirectories and
+  Automake fragments shall not independently establish components. Literal Automake
+  SUBDIRS and *_SOURCES assignments shall retain source-composition and declared C/C++
+  source-type evidence without reading source files or evaluating assignment semantics.
+  Explicit supported legacy Bazel cc_* calls and literal standard rules_cc imports,
+  including aliases, shall identify declared C/C++ rule calls without resolving or
+  verifying imported implementations. Arbitrary loads, rebindings, macro expansion,
+  computed expressions, external projects and conditional activation shall remain
+  unresolved. Comments, strings and macro definitions shall not fabricate declarations.
+  Co-located ecosystem facets, stable path identities, unique evidence locators,
+  competing declarations and independent valid evidence shall be preserved. Malformed
+  supported syntax and resource limits shall retain explicit partial results. All reads,
+  parser allocations and candidate retention shall use bounded repository capabilities
+  preserving containment, ignore, tracked-file, link and sensitive-content guards.
+  Inspection shall not evaluate build languages, run discovered commands, fetch
+  dependencies or access networks. Canonical records shall remain available through
+  scan presentations/JSON, map, initialization provenance and static doctor comparison
+  without public API or schema changes.

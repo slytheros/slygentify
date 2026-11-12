@@ -110,13 +110,20 @@ def test_detector_registry_is_ordered_and_normalization_propagates_generic_conte
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     from slygentify._scan.detectors import BUILTIN_DETECTORS
+    from slygentify._scan.detectors.autotools import detect_automake, detect_autotools
+    from slygentify._scan.detectors.bazel import detect_bazel
+    from slygentify._scan.detectors.meson import detect_meson
 
     assert (
         generic.detect_generic,
         python.detect_python,
         javascript.detect_javascript,
         cmake.detect_cmake,
+        detect_meson,
+        detect_autotools,
+        detect_bazel,
         visual_studio.detect_msbuild_make,
+        detect_automake,
         cpp_dependencies.detect_cpp_dependencies,
     ) == BUILTIN_DETECTORS
     assert all(len(inspect.signature(detector).parameters) == 2 for detector in BUILTIN_DETECTORS)

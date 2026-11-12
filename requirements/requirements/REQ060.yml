@@ -10,7 +10,7 @@ references:
 - keyword: REQ060
   path: src/slygentify/_scan/detectors/cmake.py
   type: file
-reviewed: null
+reviewed: W9IlUxrfmHAOH4l66JTplkdT5zd-VIolRKLd0qvCZss=
 text: |
   Slygentify shall accept CMakePresets.json encoded as UTF-8 with or without one
   leading byte-order mark, retaining identical canonical declarations and source locators.
