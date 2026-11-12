@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+
 import pytest
 
-from slygentify._scan.contracts import DetectionContext, DetectionResult, Detector
+from slygentify._scan.contracts import DetectionContext, DetectionResult, Detector, PathCandidate
 from slygentify._scan.detectors.autotools import detect_automake, detect_autotools
 from slygentify._scan.detectors.bazel import detect_bazel
 from slygentify._scan.detectors.meson import detect_meson
@@ -573,7 +575,9 @@ def test_deadlines_at_every_parser_and_retention_phase_are_bounded(
 def test_automake_unreadable_and_parser_memory_boundaries(stop: str) -> None:
     class MemoryView(InMemoryDetectorView):
         def reserve_memory(self, path: str, amount: int) -> bool:
-            return False
+            if amount >= 8192:
+                return False
+            return super().reserve_memory(path, amount)
 
     view = MemoryView({"Makefile.am": b"app_SOURCES = main.cpp" if stop == "memory" else None})
     assert not detect_automake(view, DetectionContext()).components
@@ -877,3 +881,33 @@ def test_bazel_package_lookup_work_grows_linearly(monkeypatch: pytest.MonkeyPatc
         costs.append(calls)
     assert costs[1] <= 2 * costs[0]
     assert costs[1] <= 4 * (sizes[1] + 1)
+
+
+@pytest.mark.verifies("TST062")
+def test_automake_fragment_lookup_work_grows_linearly() -> None:
+    examined = 0
+
+    class CountedCatalog(tuple[PathCandidate, ...]):
+        def __iter__(self) -> Iterator[PathCandidate]:
+            nonlocal examined
+            for candidate in super().__iter__():
+                examined += 1
+                yield candidate
+
+    class CountedView(InMemoryDetectorView):
+        def path_candidates(self) -> tuple[PathCandidate, ...]:
+            return CountedCatalog(super().path_candidates())
+
+    costs = []
+    for size in (128, 256):
+        examined = 0
+        files = {f"child{i}/Makefile.am": b"" for i in range(size)}
+        files["Makefile.am"] = "".join(f"SUBDIRS += child{i}\n" for i in range(size)).encode()
+        result = detect_automake(
+            CountedView(files), DetectionContext(component_paths=frozenset({"."}))
+        )
+        assert len([f for f in result.findings if ".composition." in f.code]) == size
+        assert not result.components and not result.relationships
+        assert examined <= 3 * (size + 1)
+        costs.append(examined)
+    assert costs[1] <= 2 * costs[0]

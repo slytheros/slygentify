@@ -8,7 +8,7 @@ major versions are independent compatibility surfaces.
 
 - Keep Automake recipes unresolved and attribute fragments after all component
   boundaries; preserve complementary Bazel root markers, top-level semicolon calls
-  and unshadowed rules after nested expressions, with linear package-file lookup.
+  and unshadowed rules after nested expressions, with linear package-file and Automake fragment lookup.
 
 - Preserve literal Autoconf declarations after unevaluated shell `case` arms, and
   summarize repetitive Meson/Autotools/Bazel capability limitations while retaining

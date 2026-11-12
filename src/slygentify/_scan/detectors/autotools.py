@@ -120,6 +120,17 @@ def detect_automake(view: RepositoryView, context: DetectionContext) -> Detectio
 
 @implements("REQ061")
 def _automake(state: Inspection, roots: set[str]) -> None:
+    fragments: set[str] = set()
+    for candidate in state.view.path_candidates():
+        if state.view.checkpoint():
+            raise Stopped
+        if candidate.name != "Makefile.am":
+            continue
+        amount = 256 + 16 * len(candidate.parent)
+        if not state.view.reserve_memory(candidate.path, amount):
+            raise Stopped
+        state.temporary += amount
+        fragments.add(candidate.parent)
     for candidate in state.view.path_candidates():
         if state.view.checkpoint():
             raise Stopped
@@ -220,9 +231,7 @@ def _automake(state: Inspection, roots: set[str]) -> None:
                 elif name == "SUBDIRS":
                     if target in roots and not call.conditional:
                         state.member(path, call.locator + f":{index}", owner, target, roots)
-                    elif any(
-                        c.path == f"{target}/Makefile.am" for c in state.view.path_candidates()
-                    ):
+                    elif target in fragments:
                         state.declaration(
                             path,
                             call,
